@@ -1,5 +1,5 @@
-# sAMPpred-ESM2-GAT
-The implementation of the paper ***sAMPpred-GAT: Prediction of Antimicrobial Peptide by Graph Attention Network, ESM-2 model and Predicted Peptide Structure***
+# sAMPpred-GAT-ESM2
+The implementation of the paper ***sAMPpred-GAT-ESM2: Prediction of Antimicrobial Peptide by Graph Attention Network, ESM-2 model and Predicted Peptide Structure***
 
 ## Requirements
 The majoy dependencies used in this project are as following:
