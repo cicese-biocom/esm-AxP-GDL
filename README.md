@@ -1,5 +1,5 @@
-# sAMPpred-GAT
-The implementation of the paper ***sAMPpred-GAT: Prediction of Antimicrobial Peptide by Graph Attention Network and Predicted Peptide Structure***
+# sAMPpred-ESM2-GAT
+The implementation of the paper ***sAMPpred-GAT: Prediction of Antimicrobial Peptide by Graph Attention Network, ESM-2 model and Predicted Peptide Structure***
 
 ## Requirements
 The majoy dependencies used in this project are as following:
@@ -33,64 +33,11 @@ pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geo
 
 
 ## Tools
-Two multiple sequence alignment tools and three databases are required: 
-```
-psi-blast 2.12.0
-hhblits 3.3.0
-```
-Databases:
-```
-nrdb90(http://bliulab.net/sAMPpred-GAT/static/download/nrdb90.tar.gz)
-NR(https://ftp.ncbi.nlm.nih.gov/blast/db/)
-uniclust30_2018_08(https://wwwuser.gwdg.de/~compbiol/uniclust/2018_08/uniclust30_2018_08_hhsuite.tar.gz)
-```
-**nrdb90**: We have supplied the nrdb90 databases on our webserver. You need to put it into the `utils/psiblast/` directoy and decompress it. 
-
-**NR**:You can download NR dababase from `https://ftp.ncbi.nlm.nih.gov/blast/db/`. Note that only the files with format `nr.*` are needed. You need to download them can put them into the `utils/psiblast/nr/` directory. The `utils/psiblast/nr/` folder should contain `nr.00.psq`, `nr.00.ppi`, ..., `nr.54.phd`, etc..
-
-**uniclust30_2018_08**:You can download it dababase from `https://wwwuser.gwdg.de/~compbiol/uniclust/2018_08/uniclust30_2018_08_hhsuite.tar.gz`. Just decompress it in the directory `utils/hhblits/` and rename this database folder to `uniclust30_2018_08`.
+**ESM-2**: Amino acid level characteristics are calculated by ESM-2 model (https://github.com/facebookresearch/esm)
 
 **trRosetta**: The structures are predicted by trRosetta(https://github.com/gjoni/trRosetta), you need to download and put the trRosetta pretrain model(https://files.ipd.uw.edu/pub/trRosetta/model2019_07.tar.bz2) and decompress it into `utils/trRosetta/`.
 
 > **Note** that all the defalut paths of the tools and databases are shown in `config.yaml`. You can change the paths of the tools and databases by configuring `config.yaml` as you need. 
-
-
-`psi-blast` and `hhblist` are recommended to be configured as the system envirenment path. Your can follow these steps to install them:
-### How to install psiblast
-
-Download 
-
-```
-wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.12.0/ncbi-blast-2.12.0+-x64-linux.tar.gz
-tar zxvf ncbi-blast-2.12.0+-x64-linux.tar.gz
-```
-
-Add the path to system envirenment in `~/.bashrc`.
-
-```
-export BLAST_HOME={your_path}/ncbi-blast-2.12.0+
-export PATH=$PATH:$BLAST_HOME/bin
-```
-
-Finally, reload the system envirenment and check the psiblast command:
-
-```
-source ~/.bashrc
-psiblast -h
-```
-
-
-### How to install hhblits
-You can download and install the hhblits througth `conda` quickly.
-
-```
-conda install -c conda-forge -c bioconda hhsuite==3.3.0
-```
-Check the installation:
-
-```
-hhblits -h
-```
 
 ## Feature extraction
 
