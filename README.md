@@ -48,16 +48,13 @@ Run the example by:
 chmod +x generate_features_example.sh
 ./generate_features_example.sh
 ```
-The features of the examples will be genrerated if your tools and databases are configured correctly. 
-Some common errors:
-+ `BLAST Database error` means the nrdb90 or NR is failed to found.
-+ `ERROR:   could not open file ... uniclust30_2018_08_cs219.ffdata` means the uniclust30_2018_08 is failed to found.
+The features of the examples will be genrerated if your tools are configured correctly. 
 
 If you want generate the features using your own file in fasta format, just follow the `generate_features_example.sh` and change the pathes into yours.
 
 ## Usage
 It takes 3 steps to train/test our model:
-(1) copy the train/test soucre files in fasta format, which is  supplied in `datasets` folder, into the `data` folder.
+(1) copy the train/test soucre files in fasta format, which is supplied in `datasets` folder, into the `data` folder.
 (2) generate features, including the predicted sturctures and the sequential features.
 (3) train / test.
 
