@@ -1,6 +1,4 @@
 import os
-import utils.hhblits_search as hh
-import utils.psiblast_search as psi
 import yaml
 import argparse
 
