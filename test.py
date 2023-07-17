@@ -97,6 +97,4 @@ if __name__ == '__main__':
     parser.add_argument('-d', type=int, default=37, help='Distance threshold')
     args = parser.parse_args()
 
-    
-
     independent_test(args)

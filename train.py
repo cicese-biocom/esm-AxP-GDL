@@ -14,41 +14,50 @@ import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
+
 def train(args):
     threshold = args.d
 
-    # loading and spliting data
-    if args.pos_v == "" or args.neg_v == "":
-        
-        fasta_path_positive = args.pos_t
-        npz_dir_positive = args.pos_npz
+    # loading and splitting data
+    if args.pos_v == "" or args.neg_v == "":                                                   
+
+        # positive training dataset
+        fasta_path_positive = args.pos_t                                                        
+        npz_dir_positive = args.pos_npz                                                         
         data_list, labels = load_data(fasta_path_positive, npz_dir_positive, threshold, 1)
 
+        # negative training dataset
         fasta_path_negative = args.neg_t
         npz_dir_negative = args.neg_npz
-
         neg_data = load_data(fasta_path_negative, npz_dir_negative, threshold, 0)
+
+        # positive + negative training dataset
         data_list.extend(neg_data[0])
         labels = np.concatenate((labels, neg_data[1]), axis=0)
 
+        # split training dataset: 80% train y 20% test, with seed and shuffle
         data_train, data_val, _, _ = train_test_split(data_list, labels, test_size=0.2, shuffle=True, random_state=41)
     else:
 
+        # positive training and validation dataset
         fasta_path_train_positive = args.pos_t
         fasta_path_val_positive = args.pos_v
         npz_dir_positive = args.pos_npz
         data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, threshold, 1)
         data_val, _ = load_data(fasta_path_val_positive, npz_dir_positive, threshold, 1)
 
+        # negative training and validation dataset
         fasta_path_train_negative = args.neg_t
         fasta_path_val_negative = args.neg_v
         npz_dir_negative = args.neg_npz
         neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, threshold, 0)
         neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, threshold, 0)
 
+        # positive + negative training and validation dataset
         data_train.extend(neg_data_train)
         data_val.extend(neg_data_val)
 
+        # data_train shuffle
         data_train = shuffle(data_train)  
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -59,7 +68,6 @@ def train(args):
 
     # tensorboard, record the change of auc, acc and loss
     writer = SummaryWriter()
-
 
     if args.pretrained_model == "":
         model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads).to(device)
@@ -177,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('-neg_npz', type=str, default='data/train_data/negative/npz/', 
                         help='Path of the positive npz folder, which saves the predicted structure')
 
-    # 0.001 for pretrain， 0.0001 or train
+    # 0.001 for pretrain， 0.0001 for train
     parser.add_argument('-lr', type=float, default=0.001, help='Learning rate') 
     parser.add_argument('-drop', type=float, default=0.5, help='Dropout rate')
     parser.add_argument('-e', type=int, default=50, help='Maximum number of epochs')

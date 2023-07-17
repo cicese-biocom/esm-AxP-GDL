@@ -1,11 +1,8 @@
 # Tools
-psiblast: psiblast
-hhblits: hhblits
+esm2: utils/esm2/
 rosetta: utils/trRosetta/predict_many.py
 
-# Databases and model
-nrdb90: utils/psiblast/nrdb90/nrdb90
-nr: utils/psiblast/nr/nr
-uniclust: /utils/hhblits/uniclust30_2018_08/uniclust30_2018_08
+# Models
 rosetta_model: utils/trRosetta/model2019_07
+esm2_model: utils/esm2/esm2_t33_650M_UR50D
 

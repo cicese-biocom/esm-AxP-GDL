@@ -1,14 +1,14 @@
 import re
 import numpy as np
 import torch
-from utils.encoding_methods import onehot_encoding, pssm_encoding, position_encoding, hhm_encoding,  cat
+from utils.encoding_methods import onehot_encoding, position_encoding,  cat
 from torch_geometric.data import Data, DataLoader
 
 
 def load_seqs(fn, label=1):
     """
     :param fn: source file name in fasta format
-    :param tag: label = 1(positive, AMPs) or 0(negative, non-AMPs)
+    :param label: label = 1(positive, AMPs) or 0(negative, non-AMPs)
     :return:
         ids: name list
         seqs: peptide sequence list
@@ -42,22 +42,23 @@ def load_data(fasta_path, npz_dir, threshold=37, label=1, add_self_loop=True):
     :param npz_dir: dir that saves npz files
     :param threshold: threshold for build adjacency matrix
     :param label: labels
+    :param add_self_loop: add_self_loop
     :return:
         data_list: list of Data
         labels: list of labels
     """
+
+    # load sequences (ids: sequence id, seqs: sequence itself, labels: 1 AMP 0 non-AMP)
     ids, seqs, labels = load_seqs(fasta_path, label)
+
+    # load contact map
     As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
 
+    # amino acid level features
     one_hot_encodings = onehot_encoding(seqs)
     position_encodings = position_encoding(seqs)
-    pssm_dir = '/'.join(fasta_path.split('/')[:-1]) + '/pssm/'
-    pssm_encodings = pssm_encoding(ids, pssm_dir)
 
-    hhm_dir = '/'.join(fasta_path.split('/')[:-1]) + '/hhm/'
-    hhm_encodings = hhm_encoding(ids, hhm_dir)
-
-    Xs = cat(one_hot_encodings, position_encodings, pssm_encodings, hhm_encodings)
+    Xs = cat(one_hot_encodings, position_encodings)
 
     n_samples = len(As)
     data_list = []
@@ -128,6 +129,7 @@ def to_parse_matrix(A, X, E, Y, eps=1e-6):
     :param A: Adjacency matrix with shape (n_nodes, n_nodes)
     :param E: Edge matrix with shape (n_nodes, n_nodes, n_edge_features)
     :param X: node embedding with shape (n_nodes, n_node_features)
+    :param eps: default eps=1e-6
     :return:
     """
     num_row, num_col = A.shape
