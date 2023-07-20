@@ -34,7 +34,11 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt
 RUN python3 -m pip install --no-cache-dir torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113 && \
     python3 -m pip install --no-cache-dir torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==1.7.2 -f https://data.pyg.org/whl/torch-1.11.0+cu113.html
 
+# hhsuite
 RUN conda install -c conda-forge -c bioconda hhsuite==3.3.0
+
+# esm2
+RUN python3 -m pip install --no-cache-dir fair-esm
 
 # Comando predeterminado
 CMD ["/bin/bash"]
