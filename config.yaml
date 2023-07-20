@@ -4,7 +4,7 @@ esm2: utils/esm2/
 rosetta: utils/trRosetta/predict_many.py
 
 # Database and models
-uniclust: utils/hhblits/uniclust30_2018_08
+uniclust: utils/hhblits/uniclust30_2018_08/uniclust30_2018_08
 rosetta_model: utils/trRosetta/model2019_07
 esm2_model: utils/esm2/esm2_t33_650M_UR50D
 
