@@ -1,7 +1,7 @@
 import re
 import numpy as np
 import torch
-from utils.encoding_methods import onehot_encoding, position_encoding,  cat
+from utils.encoding_methods import onehot_encoding, position_encoding,  cat, esm2_embbeding
 from torch_geometric.data import Data, DataLoader
 
 
@@ -36,7 +36,7 @@ def load_seqs(fn, label=1):
     return ids, seqs, labels
 
 
-def load_data(fasta_path, npz_dir, threshold=37, label=1, add_self_loop=True):
+def load_data(fasta_path, npz_dir, esm2_dir, threshold=37, label=1, add_self_loop=True):
     """
     :param fasta_path: file path of fasta
     :param npz_dir: dir that saves npz files
@@ -58,7 +58,11 @@ def load_data(fasta_path, npz_dir, threshold=37, label=1, add_self_loop=True):
     one_hot_encodings = onehot_encoding(seqs)
     position_encodings = position_encoding(seqs)
 
-    Xs = cat(one_hot_encodings, position_encodings)
+    # embbeding esm2
+    emb_esm2 = esm2_embbeding(ids, esm2_dir)
+
+    Xs = emb_esm2
+ #   Xs = cat(one_hot_encodings, position_encodings)
 
     n_samples = len(As)
     data_list = []
