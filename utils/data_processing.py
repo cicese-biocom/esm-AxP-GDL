@@ -1,7 +1,7 @@
 import re
 import numpy as np
 import torch
-from utils.encoding_methods import onehot_encoding, position_encoding,  cat, esm2_embbeding
+from utils.encoding_methods import esm2_embbeding
 from torch_geometric.data import Data, DataLoader
 
 
@@ -55,14 +55,11 @@ def load_data(fasta_path, npz_dir, esm2_dir, threshold=37, label=1, add_self_loo
     As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
 
     # amino acid level features
-    one_hot_encodings = onehot_encoding(seqs)
-    position_encodings = position_encoding(seqs)
 
     # embbeding esm2
     emb_esm2 = esm2_embbeding(ids, esm2_dir)
 
     Xs = emb_esm2
- #   Xs = cat(one_hot_encodings, position_encodings)
 
     n_samples = len(As)
     data_list = []
