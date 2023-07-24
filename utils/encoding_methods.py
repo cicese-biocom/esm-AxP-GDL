@@ -23,9 +23,11 @@ def esm2_embbeding(ids, esm2_dir):
 
         assert 'representations' in emb_pt
 
-        # representations is a dictionary object with a single key, whose key name varies depending on the layer number
-        # of the esm2 model used.representations is a dictionary object with a single key, whose key name varies
-        # depending on the layer number of the esm2 model used.
+        """ 
+        representations is a dictionary object with a single key, whose key name varies depending on the layer number
+        of the esm2 model used.representations is a dictionary object with a single key, whose key name varies
+        depending on the layer number of the esm2 model used.
+        """
         representations = emb_pt["representations"]
         key = list(representations.keys())[0]
         tensor = representations[key]
