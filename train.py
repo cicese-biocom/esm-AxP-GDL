@@ -13,7 +13,7 @@ import time
 import datetime
 import warnings
 warnings.filterwarnings("ignore")
-
+warnings.filterwarnings('ignore', category=FutureWarning)
 
 def train(args):
     threshold = args.d
@@ -23,13 +23,15 @@ def train(args):
 
         # positive training dataset
         fasta_path_positive = args.pos_t                                                        
-        npz_dir_positive = args.pos_npz                                                         
-        data_list, labels = load_data(fasta_path_positive, npz_dir_positive, threshold, 1)
+        npz_dir_positive = args.pos_npz
+        esm2_dir_positive = args.pos_esm2
+        data_list, labels = load_data(fasta_path_positive, npz_dir_positive, esm2_dir_positive, threshold, label=1)
 
         # negative training dataset
         fasta_path_negative = args.neg_t
         npz_dir_negative = args.neg_npz
-        neg_data = load_data(fasta_path_negative, npz_dir_negative, threshold, 0)
+        esm2_dir_negative = args.neg_esm2
+        neg_data = load_data(fasta_path_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
 
         # positive + negative training dataset
         data_list.extend(neg_data[0])
@@ -43,15 +45,18 @@ def train(args):
         fasta_path_train_positive = args.pos_t
         fasta_path_val_positive = args.pos_v
         npz_dir_positive = args.pos_npz
-        data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, threshold, 1)
+        esm2_dir_positive = args.pos_esm2
+        esm2_dir_positive = args.pos_esm2
+        data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, esm2_dir_positive, threshold, label=1)
         data_val, _ = load_data(fasta_path_val_positive, npz_dir_positive, threshold, 1)
 
         # negative training and validation dataset
         fasta_path_train_negative = args.neg_t
         fasta_path_val_negative = args.neg_v
         npz_dir_negative = args.neg_npz
-        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, threshold, 0)
-        neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, threshold, 0)
+        esm2_dir_negative = args.neg_esm2
+        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, esm2_dir_negative, threshold, 0)
+        neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
 
         # positive + negative training and validation dataset
         data_train.extend(neg_data_train)
@@ -171,19 +176,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # input file
-    parser.add_argument('-pos_t', type=str, default='data/train_data/positive/XU_pretrain_train_positive.fasta',
+    parser.add_argument('-pos_t', type=str, default='data/train_data/positive/example_pos.fasta',
                         help='Path of the positive training dataset')
     parser.add_argument('-pos_v', type=str, default='',
                         help='Path of the positive validation dataset')
     parser.add_argument('-pos_npz', type=str, default='data/train_data/positive/npz/',
                         help='Path of the positive npz folder, which saves the predicted structure')
+    parser.add_argument('-pos_esm2', type=str, default='data/train_data/positive/esm2/',
+                        help='Path of the positive esm2 folder')
 
-    parser.add_argument('-neg_t', type=str, default='data/train_data/negative/XU_pretrain_train_negative.fasta',
+    parser.add_argument('-neg_t', type=str, default='data/train_data/negative/example_neg.fasta',
                         help='Path of the negative training dataset')
     parser.add_argument('-neg_v', type=str, default='', 
                         help='Path of the negative validation dataset')
-    parser.add_argument('-neg_npz', type=str, default='data/train_data/negative/npz/', 
+    parser.add_argument('-neg_npz', type=str, default='data/train_data/negative/npz/',
                         help='Path of the positive npz folder, which saves the predicted structure')
+    parser.add_argument('-neg_esm2', type=str, default='data/train_data/negative/esm2/',
+                        help='Path of the negative esm2 folder')
 
     # 0.001 for pretrain， 0.0001 for train
     parser.add_argument('-lr', type=float, default=0.001, help='Learning rate') 
