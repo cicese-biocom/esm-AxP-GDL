@@ -1,7 +1,10 @@
+import warnings
+warnings.filterwarnings('ignore')
 import os
 import numpy as np
 import string
 import tensorflow as tf
+
 
 # read A3M and convert letters into
 # integers in the 0..20 range
