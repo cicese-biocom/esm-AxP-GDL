@@ -24,6 +24,8 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 # Establecer el directorio de trabajo
 WORKDIR /app
 
+RUN conda install -c conda-forge gcc
+
 # Instalar las dependencias de Python
 
 # requirements.txt
@@ -31,8 +33,8 @@ COPY requirements.txt .
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # PyTorch
-RUN python3 -m pip install --no-cache-dir torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113 && \
-    python3 -m pip install --no-cache-dir torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==1.7.2 -f https://data.pyg.org/whl/torch-1.11.0+cu113.html
+RUN python3 -m pip install --no-cache-dir torch==1.11.0 torchvision==0.12.0 torchaudio==0.11.0 && \
+    python3 -m pip install --no-cache-dir torch-scatter==2.0.9 torch-sparse==0.6.15 torch-cluster==1.6.0 torch-spline-conv==1.2.1 torch-geometric==1.7.2
 
 # hhsuite
 RUN conda install -c conda-forge -c bioconda hhsuite==3.3.0
