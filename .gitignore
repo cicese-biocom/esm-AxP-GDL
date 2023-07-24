@@ -4,3 +4,7 @@
 /.idea/vcs.xml
 /.idea/
 /utils/hhblits/uniclust30_2018_08/
+/utils/esm2/esm2_t33_650M_UR50D.pt
+/utils/esm2/esm2_t33_650M_UR50D-contact-regression.pt
+/utils/hhblits/uniclust30_2018_08_hhsuite.tar.gz
+/runs/
