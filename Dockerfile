@@ -24,8 +24,6 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 # Establecer el directorio de trabajo
 WORKDIR /app
 
-RUN conda install -c conda-forge gcc
-
 # Instalar las dependencias de Python
 
 # requirements.txt
