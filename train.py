@@ -46,16 +46,15 @@ def train(args):
         fasta_path_val_positive = args.pos_v
         npz_dir_positive = args.pos_npz
         esm2_dir_positive = args.pos_esm2
-        esm2_dir_positive = args.pos_esm2
         data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, esm2_dir_positive, threshold, label=1)
-        data_val, _ = load_data(fasta_path_val_positive, npz_dir_positive, threshold, 1)
+        data_val, _ = load_data(fasta_path_val_positive, npz_dir_positive, threshold, label=1)
 
         # negative training and validation dataset
         fasta_path_train_negative = args.neg_t
         fasta_path_val_negative = args.neg_v
         npz_dir_negative = args.neg_npz
         esm2_dir_negative = args.neg_esm2
-        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, esm2_dir_negative, threshold, 0)
+        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
         neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
 
         # positive + negative training and validation dataset
