@@ -3,7 +3,9 @@ import numpy as np
 import torch
 from utils.encoding_methods import esm2_embbeding
 from torch_geometric.data import Data, DataLoader
-
+import warnings
+warnings.Change ("ignore")
+warnings.filterwarnings('ignore', category=FutureWarning)
 
 def load_seqs(fn, label=1):
     """
