@@ -58,25 +58,16 @@ if __name__ == '__main__':      # Si generate_features.py se ejecuta directament
                         help='Output folder saving .npz files')
     parser.add_argument('-hhm_ohhm', type=str, default='data/train_data/negative/hhm/',
                         help='Output folder saving .hhm files')
-    parser.add_argument('-hhm_tmp', type=str, default='data/train_data/negative/tmp/', help='Temp folder')
+    parser.add_argument('-hhm_tmp', type=str, default='data/train_data/negative/tmp/',
+                        help='Temp folder')
 
     # esm2 parameters
-    parser.add_argument('-model_location', type=str, default=esm2_model,
-                        help='PyTorch model file')
     parser.add_argument('-fasta_file', type=str, default='data/train_data/negative/example_neg.fasta',
                         help='FASTA file on which to extract representations')
     parser.add_argument('-output_dir', type=str, default='data/train_data/negative/esm2',
                         help='output directory for extracted representations')
-    parser.add_argument('-toks_per_batch', type=str, default='4096',
-                        help='maximum batch size')
-    parser.add_argument('-repr_layers', type=str, default='33', # final only
-                        help='layers indices from which to extract representations (0 to num_layers, inclusive)')
-    parser.add_argument('-include', type=str, default='per_tok',
-                        help='specify which representations to return')
-    parser.add_argument('-truncation_seq_length', type=str, default='1022',
-                        help='truncate sequences longer than the given value')
-    parser.add_argument('-nogpu', type=str,
-                        help='Do not use GPU even if available')
+
+    #-fasta_file = hhm_ifasta
 
     args = parser.parse_args()
 
