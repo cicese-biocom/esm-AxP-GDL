@@ -175,7 +175,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # input file
-    parser.add_argument('-pos_t', type=str, default='data/train_data/positive/example_pos.fasta',
+    parser.add_argument('-pos_t', type=str, default='data/train_data/positive/',
                         help='Path of the positive training dataset')
     parser.add_argument('-pos_v', type=str, default='',
                         help='Path of the positive validation dataset')
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('-pos_esm2', type=str, default='data/train_data/positive/esm2/',
                         help='Path of the positive esm2 folder')
 
-    parser.add_argument('-neg_t', type=str, default='data/train_data/negative/example_neg.fasta',
+    parser.add_argument('-neg_t', type=str, default='data/train_data/negative/',
                         help='Path of the negative training dataset')
     parser.add_argument('-neg_v', type=str, default='', 
                         help='Path of the negative validation dataset')
