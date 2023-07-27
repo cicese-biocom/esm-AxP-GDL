@@ -34,7 +34,7 @@ def generate_features(args):
 
     if 'ESM2' in feas:
         esm2_cmd = 'python' + ' ' + esm2 + ' ' + esm2_model + ' ' + args.fasta_file + ' ' + args.output_dir + \
-                   ' ' + '--repr_layers [-1] --include per_tok'
+                   ' ' + '--repr_layers 33 --include per_tok'
 
         os.system(esm2_cmd)
 
@@ -46,25 +46,25 @@ if __name__ == '__main__':      # Si generate_features.py se ejecuta directament
     parser.add_argument('-feas', type=str, nargs='+', default=['HHM', 'NPZ', 'ESM2'], help='Feature names')
 
     # HHblits parameters
-    parser.add_argument('-hhm_ifasta', type=str, default='data/train_data/negative/example_neg.fasta',
+    parser.add_argument('-hhm_ifasta', type=str, default='example_data/train_data/negative/example_neg.fasta',
                         help='Input a file with fasta format for hhblits search')
-    parser.add_argument('-hhm_oa3m', type=str, default='data/train_data/negative/a3m/',
+    parser.add_argument('-hhm_oa3m', type=str, default='example_data/train_data/negative/a3m/',
                         help='Output folder saving .a3m files')
 
     # trRosetta parameters
-    parser.add_argument('-tr_ia3m', type=str, default='data/train_data/negative/a3m/',
+    parser.add_argument('-tr_ia3m', type=str, default='example_data/train_data/negative/a3m/',
                         help='Input folder saving .a3m files')
-    parser.add_argument('-tr_onpz', type=str, default='data/train_data/negative/npz/',
+    parser.add_argument('-tr_onpz', type=str, default='example_data/train_data/negative/npz/',
                         help='Output folder saving .npz files')
-    parser.add_argument('-hhm_ohhm', type=str, default='data/train_data/negative/hhm/',
+    parser.add_argument('-hhm_ohhm', type=str, default='example_data/train_data/negative/hhm/',
                         help='Output folder saving .hhm files')
-    parser.add_argument('-hhm_tmp', type=str, default='data/train_data/negative/tmp/',
+    parser.add_argument('-hhm_tmp', type=str, default='example_data/train_data/negative/tmp/',
                         help='Temp folder')
 
     # esm2 parameters
-    parser.add_argument('-fasta_file', type=str, default='data/train_data/negative/example_neg.fasta',
+    parser.add_argument('-fasta_file', type=str, default='example_data/train_data/negative/example_neg.fasta',
                         help='FASTA file on which to extract representations')
-    parser.add_argument('-output_dir', type=str, default='data/train_data/negative/esm2',
+    parser.add_argument('-output_dir', type=str, default='example_data/train_data/negative/esm2',
                         help='output directory for extracted representations')
 
     #-fasta_file = hhm_ifasta
