@@ -1,11 +1,36 @@
 import re
+import os
 import numpy as np
 import torch
 from utils.encoding_methods import esm2_embbeding
 from torch_geometric.data import Data, DataLoader
 import warnings
-warnings.Change ("ignore")
+warnings.filterwarnings("ignore")
 warnings.filterwarnings('ignore', category=FutureWarning)
+
+
+def load_fasta(fasta_path):
+    """
+    :param fasta_path: source files in fasta format
+    :return: List of found .fasta files
+    """
+    fasta_files = []
+
+    # Verify that the directory exists
+    if not os.path.exists(fasta_path):
+        raise FileNotFoundError(f"The directory '{fasta_path}' does not exist.")
+
+    # List all files in the directory
+    files = os.listdir(fasta_path)
+
+    # Filter files with .fasta extension and load them in the list
+    for file in files:
+        if file.endswith(".fasta"):
+            file_path = os.path.join(fasta_path, file)
+            fasta_files.append(file_path)
+
+    return fasta_files
+
 
 def load_seqs(fn, label=1):
     """
@@ -50,23 +75,23 @@ def load_data(fasta_path, npz_dir, esm2_dir, threshold=37, label=1, add_self_loo
         labels: list of labels
     """
 
-    # load sequences (ids: sequence id, seqs: sequence itself, labels: 1 AMP 0 non-AMP)
-    ids, seqs, labels = load_seqs(fasta_path, label)
+    # load .fasta files
+    fasta_list = load_fasta(fasta_path)
 
-    # load contact map
-    As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
-
-    # amino acid level features
-
-    # embbeding esm2
-    emb_esm2 = esm2_embbeding(ids, esm2_dir)
-
-    Xs = emb_esm2
-
-    n_samples = len(As)
     data_list = []
-    for i in range(n_samples):
-        data_list.append(to_parse_matrix(As[i], Xs[i], Es[i], labels[i]))
+    labels = []
+    for fasta_file in fasta_list:
+        # load sequences (ids: sequence id, seqs: sequence itself, labels: 1 AMP 0 non-AMP)
+        ids, seqs, labels = load_seqs(fasta_file, label)
+        # load contact map
+        As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
+        # compute amino acid level feature (embbedings esm2)
+        Xs = esm2_embbeding(ids, esm2_dir)
+
+        n_samples = len(As)
+        for i in range(n_samples):
+            data_list.append(to_parse_matrix(As[i], Xs[i], Es[i], labels[i]))
+
     return data_list, labels
 
 
