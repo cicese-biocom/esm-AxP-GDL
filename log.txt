@@ -1,0 +1,8 @@
+Mon Jul 24 18:21:22 2023
+args: Namespace(b=512, d=37, drop=0.5, e=50, hd=64, heads=8, lr=0.001, neg_esm2='data/train_data/negative/esm2/', neg_npz='data/train_data/negative/npz/', neg_t='data/train_data/negative/example_neg.fasta', neg_v='', o='log.txt', pos_esm2='data/train_data/positive/esm2/', pos_npz='data/train_data/positive/npz/', pos_t='data/train_data/positive/example_pos.fasta', pos_v='', pretrained_model='', save='saved_models/samp.model')
+auc result: 1.0
+
+Mon Jul 24 18:37:32 2023
+args: Namespace(b=512, d=37, drop=0.5, e=50, hd=64, heads=8, lr=0.001, neg_esm2='data/train_data/negative/esm2/', neg_npz='data/train_data/negative/npz/', neg_t='data/train_data/negative/example_neg.fasta', neg_v='', o='log.txt', pos_esm2='data/train_data/positive/esm2/', pos_npz='data/train_data/positive/npz/', pos_t='data/train_data/positive/example_pos.fasta', pos_v='', pretrained_model='', save='saved_models/samp.model')
+auc result: 1.0
+
