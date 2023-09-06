@@ -2,7 +2,7 @@ import re
 import os
 import numpy as np
 import torch
-from utils.encoding_methods import esm2_embbeding
+from utils.encoding_methods import residual_level_features
 from torch_geometric.data import Data, DataLoader
 import warnings
 warnings.filterwarnings("ignore")
@@ -63,10 +63,11 @@ def load_seqs(fn, label=1):
     return ids, seqs, labels
 
 
-def load_data(fasta_path, npz_dir, esm2_dir, threshold=37, label=1, add_self_loop=True):
+def load_data(fasta_path, npz_dir, esm2_representation, threshold=37, label=1, add_self_loop=True):
     """
     :param fasta_path: file path of fasta
     :param npz_dir: dir that saves npz files
+    :param esm2_representation: name of the esm2 representation to be used
     :param threshold: threshold for build adjacency matrix
     :param label: labels
     :param add_self_loop: add_self_loop
@@ -84,9 +85,10 @@ def load_data(fasta_path, npz_dir, esm2_dir, threshold=37, label=1, add_self_loo
         # load sequences (ids: sequence id, seqs: sequence itself, labels: 1 AMP 0 non-AMP)
         ids, seqs, labels = load_seqs(fasta_file, label)
         # load contact map
-        As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
-        # compute amino acid level feature (embbedings esm2)
-        Xs = esm2_embbeding(ids, esm2_dir)
+     #   As, Es = get_cmap(npz_dir, ids, threshold, add_self_loop)
+        # compute amino acid level feature (esm2 embbedings)
+        #Xs = esm2_embbeding(ids, esm2_dir)
+        Xs = residual_level_features(fasta_file, esm2_representation)
 
         n_samples = len(As)
         for i in range(n_samples):
