@@ -17,6 +17,7 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 def train(args):
     threshold = args.d
+    esm2_representation = 'esm2_t6_reduced'
 
     # loading and splitting data
     if args.pos_v == "" or args.neg_v == "":                                                   
@@ -24,14 +25,13 @@ def train(args):
         # positive training dataset
         fasta_path_positive = args.pos_t                                                        
         npz_dir_positive = args.pos_npz
-        esm2_dir_positive = args.pos_esm2
-        data_list, labels = load_data(fasta_path_positive, npz_dir_positive, esm2_dir_positive, threshold, label=1)
+        data_list, labels = load_data(fasta_path_positive, npz_dir_positive, esm2_representation, threshold, label=1)
 
         # negative training dataset
         fasta_path_negative = args.neg_t
         npz_dir_negative = args.neg_npz
         esm2_dir_negative = args.neg_esm2
-        neg_data = load_data(fasta_path_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
+        neg_data = load_data(fasta_path_negative, npz_dir_negative, esm2_representation, threshold, label=0)
 
         # positive + negative training dataset
         data_list.extend(neg_data[0])
@@ -46,7 +46,7 @@ def train(args):
         fasta_path_val_positive = args.pos_v
         npz_dir_positive = args.pos_npz
         esm2_dir_positive = args.pos_esm2
-        data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, esm2_dir_positive, threshold, label=1)
+        data_train, _ = load_data(fasta_path_train_positive, npz_dir_positive, esm2_representation, threshold, label=1)
         data_val, _ = load_data(fasta_path_val_positive, npz_dir_positive, threshold, label=1)
 
         # negative training and validation dataset
@@ -54,8 +54,8 @@ def train(args):
         fasta_path_val_negative = args.neg_v
         npz_dir_negative = args.neg_npz
         esm2_dir_negative = args.neg_esm2
-        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
-        neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, esm2_dir_negative, threshold, label=0)
+        neg_data_train, _ = load_data(fasta_path_train_negative, npz_dir_negative, esm2_representation, threshold, label=0)
+        neg_data_val, _ = load_data(fasta_path_val_negative, npz_dir_negative, esm2_representation, threshold, label=0)
 
         # positive + negative training and validation dataset
         data_train.extend(neg_data_train)
