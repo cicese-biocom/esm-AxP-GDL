@@ -3,7 +3,12 @@
 /.idea/sAMPpred-GAT-ESM2.iml
 /.idea/vcs.xml
 /.idea/
-/utils/hhblits/uniclust30_2018_08/
-/utils/hhblits/uniclust30_2018_08_hhsuite.tar.gz
+/tools/hhblits/uniclust30_2018_08/
+/tools/hhblits/uniclust30_2018_08_hhsuite.tar.gz
 /runs/
-/utils/esm2/checkpoints/
+/models/esm2/checkpoints/
+/models/trRosetta/model2019_07/
+/datasets/DeepAVPpred/
+/datasets/Example/
+/datasets/Test_Data/
+/models/trRosetta/model2019_07/
