@@ -4,7 +4,7 @@ from torch_geometric.data import DataLoader
 import argparse
 from models.GAT.GAT import GATModel
 from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
-from graph.graph_construction import graph_representations
+from graph.construct_graphs import construct_graphs
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from tensorboardX import SummaryWriter
@@ -33,7 +33,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = graph_representations(train_and_val_data, esm2_representation, tertiary_structure_info, threshold, add_self_loop=True)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_info, threshold, add_self_loop=True)
         labels = data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
