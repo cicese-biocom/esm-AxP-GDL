@@ -2,15 +2,25 @@ import numpy as np
 from models.esmfold import esmfold
 
 
-def adjacency_matrix(data, tertiary_structure_info, threshold, add_self_loop):
-    method, path = tertiary_structure_info
+def adjacency_matrix(data, tertiary_structure_config, threshold, add_self_loop):
+    method, path, mode = tertiary_structure_config
 
     if method == 'trRosetta':
         return cmap_tr(path, data.id, threshold, add_self_loop)
 
+    if method == 'trRosetta':
+        if mode == 'load':
+            return cmap_tr(path, data.id, threshold, add_self_loop)
+        else:
+            raise ValueError("Invalid mode. Please choose 'load'.")
+
     if method == 'esmfold':
-        #return esmfold.adjacency_matrices(data, path, threshold, add_self_loop)
-        return esmfold.pdb_adjacency_matrices(data, path, threshold, add_self_loop)
+        if mode == 'generate':
+            return esmfold.adjacency_matrices(data, path, threshold, add_self_loop)
+        elif mode == 'load':
+            return esmfold.pdb_adjacency_matrices(data, path, threshold, add_self_loop)
+        else:
+            raise ValueError("Invalid mode. Please choose 'generate' or 'load'.")
 
 def cmap_tr(npz_folder, ids, threshold, add_self_loop=True):
     if npz_folder[-1] != '/':
