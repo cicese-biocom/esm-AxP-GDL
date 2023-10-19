@@ -5,7 +5,7 @@ from graph.structure_feature_extraction import adjacency_matrix
 from tqdm import tqdm
 import numpy as np
 
-def construct_graphs(data, esm2_representation, tertiary_structure_info, normalize_embedding, threshold, add_self_loop=True):
+def construct_graphs(data, esm2_representation, tertiary_structure_config, threshold, add_self_loop=True):
     """
     :param data: data (id, sequence itself, activity, label)
     :param esm2_representation: name of the esm2 representation to be used
@@ -20,11 +20,11 @@ def construct_graphs(data, esm2_representation, tertiary_structure_info, normali
     """
 
     # compute amino acid level feature (esm2 embeddings)
-    Xs = esm2_derived_features(data, esm2_representation, normalize_embedding)
+    Xs = esm2_derived_features(data, esm2_representation)
 
     # load contact map
 #    As, Es = contact_map(npz_folder, ids, structural3d_method, threshold, add_self_loop)
-    As, Es = adjacency_matrix(data, tertiary_structure_info, threshold, add_self_loop)
+    As, Es = adjacency_matrix(data, tertiary_structure_config, threshold, add_self_loop)
 
     labels = data.activity
     n_samples = len(As)
