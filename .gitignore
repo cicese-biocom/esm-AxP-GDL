@@ -13,3 +13,8 @@
 /datasets/Test_Data/
 /models/trRosetta/model2019_07/
 /models/trRosetta/log_hhblits.txt
+/log.txt
+/output_models/
+/models/esmfold/checkpoints/esm2_t36_3B_UR50D.pt
+/models/esmfold/checkpoints/esm2_t36_3B_UR50D-contact-regression.pt
+/models/esmfold/checkpoints/esmfold_3B_v1.pt

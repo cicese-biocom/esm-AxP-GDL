@@ -23,14 +23,13 @@ def run(hhb, data, tg, tg_hhm, tmp_folder, db):
     Using HHblits to search against Uniclust2018 database, to generate .a3m and .hhm files
     parameters:
         :param hhb: path of the hhblits
-        :param names: sequences identifiers. Containing multiple sequences.
-        :param segs: sequences itself. Containing multiple sequences.
+        :param data: identifiers and sequences itself. Containing multiple sequences
         :param tg: target output .a3m folder
         :param tg_hhm: target output .hhm folder
-        :param tmp_folder: tmp folder saving the .fasta files containing a singe sequence that is split from the input files.
+        :param tmp_folder: tmp folder saving the .fasta files containing a singe sequence that is split from the input files
         :param db: the path of Uniclust2018
     """
-    names = data['id'].apply(lambda x: '>' + x)
+    names = data.id.apply(lambda x: '>' + x)
     seqs = data.sequence
 
     if not os.path.exists(tmp_folder):
@@ -47,24 +46,29 @@ def run(hhb, data, tg, tg_hhm, tmp_folder, db):
             f.write(name + '\n')
             f.write(seq)
 
-    tg_hhm = os.path.join(tg_hhm, 'output/')
+    #tg_hhm = os.path.join(tg_hhm, 'output/')
     if not os.path.exists(tg):
         os.makedirs(tg)
-    if not os.path.exists(tg_hhm):
-        os.makedirs(tg_hhm)
+ #   if not os.path.exists(tg_hhm):
+ #       os.makedirs(tg_hhm)
 
     try:
         for i in trange(len(names)):
             name = names[i]
             fname = name.replace('|', '_')[1:]
             fn = tmp_folder + fname + '.fasta'
-            cmd = hhb + ' -i ' + fn + ' -o ' + tg + 'tmp.hhr' + \
-                  ' -oa3m ' + tg + fname + '.a3m -ohhm ' + os.path.join(tg_hhm, fname) + '.hhm' + \
-                  ' -d ' + db + ' -cpu 8 -v 0 -n 3 -e 0.01'
+            cmd = hhb + \
+                  ' -i ' + fn + \
+                  ' -oa3m ' + tg + fname + '.a3m' \
+                  ' -d ' + db + ' -cpu 8 -v 2 -n 3 -e 0.01'
             # os.system(cmd)
+
+            print(f'cmd for {fname} generated')
 
             with open("log_hhblits.txt", "w") as log_file:
                 os.system(cmd + " > log_hhblits.txt 2>&1")
+
+            print(f'File {fname} .a3m generated')
     except:
         print('Failed to search !')
     finally:
@@ -74,8 +78,8 @@ def run(hhb, data, tg, tg_hhm, tmp_folder, db):
 
 
 def main(args):
-    names = args.data['id']
-    seqs = args.data['sequence']
+    names = args.data.id.apply(lambda x: '>' + x)
+    seqs = args.data.sequence
     pt = args.pt
     db = args.d
     tg = args.oa3m

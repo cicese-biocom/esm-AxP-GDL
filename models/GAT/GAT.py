@@ -3,10 +3,11 @@ from torch_geometric.nn import GATConv, LayerNorm
 from torch_geometric.nn import TopKPooling
 import torch.nn as nn
 from torch.nn import Linear
+import torch
 
 
 """
-Appling pyG lib
+Applying pyG lib
 """
 
 
@@ -32,7 +33,7 @@ class GATModel(nn.Module):
         self.norm2 = LayerNorm(nheads * hidden_dim)
         self.norm3 = LayerNorm(hidden_dim)
 
-        self.lin0 = Linear(k * hidden_dim, hidden_dim)
+        self.lin0 = Linear(hidden_dim, hidden_dim)
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin = Linear(hidden_dim, output_dim)
 
@@ -49,13 +50,6 @@ class GATModel(nn.Module):
 
     def forward(self, x, edge_index, batch):
         # 1. Obtain node embeddings
-        # edge_index, _  = dropout_adj(edge_index, p = 0.2, training = self.training)
-
-        # x = self.conv0(x, edge_index)
-        # x = self.norm0(x, batch)
-        # x = F.relu(x)
-        # x = F.dropout(x, p=self.drop, training=self.training)
-
         x = self.conv1(x, edge_index)
         x = self.norm1(x, batch)
         x = F.relu(x)
@@ -73,7 +67,10 @@ class GATModel(nn.Module):
         # x = global_max_pool(x, batch)  # [batch_size, hidden_channels]
 
         x = self.topk_pool(x, edge_index, batch=batch)[0]
-        x = x.view(batch[-1] + 1, -1)
+        x = torch.transpose(x, 0, 1)
+        x = nn.Linear(x.shape[1], batch[-1] + 1, bias=False, device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))(x)
+        x = torch.transpose(x, 0, 1)
+        # x = x.view(batch[-1] + 1, -1)
 
         # 3. Apply a final classifier
         x = F.dropout(x, p=self.drop, training=self.training)

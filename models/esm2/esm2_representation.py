@@ -6,7 +6,9 @@ import esm
 from esm import FastaBatchedDataset
 import os
 import json
-
+from tqdm import tqdm
+from sklearn.preprocessing import MinMaxScaler
+from torch.nn.functional import normalize
 
 def get_models(esm2_representation):
     """
@@ -33,17 +35,18 @@ def get_models(esm2_representation):
         models = representation["models"].explode(ignore_index=True)
     else:
         #  If the DataFrame is empty, throw an exception and stop the code.
-        raise Exception(f"'{representation_name}' is not a valid coding method name.")
+        raise Exception(f"'{esm2_representation}' is not a valid coding method name.")
 
     return models
 
 
-def get_embeddings(data, model_name, reduced_features):
+def get_embeddings(data, model_name, reduced_features, normalize_embedding):
     """
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
     :param model_name: esm2 model name
     :param reduced_features: vector of positions of the features to be used
+    :param normalize_embedding: whether to normalize the embedding using Min-Max scaling
     :return:
         embeddings: reduced embedding of each sequence of the fasta file according to reduced_features
     """
@@ -57,34 +60,44 @@ def get_embeddings(data, model_name, reduced_features):
 
         if torch.cuda.is_available() and not no_gpu:
             model = model.cuda()
-            print("Transferred model to GPU")
+            #print("Transferred model to GPU")
 
         dataset = FastaBatchedDataset(data.id, data.sequence)
         batches = dataset.get_batch_indices(toks_per_batch=1, extra_toks_per_seq=1)
         data_loader = torch.utils.data.DataLoader(dataset, collate_fn=alphabet.get_batch_converter(), batch_sampler=None)
-        print(f"Read FASTA file with {len(dataset)} sequences")
+        #print(f"Read FASTA file with {len(dataset)} sequences")
 
-
+        scaler = MinMaxScaler()
         repr_layers = model.num_layers
         embeddings = []
+
         with torch.no_grad():
-            for batch_idx, (labels, strs, toks) in enumerate(data_loader):
-                print(f"Processing {batch_idx + 1} of {len(batches)} batches ({toks.size(0)} sequences)")
+                for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader), total=len(data_loader), desc ="Generating esm2 embeddings"):
+                    if torch.cuda.is_available() and not no_gpu:
+                        toks = toks.to(device="cuda", non_blocking=True)
 
-                if torch.cuda.is_available() and not no_gpu:
-                    toks = toks.to(device="cuda", non_blocking=True)
+                    representation = model(toks, repr_layers=[repr_layers], return_contacts=False)["representations"][repr_layers]
 
-                representation = model(toks, repr_layers=[repr_layers], return_contacts=False)["representations"][repr_layers]
+                    for i, label in enumerate(labels):
+                        layer_for_i = representation[i, 1:len(strs[i]) + 1]
 
-                for i, label in enumerate(labels):
-                    layer_for_i = representation[i, 1:len(strs[i]) + 1]
-                    embedding = layer_for_i.numpy()
+                        reduced_features = np.array(reduced_features)
+                        if len(reduced_features) > 0:
+                            layer_for_i = layer_for_i[:, reduced_features]
 
-                    reduced_features = np.array(reduced_features)
-                    if len(reduced_features) > 0:
-                        embedding = embedding[:, reduced_features]
+#                        embedding = layer_for_i.cpu().numpy()
 
-                embeddings.append(embedding)
+                        if normalize_embedding:
+#                            min_values = embedding.min(axis=1)
+#                            max_values = embedding.max(axis=1)
+#                            embedding = (embedding - min_values[:, np.newaxis]) / (max_values - min_values)[:,
+#                                                                                           np.newaxis]
+                             layer_for_i = normalize(layer_for_i)
+
+#                        embeddings.append(embedding)
+                        embeddings.append(layer_for_i.cpu().numpy())
+
         return embeddings
+
     except Exception as e:
         print(f"Error in get_embeddings function: {e}")

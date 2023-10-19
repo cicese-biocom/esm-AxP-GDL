@@ -5,7 +5,7 @@ import pandas as pd
 def load_and_validate_dataset(dataset):
     # Check if the file exists
     if not os.path.exists(dataset):
-        raise FileNotFoundError(f"The file '{dataset_path}' does not exist at the specified path.")
+        raise FileNotFoundError(f"The file '{dataset}' does not exist at the specified path.")
 
     # Read the CSV file and load the data into a DataFrame
     data = pd.read_csv(dataset)

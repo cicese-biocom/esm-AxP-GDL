@@ -2,35 +2,39 @@ import numpy as np
 import torch
 from torch_geometric.data import DataLoader
 import argparse
-from models.GAT import GATModel
-from utils.data_processing import load_data
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, matthews_corrcoef, confusion_matrix
 import torch.nn.functional as F
 import pandas as pd
-
+from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
+from graph.construct_graphs import construct_graphs
+import os
 
 def independent_test(args):
 
     threshold = args.d
+    dataset = args.dataset
+    esm2_representation = args.esm2_representation
+    tertiary_structure_info = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path))
 
-    fasta_path_positive = args.pos_t
-    npz_dir_positive = args.pos_npz
+    # Load and validation data_preprocessing dataset
+    data = load_and_validate_dataset(dataset)
 
-    data_list, labels = load_data(fasta_path_positive, npz_dir_positive, threshold, 1)
+    # Filter rows where 'partition' is equal to 3 (test data)
+    test_data = data[data['partition'].isin([3])]
 
-    fasta_path_negative = args.neg_t
-    npz_dir_negative = args.neg_npz
+    # Check if test_data is empty
+    if test_data.empty:
+        raise ValueError("No data available for training.")
 
-    neg_data = load_data(fasta_path_negative, npz_dir_negative, threshold, 0)
-
-    data_list.extend(neg_data[0])
-    # labels = np.concatenate((labels, neg_data[1]), axis=0)
+    # to get the graph representations
+    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_info, threshold,
+                              add_self_loop=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = torch.load(args.save).to(device)
 
-    test_dataloader = DataLoader(data_list, batch_size=args.b, shuffle=False)
+    test_dataloader = DataLoader(graphs, batch_size=args.b, shuffle=False)
     y_true = []
     y_pred = []
     prob = []
@@ -76,17 +80,19 @@ def independent_test(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    # input file
-    parser.add_argument('-pos_t', type=str, default='example/positive/example_pos.fasta',
-                        help='Path of the positive test dataset')
-    parser.add_argument('-pos_npz', type=str, default='example/positive/npz/',
-                        help='Path of the positive npz folder, which saves the predicted structure')
+    # input files
+    parser.add_argument('-dataset', type=str, default='datasets/DeepAVPpred/DeepAVPpred.csv',
+                        help='Path to the dataset in csv format')
 
-    parser.add_argument('-neg_t', type=str, default='example/negative/example_neg.fasta',
-                        help='Path of the negative test dataset')
-    parser.add_argument('-neg_npz', type=str, default='example/negative/npz/', 
-                        help='Path of the positive npz folder, which saves the predicted structure')
+    # methods for graphs construction
+    parser.add_argument('-esm2_representation', type=str, default='esm2_t6',
+                        help='Representation derived from ESM models to be used')
+    parser.add_argument('-tertiary_structure_method', type=str, default='esmfold',
+                        help='Method of generation of 3D structures to be used')
+    parser.add_argument('-tertiary_structure_path', type=str, default='datasets/DeepAVPpred/trRosetta_output/npz/',
+                        help='Path of the tertiary structures generated with the method specified in the parameter tertiary_structure_method')
 
+    # test parameters
     parser.add_argument('-b', type=int, default=512, help='Batch size')
     parser.add_argument('-save', type=str, default='saved_models/samp.model',
                         help='The directory saving the trained models')

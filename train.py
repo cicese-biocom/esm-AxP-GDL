@@ -1,18 +1,19 @@
 import numpy as np
 import torch
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 import argparse
 from models.GAT.GAT import GATModel
 from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
 from graph.construct_graphs import construct_graphs
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 from tensorboardX import SummaryWriter
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score,matthews_corrcoef
 import torch.nn.functional as F
 import time
 import datetime
 import os
+from tqdm import tqdm
+from pathlib import Path
 
 def train(args):
     try:
@@ -20,6 +21,7 @@ def train(args):
         threshold = args.d
         dataset = args.dataset
         esm2_representation = args.esm2_representation
+        normalize_embedding = args.normalize_embedding
         tertiary_structure_info = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path))
 
         # Load and validation data_preprocessing dataset
@@ -33,22 +35,25 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_info, threshold, add_self_loop=True)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_info, normalize_embedding, threshold, add_self_loop=True)
         labels = data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
         partitions = data.partition
-        partition_train = partitions == 1
-        partition_val = partitions == 2
+
+        partition_train = any(x == 1 for x in partitions)
+        partition_val = any(x == 2 for x in partitions)
 
         # If training and validation data were provided
-        if partition_train.any() and partition_val.any():
-            # Training graphs
-            graphs_train = graphs[partition_train]
-            graphs_train = shuffle(graphs_train)
+        if partition_train and partition_val:
+            graphs_train = []
+            graphs_val = []
 
-            # Validation graphs
-            graphs_val = graphs[partition_val]
+            for graph, group in zip(graphs, partitions):
+                if group == 1:
+                    graphs_train.append(graph)
+                elif group == 2:
+                    graphs_val.append(graph)
 
         # If only training or validation data were provided
         else:
@@ -71,19 +76,24 @@ def train(args):
         else:
             model = torch.load(args.pretrained_model).to(device)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
 
         criterion = torch.nn.CrossEntropyLoss()
         train_dataloader = DataLoader(graphs_train, batch_size=args.b)
         val_dataloader = DataLoader(graphs_val, batch_size=args.b)
 
-        best_acc = 0
-        best_auc = 0
-        min_loss = 1000
-        save_acc = '/'.join(args.save.split('/')[:-1]) + '/acc_' + args.save.split('/')[-1]
-        save_auc = '/'.join(args.save.split('/')[:-1]) + '/auc_' + args.save.split('/')[-1]
-        save_loss = '/'.join(args.save.split('/')[:-1]) + '/loss_' + args.save.split('/')[-1]
+        best_mcc = 0
+
+        model_name = os.path.basename(args.save)
+        model_path = os.path.dirname(args.save)
+
+        os.makedirs(model_path, exist_ok=True)
+
+        if not model_name.endswith(".model"):
+            model_name = model_name + ".model"
+
+        save_mcc = os.path.join(model_path, "mcc_" + model_name)
 
         for epoch in range(args.e):
             print('Epoch ', epoch)
@@ -109,6 +119,7 @@ def train(args):
                 total_correct = 0
                 preds = []
                 y_true = []
+                y_pred = []
                 arr_loss = []
                 for data in val_dataloader:
                     data = data.to(device)
@@ -124,44 +135,51 @@ def train(args):
                     correct = (pred == data.y).sum().float()
                     total_correct += correct
                     total_num += data.num_graphs
+                    y_pred.extend(pred.cpu().detach().data.numpy())
                     preds.extend(score.cpu().detach().data.numpy())
                     y_true.extend(data.y.cpu().detach().data.numpy())
 
+                mcc = matthews_corrcoef(y_true, y_pred)
                 acc = (total_correct / total_num).cpu().detach().data.numpy()
                 auc = roc_auc_score(y_true, preds)
                 val_loss = np.mean(arr_loss)
+
+                print("Validation mcc: ", mcc)
                 print("Validation accuracy: ", acc)
                 print("Validation auc:", auc)
                 print("Validation loss:", val_loss)
 
+                writer.add_scalar('mcc', mcc, global_step=epoch)
                 writer.add_scalar('Loss', avgl, global_step=epoch)
                 writer.add_scalar('acc', acc, global_step=epoch)
                 writer.add_scalar('auc', auc, global_step=epoch)
 
-                if acc > best_acc:
-                    best_acc = acc
-                    torch.save(model, save_acc)
-
-                if auc > best_auc:
-                    best_auc = auc
-                    torch.save(model, save_auc)
-
-                if np.mean(val_loss) < min_loss:
-                    min_loss = val_loss
-                    torch.save(model, save_loss)
+                if mcc > best_mcc:
+                    best_mcc = mcc
+                    acc_of_the_best_mcc = acc
+                    auc_of_the_best_mcc = auc
+                    val_loss_of_the_best_mcc = val_loss
+                    avgl_of_the_best_mcc = avgl
+                    epoch_of_the_best_mcc = epoch
+                    torch.save(model, save_mcc)
 
                 print('-' * 50)
 
             scheduler.step()
 
-        print('best acc:', best_acc)
-        print('best auc:', best_auc)
+        print(f"Metrics of the epoch with best mcc")
+        print('Epoch:', round(epoch_of_the_best_mcc, 4))
+        print('Training Loss:', round(avgl_of_the_best_mcc, 4))
+        print('Validation Loss:', round(val_loss_of_the_best_mcc, 4))
+        print('Validation MCC:', round(best_mcc, 4))
+        print('Validation ACC:', round(float(acc_of_the_best_mcc), 4))
+        print('Validation AUC:', round(auc_of_the_best_mcc, 4))
         if args.o is not None:
             with open(args.o, 'a') as f:
                 localtime = time.asctime(time.localtime(time.time()))
                 f.write(str(localtime) + '\n')
                 f.write('args: ' + str(args) + '\n')
-                f.write('auc result: ' + str(best_auc) + '\n\n')
+                f.write('auc result: ' + str(auc_of_the_best_mcc) + '\n\n')
 
     except Exception as e:
         raise
@@ -170,22 +188,24 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('-dataset', type=str, default='datasets/Test_Data/Test_Data.csv',
+    parser.add_argument('-dataset', type=str, default='datasets/DeepAVPpred/DeepAVPpred.csv',
                         help='Path to the dataset in csv format')
 
     # methods for graphs construction
     parser.add_argument('-esm2_representation', type=str, default='esm2_t6',
                         help='Representation derived from ESM models to be used')
-    parser.add_argument('-tertiary_structure_method', type=str, default='trRosetta',
+    parser.add_argument('-tertiary_structure_method', type=str, default='esmfold',
                         help='Method of generation of 3D structures to be used')
-    parser.add_argument('-tertiary_structure_path', type=str, default='datasets/Test_Data/trRosetta_output/npz/',
-                        help='Path of the tertiary structures generated with the method specified in the parameter tertiary_structure_method')
+    parser.add_argument('-tertiary_structure_path', type=str, default='datasets/DeepAVPpred/ESMFold_pdbs/',
+                        help='Path to read (trRossetta) or save (ESMFold) the 3D structures')
+    parser.add_argument('-normalize_embedding', type=bool, default=True,
+                        help='Whether to normalize the embedding using Min-Max scaling')
 
     # training parameters
     # 0.001 for pretrain， 0.0001 for train
-    parser.add_argument('-lr', type=float, default=0.001, help='Learning rate') 
-    parser.add_argument('-drop', type=float, default=0.5, help='Dropout rate')
-    parser.add_argument('-e', type=int, default=50, help='Maximum number of epochs')
+    parser.add_argument('-lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('-drop', type=float, default=0.2, help='Dropout rate')
+    parser.add_argument('-e', type=int, default=100, help='Maximum number of epochs')
     parser.add_argument('-b', type=int, default=512, help='Batch size')
     parser.add_argument('-hd', type=int, default=64, help='Hidden layer dim')
 
@@ -196,7 +216,7 @@ if __name__ == '__main__':
                         help='The path saving the trained models')
     parser.add_argument('-heads', type=int, default=8, help='Number of heads')
 
-    parser.add_argument('-d', type=int, default=37, help='Distance threshold to construct a graph, 0-37, 37 means 20A')
+    parser.add_argument('-d', type=int, default=20, help='Distance threshold to construct a graph')
 
     # log path
     parser.add_argument('-o', type=str, default='log.txt', help='File saving the raw prediction results')

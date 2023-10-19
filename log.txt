@@ -6,3 +6,171 @@ Mon Jul 24 18:37:32 2023
 args: Namespace(b=512, d=37, drop=0.5, e=50, hd=64, heads=8, lr=0.001, neg_esm2='data/train_data/negative/esm2/', neg_npz='data/train_data/negative/npz/', neg_t='data/train_data/negative/example_neg.fasta', neg_v='', o='log.txt', pos_esm2='data/train_data/positive/esm2/', pos_npz='data/train_data/positive/npz/', pos_t='data/train_data/positive/example_pos.fasta', pos_v='', pretrained_model='', save='saved_models/samp.model')
 auc result: 1.0
 
+Tue Oct 10 23:47:02 2023
+args: Namespace(b=512, d=37, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=50, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/trRosetta_output/npz/')
+auc result: 1.0
+
+Sat Oct 14 07:45:49 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=50, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.6947807880153754
+
+Sat Oct 14 16:02:43 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=500, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.7874594245610679
+
+Sun Oct 15 01:38:42 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=50, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8797846139131164
+
+Sun Oct 15 06:02:57 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=1000, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9259105935521668
+
+Sun Oct 15 15:26:10 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9209832557194182
+
+Sun Oct 15 17:23:36 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=500, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.917837351522289
+
+Sun Oct 15 18:23:45 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8973314363257034
+
+Sun Oct 15 19:15:02 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9062191761168332
+
+Sun Oct 15 20:05:41 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9211162654455677
+
+Sun Oct 15 22:08:28 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9063686252473384
+
+Sun Oct 15 23:25:55 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9033706756894089
+
+Mon Oct 16 01:45:09 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9151696845427754
+
+Mon Oct 16 03:43:21 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=50, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8766043364159708
+
+Mon Oct 16 05:58:49 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=256, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9210280904585697
+
+Mon Oct 16 09:47:58 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8888546816434622
+
+Mon Oct 16 18:58:31 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.882819925753672
+
+Mon Oct 16 19:07:29 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t30_reduced', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9015369348581129
+
+Mon Oct 16 19:24:24 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6_reduced', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8941959935677094
+
+Mon Oct 16 19:36:00 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t33_reduced', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8913280647533193
+
+Tue Oct 17 08:45:40 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8798653164435889
+
+Tue Oct 17 22:30:50 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.5, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8752503272935956
+
+Tue Oct 17 22:36:30 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9077330958088486
+
+Tue Oct 17 22:52:42 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8834237002409121
+
+Tue Oct 17 23:09:19 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8527238598525835
+
+Tue Oct 17 23:15:39 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9000304876226228
+
+Tue Oct 17 23:24:46 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8762008237636073
+
+Tue Oct 17 23:32:55 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.3, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9007612938707923
+
+Tue Oct 17 23:48:38 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9058649816775366
+
+Wed Oct 18 00:03:30 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.924986997925646
+
+Wed Oct 18 01:46:05 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=256, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9247090225429068
+
+Wed Oct 18 04:59:42 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=128, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9235851650815096
+
+Wed Oct 18 06:35:16 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0
+
+Wed Oct 18 06:42:23 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=False, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0
+
+Wed Oct 18 20:58:39 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=False, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0
+
+Wed Oct 18 22:15:36 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0
+
+Thu Oct 19 00:19:37 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9017506471147351
+
+Thu Oct 19 01:17:52 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8975346871431902
+
+Thu Oct 19 01:31:34 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9006208116881176
+
+Thu Oct 19 03:01:22 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8938163927762267
+
+Thu Oct 19 03:24:50 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8961104369294781
+
+Thu Oct 19 06:05:23 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.90280874695871
+

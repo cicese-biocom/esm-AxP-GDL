@@ -1,22 +1,16 @@
 import numpy as np
-import models.esmfold as esmfold
+from models.esmfold import esmfold
 
 
-def cmap_esmfold(data, threshold, add_self_loop):
-    esmfold.predict(data)
-
-
-def contact_map(data, tertiary_structure_info, threshold, add_self_loop):
+def adjacency_matrix(data, tertiary_structure_info, threshold, add_self_loop):
     method, path = tertiary_structure_info
 
     if method == 'trRosetta':
-        list_A, list_E = cmap_tr(path, data.id, threshold, add_self_loop)
+        return cmap_tr(path, data.id, threshold, add_self_loop)
 
     if method == 'esmfold':
-        list_A, list_E = cmap_esmfold(data, threshold, add_self_loop)
-
-    return list_A, list_E
-
+        #return esmfold.adjacency_matrices(data, path, threshold, add_self_loop)
+        return esmfold.pdb_adjacency_matrices(data, path, threshold, add_self_loop)
 
 def cmap_tr(npz_folder, ids, threshold, add_self_loop=True):
     if npz_folder[-1] != '/':

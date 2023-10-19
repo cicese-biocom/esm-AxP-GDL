@@ -1,10 +1,11 @@
 import torch
 from torch_geometric.data import Data, DataLoader
 from graph.residues_level_features_encoding import esm2_derived_features
-from graph.structure_feature_extraction import contact_map
+from graph.structure_feature_extraction import adjacency_matrix
+from tqdm import tqdm
+import numpy as np
 
-
-def construct_graphs(data, esm2_representation, tertiary_structure_info, threshold, add_self_loop=True):
+def construct_graphs(data, esm2_representation, tertiary_structure_info, normalize_embedding, threshold, add_self_loop=True):
     """
     :param data: data (id, sequence itself, activity, label)
     :param esm2_representation: name of the esm2 representation to be used
@@ -19,20 +20,21 @@ def construct_graphs(data, esm2_representation, tertiary_structure_info, thresho
     """
 
     # compute amino acid level feature (esm2 embeddings)
-    Xs = esm2_derived_features(data, esm2_representation)
+    Xs = esm2_derived_features(data, esm2_representation, normalize_embedding)
 
     # load contact map
 #    As, Es = contact_map(npz_folder, ids, structural3d_method, threshold, add_self_loop)
-    As, Es = contact_map(data, tertiary_structure_info, threshold, add_self_loop)
-
-    graph_representations = []
+    As, Es = adjacency_matrix(data, tertiary_structure_info, threshold, add_self_loop)
 
     labels = data.activity
     n_samples = len(As)
-    for i in range(n_samples):
-        graph_representations.append(to_parse_matrix(As[i], Xs[i], Es[i], labels[i]))
+    with tqdm(range(n_samples), total=len(As), desc ="Generating graphs", disable=False) as progress:
+        graphs = []
+        for i in range(n_samples):
+            graphs.append(to_parse_matrix(As[i], Xs[i], Es[i], labels[i]))
+            progress.update(1)
 
-    return graph_representations
+    return graphs
 
 
 def to_parse_matrix(A, X, E, Y, eps=1e-6):
@@ -43,6 +45,7 @@ def to_parse_matrix(A, X, E, Y, eps=1e-6):
     :param eps: default eps=1e-6
     :return:
     """
+
     num_row, num_col = A.shape
     rows = []
     cols = []
@@ -56,7 +59,7 @@ def to_parse_matrix(A, X, E, Y, eps=1e-6):
                 e_vec.append(E[i][j])
     edge_index = torch.tensor([rows, cols], dtype=torch.int64)
     x = torch.tensor(X, dtype=torch.float32)
-    edge_attr = torch.tensor(e_vec, dtype=torch.float32)
+    edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
     y = torch.tensor([Y], dtype=torch.long)
 
     return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)

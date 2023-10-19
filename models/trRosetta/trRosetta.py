@@ -1,6 +1,5 @@
 import tools.hhblits.hhblits_search as hh
 import models.trRosetta.predict_many as tr
-
 import argparse
 import os
 from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
@@ -40,7 +39,7 @@ def trRosetta(args):
         os.makedirs(npz_path, exist_ok=True)
 
         # Run hhblits
-#        hh.run('hhblits', data, a3m_path, hhm_path, tmp_path, hhb_database)
+        hh.run('hhblits', data, a3m_path, hhm_path, tmp_path, hhb_database)
 
         # Run trRoseTTA
         tr.predict(a3m_path, npz_path, rosetta_model)

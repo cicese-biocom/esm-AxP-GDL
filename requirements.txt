@@ -46,3 +46,4 @@ wrapt==1.14.1
 yarg==0.1.9
 zipp==3.8.1
 pandas==1.3.5
+biopython
