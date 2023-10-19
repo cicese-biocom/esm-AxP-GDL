@@ -9,11 +9,9 @@ from sklearn.model_selection import train_test_split
 from tensorboardX import SummaryWriter
 from sklearn.metrics import roc_auc_score,matthews_corrcoef
 import torch.nn.functional as F
-import time
-import datetime
 import os
 from tqdm import tqdm
-from pathlib import Path
+
 
 def train(args):
     try:
@@ -21,8 +19,7 @@ def train(args):
         threshold = args.d
         dataset = args.dataset
         esm2_representation = args.esm2_representation
-        normalize_embedding = args.normalize_embedding
-        tertiary_structure_info = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path))
+        tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_operation_mode)
 
         # Load and validation data_preprocessing dataset
         data = load_and_validate_dataset(dataset)
@@ -35,7 +32,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_info, normalize_embedding, threshold, add_self_loop=True)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, add_self_loop=True)
         labels = data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -62,7 +59,7 @@ def train(args):
                                                           random_state=41)
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print('device:', device)
+       #print('device:', device)
 
         node_feature_dim = graphs_train[0].x.shape[1]
         n_class = 2
@@ -95,11 +92,13 @@ def train(args):
 
         save_mcc = os.path.join(model_path, "mcc_" + model_name)
 
-        for epoch in range(args.e):
-            print('Epoch ', epoch)
+        epochs = args.e
+        bar = tqdm(total=epochs, desc="Training and Validation:")
+        for epoch in range(1, epochs + 1):
+            #print('Epoch ', epoch)
             model.train()
             arr_loss = []
-            for i, data in enumerate(train_dataloader):
+            for data in train_dataloader:
                 optimizer.zero_grad()
                 data = data.to(device)
 
@@ -110,8 +109,8 @@ def train(args):
                 optimizer.step()
                 arr_loss.append(loss.item())
 
-            avgl = np.mean(arr_loss)
-            print("Training Average loss :", avgl)
+            train_loss = np.mean(arr_loss)
+           # print("Training Average loss :", train_loss)
 
             model.eval()
             with torch.no_grad():
@@ -144,13 +143,18 @@ def train(args):
                 auc = roc_auc_score(y_true, preds)
                 val_loss = np.mean(arr_loss)
 
-                print("Validation mcc: ", mcc)
-                print("Validation accuracy: ", acc)
-                print("Validation auc:", auc)
-                print("Validation loss:", val_loss)
+                bar.update(1)
+                bar.set_postfix(
+                    Epoch=f"{epoch}",
+                    Training_Loss=f"{train_loss:.4f}",
+                    Validation_Loss=f"{val_loss:.4f}",
+                    Validation_MCC=f"{mcc:.4f}",
+                    Validation_ACC=f"{acc:.4f}",
+                    Validation_AUC=f"{auc:.4f}"
+                )
 
                 writer.add_scalar('mcc', mcc, global_step=epoch)
-                writer.add_scalar('Loss', avgl, global_step=epoch)
+                writer.add_scalar('Loss', train_loss, global_step=epoch)
                 writer.add_scalar('acc', acc, global_step=epoch)
                 writer.add_scalar('auc', auc, global_step=epoch)
 
@@ -159,27 +163,28 @@ def train(args):
                     acc_of_the_best_mcc = acc
                     auc_of_the_best_mcc = auc
                     val_loss_of_the_best_mcc = val_loss
-                    avgl_of_the_best_mcc = avgl
+                    train_loss_of_the_best_mcc = train_loss
                     epoch_of_the_best_mcc = epoch
                     torch.save(model, save_mcc)
 
-                print('-' * 50)
-
             scheduler.step()
 
-        print(f"Metrics of the epoch with best mcc")
-        print('Epoch:', round(epoch_of_the_best_mcc, 4))
-        print('Training Loss:', round(avgl_of_the_best_mcc, 4))
-        print('Validation Loss:', round(val_loss_of_the_best_mcc, 4))
-        print('Validation MCC:', round(best_mcc, 4))
-        print('Validation ACC:', round(float(acc_of_the_best_mcc), 4))
-        print('Validation AUC:', round(auc_of_the_best_mcc, 4))
+        bar.set_postfix(
+            Epoch_Best_MCC=f"{epoch_of_the_best_mcc}",
+            Training_Loss=f"{train_loss_of_the_best_mcc:.4f}",
+            Validation_Loss=f"{val_loss_of_the_best_mcc:.4f}",
+            Validation_MCC=f"{best_mcc:.4f}",
+            Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
+            Validation_AUC=f"{auc_of_the_best_mcc:.4f}"
+        )
+        bar.close()
+
         if args.o is not None:
             with open(args.o, 'a') as f:
-                localtime = time.asctime(time.localtime(time.time()))
-                f.write(str(localtime) + '\n')
-                f.write('args: ' + str(args) + '\n')
-                f.write('auc result: ' + str(auc_of_the_best_mcc) + '\n\n')
+               localtime = time.asctime(time.localtime(time.time()))
+               f.write(str(localtime) + '\n')
+               f.write('args: ' + str(args) + '\n')
+               f.write('Best MCC result: ' + str(best_mcc) + '\n\n')
 
     except Exception as e:
         raise
@@ -194,20 +199,22 @@ if __name__ == '__main__':
     # methods for graphs construction
     parser.add_argument('-esm2_representation', type=str, default='esm2_t6',
                         help='Representation derived from ESM models to be used')
+
     parser.add_argument('-tertiary_structure_method', type=str, default='esmfold',
                         help='Method of generation of 3D structures to be used')
     parser.add_argument('-tertiary_structure_path', type=str, default='datasets/DeepAVPpred/ESMFold_pdbs/',
-                        help='Path to read (trRossetta) or save (ESMFold) the 3D structures')
-    parser.add_argument('-normalize_embedding', type=bool, default=True,
-                        help='Whether to normalize the embedding using Min-Max scaling')
+                        help='Path to load or save generated tertiary structures')
+    parser.add_argument('-tertiary_structure_operation_mode', type=str, default='load',
+                        help="Specifies the mode of operation. You can choose between ""load"" "
+                             "to load existing tertiary structures or ""generate"" to create new ones")
 
     # training parameters
     # 0.001 for pretrain， 0.0001 for train
     parser.add_argument('-lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('-drop', type=float, default=0.2, help='Dropout rate')
-    parser.add_argument('-e', type=int, default=100, help='Maximum number of epochs')
+    parser.add_argument('-drop', type=float, default=0.25, help='Dropout rate')
+    parser.add_argument('-e', type=int, default=500, help='Maximum number of epochs')
     parser.add_argument('-b', type=int, default=512, help='Batch size')
-    parser.add_argument('-hd', type=int, default=64, help='Hidden layer dim')
+    parser.add_argument('-hd', type=int, default=128, help='Hidden layer dim')
 
     # model to be used for training and output path
     parser.add_argument('-pretrained_model', type=str, default="",
@@ -223,9 +230,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    start_time = datetime.datetime.now()
-
     train(args)
 
-    end_time = datetime.datetime.now()
-    print('End time(min):', (end_time - start_time).seconds / 60)
