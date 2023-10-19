@@ -2,7 +2,7 @@ import numpy as np
 from models.esm2.esm2_representation import *
 
 
-def esm2_derived_features(data, esm2_representation, normalize_embedding):
+def esm2_derived_features(data, esm2_representation):
     """
     :param data: (ids: sequences identifier, sequences: sequences itself)
     :param esm2_representation: name of the esm2 representation to be used
@@ -19,7 +19,7 @@ def esm2_derived_features(data, esm2_representation, normalize_embedding):
             reduced_features = model_info["reduced_features"]
             reduced_features = [x - 1 for x in reduced_features]
 
-            embeddings = get_embeddings(data, model_name, reduced_features, normalize_embedding)
+            embeddings = get_embeddings(data, model_name, reduced_features)
 
             if len(residual_level_features) == 0:
                 residual_level_features = np.array(embeddings, dtype=object).copy()
