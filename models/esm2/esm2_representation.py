@@ -40,7 +40,7 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features, normalize_embedding):
+def get_embeddings(data, model_name, reduced_features):
     """
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
@@ -87,12 +87,12 @@ def get_embeddings(data, model_name, reduced_features, normalize_embedding):
 
 #                        embedding = layer_for_i.cpu().numpy()
 
-                        if normalize_embedding:
+                        #if normalize_embedding:
 #                            min_values = embedding.min(axis=1)
 #                            max_values = embedding.max(axis=1)
 #                            embedding = (embedding - min_values[:, np.newaxis]) / (max_values - min_values)[:,
 #                                                                                           np.newaxis]
-                             layer_for_i = normalize(layer_for_i)
+                             #layer_for_i = normalize(layer_for_i)
 
 #                        embeddings.append(embedding)
                         embeddings.append(layer_for_i.cpu().numpy())
