@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score,matthews_corrcoef
 import torch.nn.functional as F
 import os
 from tqdm import tqdm
-
+import time
 
 def train(args):
     try:
@@ -80,22 +80,15 @@ def train(args):
         train_dataloader = DataLoader(graphs_train, batch_size=args.b)
         val_dataloader = DataLoader(graphs_val, batch_size=args.b)
 
-        best_mcc = 0
-
-        model_name = os.path.basename(args.save)
         model_path = os.path.dirname(args.save)
-
+        if not model_path.endswith(os.sep):
+            model_path = model_path + os.sep
         os.makedirs(model_path, exist_ok=True)
 
-        if not model_name.endswith(".model"):
-            model_name = model_name + ".model"
-
-        save_mcc = os.path.join(model_path, "mcc_" + model_name)
-
+        best_mcc = 0
         epochs = args.e
         bar = tqdm(total=epochs, desc="Training and Validation:")
         for epoch in range(1, epochs + 1):
-            #print('Epoch ', epoch)
             model.train()
             arr_loss = []
             for data in train_dataloader:
@@ -109,8 +102,13 @@ def train(args):
                 optimizer.step()
                 arr_loss.append(loss.item())
 
-            train_loss = np.mean(arr_loss)
-           # print("Training Average loss :", train_loss)
+            torch.save({
+                'epoch': epoch,
+                'model': model,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict()
+            }, os.path.join(model_path, f"checkpoint_epoch{epoch}.pt"))
 
             model.eval()
             with torch.no_grad():
@@ -138,10 +136,11 @@ def train(args):
                     preds.extend(score.cpu().detach().data.numpy())
                     y_true.extend(data.y.cpu().detach().data.numpy())
 
+                train_loss = np.mean(arr_loss)
+                val_loss = np.mean(arr_loss)
                 mcc = matthews_corrcoef(y_true, y_pred)
                 acc = (total_correct / total_num).cpu().detach().data.numpy()
                 auc = roc_auc_score(y_true, preds)
-                val_loss = np.mean(arr_loss)
 
                 bar.update(1)
                 bar.set_postfix(
@@ -153,10 +152,11 @@ def train(args):
                     Validation_AUC=f"{auc:.4f}"
                 )
 
-                writer.add_scalar('mcc', mcc, global_step=epoch)
-                writer.add_scalar('Loss', train_loss, global_step=epoch)
-                writer.add_scalar('acc', acc, global_step=epoch)
-                writer.add_scalar('auc', auc, global_step=epoch)
+                writer.add_scalar('Loss/train', train_loss, global_step=epoch)
+                writer.add_scalar('Loss/validation', val_loss, global_step=epoch)
+                writer.add_scalar('MCC/validation', mcc, global_step=epoch)
+                writer.add_scalar('ACC/validation', acc, global_step=epoch)
+                writer.add_scalar('AUC/validation', auc, global_step=epoch)
 
                 if mcc > best_mcc:
                     best_mcc = mcc
@@ -165,7 +165,6 @@ def train(args):
                     val_loss_of_the_best_mcc = val_loss
                     train_loss_of_the_best_mcc = train_loss
                     epoch_of_the_best_mcc = epoch
-                    torch.save(model, save_mcc)
 
             scheduler.step()
 
@@ -212,14 +211,14 @@ if __name__ == '__main__':
     # 0.001 for pretrain， 0.0001 for train
     parser.add_argument('-lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('-drop', type=float, default=0.25, help='Dropout rate')
-    parser.add_argument('-e', type=int, default=500, help='Maximum number of epochs')
+    parser.add_argument('-e', type=int, default=20, help='Maximum number of epochs')
     parser.add_argument('-b', type=int, default=512, help='Batch size')
-    parser.add_argument('-hd', type=int, default=128, help='Hidden layer dim')
+    parser.add_argument('-hd', type=int, default=64, help='Hidden layer dim')
 
     # model to be used for training and output path
     parser.add_argument('-pretrained_model', type=str, default="",
                         help='The path of pretraining model, if "", the model will be trained from scratch')
-    parser.add_argument('-save', type=str, default='output_models/samp.model',
+    parser.add_argument('-save', type=str, default='output_models/',
                         help='The path saving the trained models')
     parser.add_argument('-heads', type=int, default=8, help='Number of heads')
 
