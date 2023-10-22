@@ -2,6 +2,12 @@ import re
 import os
 import pandas as pd
 
+
+def is_valid_sequence(sequence):
+    pattern = re.compile('[^ARNDCQEGHILKMFPSTWYV]')
+    return not pattern.search(sequence)
+
+
 def load_and_validate_dataset(dataset):
     # Check if the file exists
     if not os.path.exists(dataset):
@@ -30,10 +36,7 @@ def load_and_validate_dataset(dataset):
     if not set(data['partition']).issubset({1, 2, 3}):
         raise ValueError("The 'partition' column must contain only values 1, 2, or 3.")
 
-    # Validate the 'sequence' column against the pattern
-    pattern = re.compile('[^ARNDCQEGHILKMFPSTWYV]')
-    invalid_sequences = data[data['sequence'].str.contains(pattern, regex=True)]
-    if not invalid_sequences.empty:
-        raise ValueError("Some sequences in the 'sequence' column do not match the specified pattern.")
-
+    # Eliminate synthetic sequences
+    valid_mask = data['sequence'].apply(is_valid_sequence)
+    data = data[valid_mask]
     return data
