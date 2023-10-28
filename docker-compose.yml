@@ -6,6 +6,8 @@ services:
     ports:
       - "5000:5000"
     command: nvidia-smi
+    volumes:
+      - .:/opt/project
     deploy:
       resources:
         reservations:
