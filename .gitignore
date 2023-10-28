@@ -8,9 +8,8 @@
 /runs/
 /models/esm2/checkpoints/
 /models/trRosetta/model2019_07/
-/datasets/DeepAVPpred/
-/datasets/Example/
-/datasets/Test_Data/
+/datasets/
+/datasets/
 /models/trRosetta/model2019_07/
 /models/trRosetta/log_hhblits.txt
 /log.txt
@@ -18,3 +17,4 @@
 /models/esmfold/checkpoints/esm2_t36_3B_UR50D.pt
 /models/esmfold/checkpoints/esm2_t36_3B_UR50D-contact-regression.pt
 /models/esmfold/checkpoints/esmfold_3B_v1.pt
+/test_results.csv
