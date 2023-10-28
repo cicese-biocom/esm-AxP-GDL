@@ -25,7 +25,7 @@ def train(args):
         data = load_and_validate_dataset(dataset)
 
         # Filter rows where 'partition' is equal to 1 (training data) or 2 (validation data)
-        train_and_val_data = data[data['partition'].isin([1, 2])]
+        train_and_val_data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
 
         # Check if train_and_val_data is empty
         if train_and_val_data.empty:
@@ -59,12 +59,11 @@ def train(args):
                                                           random_state=41)
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-       #print('device:', device)
 
         node_feature_dim = graphs_train[0].x.shape[1]
         n_class = 2
 
-        # tensorboard, record the change of auc, acc and loss
+        # tensorboard, record the change of train_loss, val_loss, mcc, acc and auc
         writer = SummaryWriter()
 
         # load model
