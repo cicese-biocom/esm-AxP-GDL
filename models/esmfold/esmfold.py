@@ -11,8 +11,6 @@ from tools.data_preprocessing.dataset_processing import load_and_validate_datase
 import warnings
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
 warnings.simplefilter('ignore', PDBConstructionWarning)
-import datetime
-import glob
 from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -41,6 +39,7 @@ def _atom_coordinates(pdb_str, atom_type='CA'):
                     atom = residue[atom_type]
                     atom_coordinates.append(atom.coord)
 
+    pdb_filehandle.close()
     return atom_coordinates
 
 
@@ -74,7 +73,6 @@ def _adjacency_matrix(args):
 
 
 def _save_pdb(pdb_str, pdb_name, path):
-    # Save the pdb
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, pdb_name + ".pdb"), "w") as f:
         f.write(pdb_str)
@@ -93,9 +91,8 @@ def adjacency_matrices(data, path, threshold, add_self_loop):
 
     sequences = data.sequence
     ids = data.id
-    labels = data.activity
 
-    with tqdm(range(len(sequences)), total=len(sequences), desc ="Generating 3D structure", disable=False) as progress_bar:
+    with tqdm(range(len(sequences)), total=len(sequences), desc ="Generating 3D structure") as progress_bar:
         pdbs = []
         for i, sequence in enumerate(sequences):
             pdb_str = _predict(model, sequence)
@@ -103,9 +100,10 @@ def adjacency_matrices(data, path, threshold, add_self_loop):
 
             progress_bar.update(1)
 
-    pdb_names = [str(id) + '_Pos' if label == 1 else str(id) + '_Neg' for id, label in zip(ids, labels)]
+    #pdb_names = [str(id) + '_Pos' if label == 1 else str(id) + '_Neg' for id, label in zip(ids, labels)]
+    pdb_names = [str(id) for id in ids]
 
-    with tqdm(range(len(pdbs)), total=len(pdbs), desc ="saving pdb files", disable=False) as progress:
+    with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Saving pdb files", disable=False) as progress:
         for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
             _save_pdb(pdb_str, pdb_name, path)
             progress.update(1)
@@ -132,13 +130,19 @@ def adjacency_matrices(data, path, threshold, add_self_loop):
 
 
 def pdb_adjacency_matrices(data, path, threshold, add_self_loop):
-    pdb_files = glob.glob(path + "*.pdb", recursive=True)
-    pdb_files = sorted(pdb_files, key=lambda name: int(os.path.basename(name).split("AVP")[1].split("_")[0]))
+    #pdb_files = glob.glob(path + "*.pdb", recursive=True)
+
+    ids = data['id']
+
+    #pdb_files_to_load = [f for f in pdb_files if os.path.basename(f) in ]
+
+    #pdb_files = sorted(pdb_files, key=lambda name: int(os.path.basename(name).split("AVP")[1].split("_")[0]))
 
     # Load pdbs
-    with tqdm(range(len(pdb_files)), total=len(pdb_files), desc ="Loading pdb files", disable=False) as progress:
+    with tqdm(range(len(ids)), total=len(ids), desc ="Loading pdb files", disable=False) as progress:
         pdbs_str = []
-        for pdb_file in pdb_files:
+        for id in ids:
+            pdb_file = os.path.join(path, id + '.pdb')
             pdb_str = _open_pdb(pdb_file)
             pdbs_str.append(pdb_str)
             progress.update(1)
@@ -151,7 +155,7 @@ def pdb_adjacency_matrices(data, path, threshold, add_self_loop):
     args = [(pdb_str, threshold, add_self_loop, distance_type, atom_type) for pdb_str in pdbs_str]
 
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs_str)), total=len(pdbs_str), desc ="Generating adjacency matrices", disable=False) as progress:
+        with tqdm(range(len(pdbs_str)), total=len(pdbs_str), desc ="Generating adjacency matrices") as progress:
             futures = []
 
             for arg in args:
