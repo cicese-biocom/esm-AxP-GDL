@@ -6,9 +6,6 @@ def adjacency_matrix(data, tertiary_structure_config, threshold, add_self_loop):
     method, path, mode = tertiary_structure_config
 
     if method == 'trRosetta':
-        return cmap_tr(path, data.id, threshold, add_self_loop)
-
-    if method == 'trRosetta':
         if mode == 'load':
             return cmap_tr(path, data.id, threshold, add_self_loop)
         else:
