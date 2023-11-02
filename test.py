@@ -17,7 +17,7 @@ def independent_test(args):
     esm2_representation = args.esm2_representation
     tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_operation_mode)
 
-    # Load and validation data_preprocessing dataset
+    # Load and validation dataset
     data = load_and_validate_dataset(dataset)
 
     # Filter rows where 'partition' is equal to 3 (test data)
