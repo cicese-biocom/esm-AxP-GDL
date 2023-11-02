@@ -5,12 +5,6 @@ from models.esmfold import esmfold
 def adjacency_matrix(data, tertiary_structure_config, threshold, add_self_loop):
     method, path, mode = tertiary_structure_config
 
-    if method == 'trRosetta':
-        if mode == 'load':
-            return cmap_tr(path, data.id, threshold, add_self_loop)
-        else:
-            raise ValueError("Invalid mode. Please choose 'load'.")
-
     if method == 'esmfold':
         if mode == 'generate':
             return esmfold.adjacency_matrices(data, path, threshold, add_self_loop)

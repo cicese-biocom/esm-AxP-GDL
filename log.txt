@@ -174,3 +174,39 @@ Thu Oct 19 06:05:23 2023
 args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
 auc result: 0.90280874695871
 
+Thu Oct 19 16:58:15 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9043241611420305
+
+Thu Oct 19 17:28:39 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9052582182076865
+
+Thu Oct 19 17:38:14 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.9022542906845368
+
+Thu Oct 19 17:56:13 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.2, e=100, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, normalize_embedding=True, o='log.txt', pretrained_model='', save='output_models/samp.model', tertiary_structure_method='esmfold', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+auc result: 0.8885692338041977
+
+Fri Oct 20 06:36:45 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.25, e=20, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/samp.pt', tertiary_structure_method='esmfold', tertiary_structure_operation_mode='load', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+Best MCC result: 0.5708642107169961
+
+Fri Oct 20 08:06:56 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.25, e=20, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/', tertiary_structure_method='esmfold', tertiary_structure_operation_mode='load', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+Best MCC result: 0.6245480655115258
+
+Fri Oct 20 08:31:57 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.25, e=20, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/', tertiary_structure_method='esmfold', tertiary_structure_operation_mode='load', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+Best MCC result: 0.5704345611793421
+
+Fri Oct 27 23:27:16 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.25, e=20, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/', tertiary_structure_method='esmfold', tertiary_structure_operation_mode='load', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+Best MCC result: 0.45361182608129486
+
+Thu Nov  2 22:56:08 2023
+args: Namespace(b=512, d=20, dataset='datasets/DeepAVPpred/DeepAVPpred.csv', drop=0.25, e=20, esm2_representation='esm2_t6', hd=64, heads=8, lr=0.0001, o='log.txt', pretrained_model='', save='output_models/', tertiary_structure_method='esmfold', tertiary_structure_operation_mode='load', tertiary_structure_path='datasets/DeepAVPpred/ESMFold_pdbs/')
+Best MCC result: 0.572210951602928
+
