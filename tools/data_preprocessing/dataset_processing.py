@@ -21,6 +21,11 @@ def load_and_validate_dataset(dataset):
     if not all(column in data.columns for column in expected_columns):
         raise ValueError("The CSV file must contain columns 'id', 'sequence', 'activity', and 'partition'.")
 
+    # Eliminate synthetic sequences
+    valid_mask = data['sequence'].apply(is_valid_sequence)
+    data = data[valid_mask]
+
+    # Verify that the database not is empty
     if data.shape[0] < 1:
         raise ValueError("The database is empty. There are no data rows in the CSV file.")
 
@@ -36,7 +41,4 @@ def load_and_validate_dataset(dataset):
     if not set(data['partition']).issubset({1, 2, 3}):
         raise ValueError("The 'partition' column must contain only values 1, 2, or 3.")
 
-    # Eliminate synthetic sequences
-    valid_mask = data['sequence'].apply(is_valid_sequence)
-    data = data[valid_mask]
     return data
