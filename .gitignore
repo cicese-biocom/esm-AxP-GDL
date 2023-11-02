@@ -8,8 +8,8 @@
 /runs/
 /models/esm2/checkpoints/
 /models/trRosetta/model2019_07/
-/datasets/
-/datasets/
+/datasets/StarPep
+/datasets/DeepAVPpred/
 /models/trRosetta/model2019_07/
 /models/trRosetta/log_hhblits.txt
 /log.txt
