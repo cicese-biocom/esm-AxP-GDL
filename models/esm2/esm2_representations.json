@@ -46,6 +46,15 @@
       ]
     },
     {
+      "representation": "esm2_t48",
+      "models":[
+        {
+            "model": "esm2_t48_15B_UR50D",
+            "reduced_features": []
+        }
+      ]
+    },
+    {
       "representation": "esm2_t6_reduced",
       "models":[
         {
