@@ -56,7 +56,7 @@ def _adjacency_matrix(args):
         for j in range(i + 1, num_atoms):
             dist = _distance(atom_coordinates[i], atom_coordinates[j], distance_type)
 
-            if dist < threshold:
+            if dist <= threshold:
                 A[i][j] = 1
                 A[j][i] = 1
                 edges[i][j] = dist
@@ -73,6 +73,9 @@ def _adjacency_matrix(args):
 
 
 def _save_pdb(pdb_str, pdb_name, path):
+    if not path.endswith(os.sep):
+        path = path + os.sep
+
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, pdb_name + ".pdb"), "w") as f:
         f.write(pdb_str)
