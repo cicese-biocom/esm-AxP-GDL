@@ -15,11 +15,24 @@ import time
 
 def train(args):
     try:
+        # Directory to save models
+        model_path = os.path.dirname(args.path_to_save_models)
+        if not model_path.endswith(os.sep):
+            model_path = model_path + os.sep
+
+        if os.path.exists(model_path):
+            if any(os.scandir(model_path)):
+                raise Exception(
+                    f"The directory '{model_path}' already exists and is not empty. Please empty it and try again.")
+        else:
+            os.makedirs(model_path)
+
         # load arguments
         threshold = args.d
         dataset = args.dataset
         esm2_representation = args.esm2_representation
-        tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_operation_mode)
+        tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_load_pdbs)
+        add_self_loop = args.add_self_loop
 
         # Load and validation dataset
         data = load_and_validate_dataset(dataset)
@@ -32,7 +45,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, add_self_loop=True)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, add_self_loop)
         labels = data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -63,10 +76,7 @@ def train(args):
         node_feature_dim = graphs_train[0].x.shape[1]
         n_class = 2
 
-        # tensorboard, record the change of train_loss, val_loss, mcc, acc and auc
-        writer = SummaryWriter()
-
-        # load model
+        # Load model
         if args.pretrained_model == "":
             model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads).to(device)
         else:
@@ -79,12 +89,14 @@ def train(args):
         train_dataloader = DataLoader(graphs_train, batch_size=args.b)
         val_dataloader = DataLoader(graphs_val, batch_size=args.b)
 
-        model_path = os.path.dirname(args.save)
-        if not model_path.endswith(os.sep):
-            model_path = model_path + os.sep
-        os.makedirs(model_path, exist_ok=True)
+        # tensorboard, record the change of train_loss, val_loss, mcc, acc and auc
+        writer = SummaryWriter(log_dir=args.path_to_save_models, filename_suffix="_metrics")
 
-        best_mcc = 0
+        # Model name
+        model_name = os.path.basename(os.path.normpath(args.path_to_save_models))
+
+        # Training and Validation
+        best_mcc = -2
         epochs = args.e
         bar = tqdm(total=epochs, desc="Training and Validation:")
         for epoch in range(1, epochs + 1):
@@ -107,7 +119,7 @@ def train(args):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict()
-            }, os.path.join(model_path, f"checkpoint_epoch{epoch}.pt"))
+            }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
 
             model.eval()
             with torch.no_grad():
@@ -177,12 +189,19 @@ def train(args):
         )
         bar.close()
 
-        if args.o is not None:
-            with open(args.o, 'a') as f:
-               localtime = time.asctime(time.localtime(time.time()))
-               f.write(str(localtime) + '\n')
-               f.write('args: ' + str(args) + '\n')
-               f.write('Best MCC result: ' + str(best_mcc) + '\n\n')
+        if args.path_to_save_models:
+            log_file_in_path = os.path.join(args.path_to_save_models, 'log.txt')
+            with open(log_file_in_path, 'a') as f:
+                localtime = time.asctime(time.localtime(time.time()))
+                f.write(str(localtime) + '\n')
+                f.write('args: ' + str(args) + '\n')
+                f.write('Epoch Best MCC: ' + str(epoch_of_the_best_mcc) + '\n')
+                f.write('Best MCC result: ' + str(best_mcc) + '\n')
+                f.write('Training Loss result: ' + str(train_loss_of_the_best_mcc) + '\n')
+                f.write('Validation Loss result: ' + str(val_loss_of_the_best_mcc) + '\n')
+                f.write('Validation ACC result: ' + str(acc_of_the_best_mcc) + '\n')
+                f.write('Validation AUC result: ' + str(auc_of_the_best_mcc) + '\n')
+
 
     except Exception as e:
         raise
@@ -191,40 +210,36 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('-dataset', type=str, default='datasets/DeepAVPpred/DeepAVPpred.csv',
-                        help='Path to the dataset in csv format')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the dataset in csv format')
 
     # methods for graphs construction
-    parser.add_argument('-esm2_representation', type=str, default='esm2_t6',
+    parser.add_argument('--esm2_representation', type=str, default='esm2_t6',
                         help='Representation derived from ESM models to be used')
 
-    parser.add_argument('-tertiary_structure_method', type=str, default='esmfold',
+    parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
                         help='Method of generation of 3D structures to be used')
-    parser.add_argument('-tertiary_structure_path', type=str, default='datasets/DeepAVPpred/ESMFold_pdbs/',
-                        help='Path to load or save generated tertiary structures')
-    parser.add_argument('-tertiary_structure_operation_mode', type=str, default='load',
-                        help="Specifies the mode of operation. You can choose between ""load"" "
-                             "to load existing tertiary structures or ""generate"" to create new ones")
+    parser.add_argument('--tertiary_structure_path', type=str, required=True,
+                       help='Path to load or save generated tertiary structures')
+    parser.add_argument('--tertiary_structure_load_pdbs', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to load existing tertiary structures from PDB files.")
 
     # training parameters
-    # 0.001 for pretrain， 0.0001 for train
-    parser.add_argument('-lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('-drop', type=float, default=0.25, help='Dropout rate')
-    parser.add_argument('-e', type=int, default=20, help='Maximum number of epochs')
-    parser.add_argument('-b', type=int, default=512, help='Batch size')
-    parser.add_argument('-hd', type=int, default=64, help='Hidden layer dim')
+    # 0.001 for pretrain，0.0001 for train
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--drop', type=float, default=0.25, help='Dropout rate')
+    parser.add_argument('--e', type=int, default=3, help='Maximum number of epochs')
+    parser.add_argument('--b', type=int, default=512, help='Batch size')
+    parser.add_argument('--hd', type=int, default=64, help='Hidden layer dim')
 
     # model to be used for training and output path
-    parser.add_argument('-pretrained_model', type=str, default="",
+    parser.add_argument('--pretrained_model', type=str, default="",
                         help='The path of pretraining model, if "", the model will be trained from scratch')
-    parser.add_argument('-save', type=str, default='output_models/',
+    parser.add_argument('--path_to_save_models', type=str, required=True,
                         help='The path saving the trained models')
-    parser.add_argument('-heads', type=int, default=8, help='Number of heads')
+    parser.add_argument('--heads', type=int, default=8, help='Number of heads')
 
-    parser.add_argument('-d', type=int, default=20, help='Distance threshold to construct a graph')
-
-    # log path
-    parser.add_argument('-o', type=str, default='log.txt', help='File saving the raw prediction results')
+    parser.add_argument('--d', type=int, default=10, help='Distance threshold to construct a graph')
+    parser.add_argument('--add_self_loop', action="store_false", help='Add self loop to the same amino acid')
 
     args = parser.parse_args()
 
