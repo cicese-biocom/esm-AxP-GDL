@@ -50,9 +50,8 @@ RUN python3 -m pip install --no-cache-dir 'openfold @ git+https://github.com/aql
 
 RUN python3 -m pip install --no-cache-dir torch-sparse==0.6.15 torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.12.0+cu113.html
 
-RUN wget https://anaconda.org/pyg/pytorch-scatter/2.0.9/download/linux-64/pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
-RUN conda install pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
-
+#RUN wget https://anaconda.org/pyg/pytorch-scatter/2.0.9/download/linux-64/pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
+#RUN conda install pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
 
 RUN wget -P /tmp \
     "https://anaconda.org/pyg/pytorch-scatter/2.0.9/download/linux-64/pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2" \
