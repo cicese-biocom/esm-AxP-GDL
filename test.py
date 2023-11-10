@@ -11,11 +11,11 @@ import os
 from tqdm import tqdm
 
 def independent_test(args):
-
     threshold = args.d
     dataset = args.dataset
     esm2_representation = args.esm2_representation
-    tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_operation_mode)
+    tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_load_pdbs)
+    add_self_loop = args.add_self_loop
 
     # Load and validation dataset
     data = load_and_validate_dataset(dataset)
@@ -29,13 +29,13 @@ def independent_test(args):
 
     # to get the graph representations
     graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold,
-                              add_self_loop=True)
+                              add_self_loop)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    save_model_path = os.path.join(os.getcwd(), args.save)
+    trained_model = os.path.join(os.getcwd(), args.trained_model)
 
-    checkpoint = torch.load(save_model_path)
+    checkpoint = torch.load(trained_model)
     model = checkpoint['model']
     optimizer = torch.optim.Adam(model.parameters())
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
@@ -80,17 +80,9 @@ def independent_test(args):
 
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
-            #f1 = f1_score(y_true, y_pred)
             mcc = matthews_corrcoef(y_true, y_pred)
             sn = tp / (tp + fn)
             sp = tn / (tn + fp)
-
-            #print("Test AUC: ", auc)
-            #print("ACC", acc)
-            #print("f1", f1)
-            #print("MCC", mcc)
-            #print("sn", sn)
-            #print("sp", sp)
 
             progress.set_description("Test result")
             progress.set_postfix(
@@ -101,42 +93,38 @@ def independent_test(args):
                 Test_AUC=f"{auc:.4f}"
             )
 
-            if args.o is not None:
-                res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
-                df = pd.DataFrame(res_data)
-                output_file = os.path.join(os.getcwd(), args.o)
-                df.to_csv(output_file, index=False)
+            res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
+            df = pd.DataFrame(res_data)
+            output_file = os.path.join(os.path.dirname(trained_model), 'test_results.csv')
+            df.to_csv(output_file, index=False)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    # input files
-    parser.add_argument('-dataset', type=str, default='datasets/DeepAVPpred/DeepAVPpred.csv',
-                        help='Path to the dataset in csv format')
+    # dataset
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the dataset in csv format')
 
     # methods for graphs construction
-    # methods for graphs construction
-    parser.add_argument('-esm2_representation', type=str, default='esm2_t6',
+    parser.add_argument('--esm2_representation', type=str, default='esm2_t6',
                         help='Representation derived from ESM models to be used')
 
-    parser.add_argument('-tertiary_structure_method', type=str, default='esmfold',
+    parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
                         help='Method of generation of 3D structures to be used')
-    parser.add_argument('-tertiary_structure_path', type=str, default='datasets/DeepAVPpred/ESMFold_pdbs/',
+    parser.add_argument('--tertiary_structure_path', type=str, required=True,
                         help='Path to load or save generated tertiary structures')
-    parser.add_argument('-tertiary_structure_operation_mode', type=str, default='load',
-                        help="Specifies the mode of operation. You can choose between ""load"" "
-                             "to load existing tertiary structures or ""generate"" to create new ones")
+    parser.add_argument('--tertiary_structure_load_pdbs', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to load existing tertiary structures from PDB files.")
 
     # test parameters
-    parser.add_argument('-b', type=int, default=512, help='Batch size')
-    parser.add_argument('-save', type=str, default='output_models/checkpoint_epoch20.pt',
+    parser.add_argument('--trained_model', type=str, required=True,
                         help='The directory saving the trained models')
-    parser.add_argument('-o', type=str, default='test_results.csv', help='Results file')
-    parser.add_argument('-drop', type=float, default=0.5, help='Dropout rate')
-    parser.add_argument('-hd', type=int, default=64, help='Hidden layer dim')
-    parser.add_argument('-heads', type=int, default=8, help='Number of heads')
-    parser.add_argument('-d', type=int, default=20, help='Distance threshold')
+    parser.add_argument('--b', type=int, default=512, help='Batch size')
+    parser.add_argument('--drop', type=float, default=0.5, help='Dropout rate')
+    parser.add_argument('--hd', type=int, default=64, help='Hidden layer dim')
+    parser.add_argument('--heads', type=int, default=8, help='Number of heads')
+    parser.add_argument('--d', type=int, default=20, help='Distance threshold')
+    parser.add_argument('--add_self_loop', action="store_false", help='Add self loop to the same amino acid')
 
     args = parser.parse_args()
 
