@@ -5,7 +5,7 @@ from graph.structure_feature_extraction import adjacency_matrix
 from tqdm import tqdm
 import numpy as np
 
-def construct_graphs(data, esm2_representation, tertiary_structure_config, threshold, add_self_loop=True):
+def construct_graphs(data, esm2_representation, tertiary_structure_config, threshold, add_self_loop):
     """
     :param data: data (id, sequence itself, activity, label)
     :param esm2_representation: name of the esm2 representation to be used
