@@ -18,3 +18,5 @@
 /models/esmfold/checkpoints/esm2_t36_3B_UR50D-contact-regression.pt
 /models/esmfold/checkpoints/esmfold_3B_v1.pt
 /test_results.csv
+/datasets/AMPDiscover/
+/datasets/Ejemplo/
