@@ -25,3 +25,4 @@
 /output_models/
 /esmfold.sh
 /docker-compose.rar
+/.gitignore
