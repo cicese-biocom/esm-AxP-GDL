@@ -7,13 +7,13 @@ from Bio.PDB import PDBParser
 import io
 import numpy as np
 from sklearn.metrics import pairwise_distances
-from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
 import warnings
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
 warnings.simplefilter('ignore', PDBConstructionWarning)
 from tqdm import tqdm
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
+import pandas as pd
 
 
 def _predict(model, sequence):
@@ -44,7 +44,7 @@ def _atom_coordinates(pdb_str, atom_type='CA'):
 
 
 def _adjacency_matrix(args):
-    pdb_str , threshold, add_self_loop, distance_type, atom_type = args
+    pdb_str , threshold, distance_type, atom_type = args
 
     atom_coordinates = _atom_coordinates(pdb_str, atom_type)
 
@@ -62,10 +62,7 @@ def _adjacency_matrix(args):
                 edges[i][j] = dist
                 edges[j][i] = dist
 
-    if add_self_loop:
-        A[np.eye(A.shape[0]) == 1] = 1
-    else:
-        A[np.eye(A.shape[0]) == 1] = 0
+    A[np.eye(A.shape[0]) == 1] = 0
 
     edges = np.expand_dims(edges, -1)
 
@@ -86,7 +83,114 @@ def _open_pdb(pdb_file):
         return pdb_str
 
 
-def adjacency_matrices(data, path, threshold, add_self_loop):
+def adjacency_matrices(data, path, threshold):
+    hub.set_dir(os.getcwd() + os.sep + "models/esmfold/")
+
+    model = esm.pretrained.esmfold_v1()
+    model = model.eval().cuda()
+
+    sequences = data.sequence
+    ids = data.id
+
+    with tqdm(range(len(sequences)), total=len(sequences), desc ="Generating 3D structure") as progress_bar:
+        pdbs = []
+        for i, sequence in enumerate(sequences):
+            pdb_str = _predict(model, sequence)
+            pdbs.append(pdb_str)
+            progress_bar.update(1)
+
+    pdb_names = [str(id) for id in ids]
+
+    with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Saving pdb files", disable=False) as progress:
+        for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
+            _save_pdb(pdb_str, pdb_name, path)
+            progress.update(1)
+
+    # adjacency matrix
+    num_cores = multiprocessing.cpu_count()
+    distance_type = 'euclidean'
+    atom_type = 'CA'
+
+    args = [(pdb, threshold, distance_type, atom_type) for pdb in pdbs]
+
+    with ProcessPoolExecutor(max_workers=num_cores) as pool:
+        with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Generating adjacency matrices", disable=False) as progress:
+            futures = []
+            for arg in args:
+                future = pool.submit(_adjacency_matrix, arg)
+                future.add_done_callback(lambda p: progress.update())
+                futures.append(future)
+
+            list_A = [future.result()[0] for future in futures]
+            list_E = [future.result()[1] for future in futures]
+
+    return list_A, list_E
+
+
+def pdb_adjacency_matrices(data, path, threshold):
+    #pdb_files = glob.glob(path + "*.pdb", recursive=True)
+
+    ids = data['id']
+
+    #pdb_files_to_load = [f for f in pdb_files if os.path.basename(f) in ]
+
+    #pdb_files = sorted(pdb_files, key=lambda name: int(os.path.basename(name).split("AVP")[1].split("_")[0]))
+
+    # Load pdbs
+    with tqdm(range(len(ids)), total=len(ids), desc ="Loading pdb files", disable=False) as progress:
+        pdbs_str = []
+        for id in ids:
+            pdb_file = os.path.join(path, id + '.pdb')
+            pdb_str = _open_pdb(pdb_file)
+            pdbs_str.append(pdb_str)
+            progress.update(1)
+
+    # adjacency matrix
+    distance_type = 'euclidean'
+    atom_type = 'CA'
+
+    num_cores = multiprocessing.cpu_count()
+    args = [(pdb_str, threshold, distance_type, atom_type) for pdb_str in pdbs_str]
+
+    with ProcessPoolExecutor(max_workers=num_cores) as pool:
+        with tqdm(range(len(pdbs_str)), total=len(pdbs_str), desc ="Generating adjacency matrices") as progress:
+            futures = []
+
+            for arg in args:
+                future = pool.submit(_adjacency_matrix, arg)
+                future.add_done_callback(lambda p: progress.update())
+                futures.append(future)
+
+            list_A = [future.result()[0] for future in futures]
+            list_E = [future.result()[1] for future in futures]
+
+    return list_A, list_E
+
+
+def _distance(atom1, atom2, distance_type='euclidean'):
+    """
+    Calculate the distance between two 3D ºpoints.
+
+    Args:
+        atom1 (tuple): The coordinates of the first point (x, y, z).
+        atom2 (tuple): The coordinates of the second point (x, y, z).
+        distance_type (str): The type of distance to calculate ('euclidean', etc.).
+
+    Returns:
+        float: The calculated distance between the two points.
+    """
+    try:
+        return pairwise_distances([atom1], [atom2], metric=distance_type)[0][0]
+    except Exception as e:
+        raise ValueError("Error calculating distance: " + str(e))
+
+
+def main(args):
+    path = args.tertiary_structure_path
+    dataset = args.dataset
+
+    data = pd.read_csv(dataset)
+
     hub.set_dir(os.getcwd() + os.sep + "models/esmfold/")
 
     model = esm.pretrained.esmfold_v1()
@@ -111,99 +215,13 @@ def adjacency_matrices(data, path, threshold, add_self_loop):
             _save_pdb(pdb_str, pdb_name, path)
             progress.update(1)
 
-    # adjacency matrix
-    num_cores = multiprocessing.cpu_count()
-    distance_type = 'euclidean'
-    atom_type = 'CA'
-
-    args = [(pdb, threshold, add_self_loop, distance_type, atom_type) for pdb in pdbs]
-
-    with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Generating adjacency matrices", disable=False) as progress:
-            futures = []
-            for arg in args:
-                future = pool.submit(_adjacency_matrix, arg)
-                future.add_done_callback(lambda p: progress.update())
-                futures.append(future)
-
-            list_A = [future.result()[0] for future in futures]
-            list_E = [future.result()[1] for future in futures]
-
-    return list_A, list_E
-
-
-def pdb_adjacency_matrices(data, path, threshold, add_self_loop):
-    #pdb_files = glob.glob(path + "*.pdb", recursive=True)
-
-    ids = data['id']
-
-    #pdb_files_to_load = [f for f in pdb_files if os.path.basename(f) in ]
-
-    #pdb_files = sorted(pdb_files, key=lambda name: int(os.path.basename(name).split("AVP")[1].split("_")[0]))
-
-    # Load pdbs
-    with tqdm(range(len(ids)), total=len(ids), desc ="Loading pdb files", disable=False) as progress:
-        pdbs_str = []
-        for id in ids:
-            pdb_file = os.path.join(path, id + '.pdb')
-            pdb_str = _open_pdb(pdb_file)
-            pdbs_str.append(pdb_str)
-            progress.update(1)
-
-    # adjacency matrix
-    distance_type = 'euclidean'
-    atom_type = 'CA'
-
-    num_cores = multiprocessing.cpu_count()
-    args = [(pdb_str, threshold, add_self_loop, distance_type, atom_type) for pdb_str in pdbs_str]
-
-    with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs_str)), total=len(pdbs_str), desc ="Generating adjacency matrices") as progress:
-            futures = []
-
-            for arg in args:
-                future = pool.submit(_adjacency_matrix, arg)
-                future.add_done_callback(lambda p: progress.update())
-                futures.append(future)
-
-            list_A = [future.result()[0] for future in futures]
-            list_E = [future.result()[1] for future in futures]
-
-    return list_A, list_E
-
-
-
-def _distance(atom1, atom2, distance_type='euclidean'):
-    """
-    Calculate the distance between two 3D ºpoints.
-
-    Args:
-        atom1 (tuple): The coordinates of the first point (x, y, z).
-        atom2 (tuple): The coordinates of the second point (x, y, z).
-        distance_type (str): The type of distance to calculate ('euclidean', etc.).
-
-    Returns:
-        float: The calculated distance between the two points.
-    """
-    try:
-        return pairwise_distances([atom1], [atom2], metric=distance_type)[0][0]
-    except Exception as e:
-        raise ValueError("Error calculating distance: " + str(e))
-
-
-def main(args):
-    print(f"Pending implementation")
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    # dataset
-    parser.add_argument('-dataset', type=str, default='datasets/Test_Data/test_data.csv',
-                        help='Path to the dataset in csv format')
-    parser.add_argument('-contact_map', type=int, default=True,
-                        help='Specify whether to include a contact map in the output. By default, a contact map'
-                             ' will be included (True), but you can disable it by specifying this flag (False).')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the dataset in csv format')
+    parser.add_argument('--tertiary_structure_path', type=str, required=True,
+                       help='Path to save generated tertiary structures')
 
     args = parser.parse_args()
     main(args)

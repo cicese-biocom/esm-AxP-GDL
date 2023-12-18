@@ -9,13 +9,13 @@ from tools.data_preprocessing.dataset_processing import load_and_validate_datase
 from graph.construct_graphs import construct_graphs
 import os
 from tqdm import tqdm
+import time
 
 def independent_test(args):
     threshold = args.d
     dataset = args.dataset
     esm2_representation = args.esm2_representation
     tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_load_pdbs)
-    add_self_loop = args.add_self_loop
 
     # Load and validation dataset
     data = load_and_validate_dataset(dataset)
@@ -28,8 +28,7 @@ def independent_test(args):
         raise ValueError("No data available for training.")
 
     # to get the graph representations
-    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold,
-                              add_self_loop)
+    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -93,9 +92,20 @@ def independent_test(args):
                 Test_AUC=f"{auc:.4f}"
             )
 
+            log_file_in_path = os.path.join(os.path.dirname(trained_model), args.LogFileName + '.txt')
+            with open(log_file_in_path, 'a') as f:
+                localtime = time.asctime(time.localtime(time.time()))
+                f.write(str(localtime) + '\n')
+                f.write('args: ' + str(args) + '\n')
+                f.write('Test MCC result: ' + str(mcc) + '\n')
+                f.write('Test ACC result: ' + str(acc) + '\n')
+                f.write('Test AUC result: ' + str(auc) + '\n')
+                f.write('Recall Pos result: ' + str(sp) + '\n')
+                f.write('Recall Neg result: ' + str(sn) + '\n')
+
             res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
             df = pd.DataFrame(res_data)
-            output_file = os.path.join(os.path.dirname(trained_model), 'test_results.csv')
+            output_file = os.path.join(os.path.dirname(trained_model), args.TestResultFileName + '.csv')
             df.to_csv(output_file, index=False)
 
 
@@ -103,28 +113,34 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('--dataset', type=str, required=True, help='Path to the dataset in csv format')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the input dataset in csv format')
 
     # methods for graphs construction
-    parser.add_argument('--esm2_representation', type=str, default='esm2_t6',
-                        help='Representation derived from ESM models to be used')
+    parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
+                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t36', 'esm2_t48'],
+                        help='ESM-2 model to be used')
 
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
-                        help='Method of generation of 3D structures to be used')
+                        choices=['esmfold'],
+                        help='3D structure prediction method')
     parser.add_argument('--tertiary_structure_path', type=str, required=True,
-                        help='Path to load or save generated tertiary structures')
+                        help='Path to load or save the generated tertiary structures')
     parser.add_argument('--tertiary_structure_load_pdbs', action="store_true",
                         help="True if specified, otherwise, False. True indicates to load existing tertiary structures from PDB files.")
 
     # test parameters
-    parser.add_argument('--trained_model', type=str, required=True,
-                        help='The directory saving the trained models')
+    parser.add_argument('--trained_model_path', type=str, required=True,
+                        help='The directory where the trained model to be used for inference is saved')
     parser.add_argument('--b', type=int, default=512, help='Batch size')
     parser.add_argument('--drop', type=float, default=0.5, help='Dropout rate')
-    parser.add_argument('--hd', type=int, default=64, help='Hidden layer dim')
+    parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
-    parser.add_argument('--d', type=int, default=20, help='Distance threshold')
-    parser.add_argument('--add_self_loop', action="store_false", help='Add self loop to the same amino acid')
+    parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
+
+    parser.add_argument('--log_file_name', type=str, default='TestLog', help='Log file name')
+    parser.add_argument('--test_result_file_name', type=str, default='TestResult', help='Results file')
+
+
 
     args = parser.parse_args()
 

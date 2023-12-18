@@ -41,4 +41,7 @@ def load_and_validate_dataset(dataset):
     if not set(data['partition']).issubset({1, 2, 3}):
         raise ValueError("The 'partition' column must contain only values 1, 2, or 3.")
 
+    # Filters out instances with sequence lengths between 5 and 30 amino acids.
+    #data = data[data['sequence'].str.len().between(5, 30)]
+
     return data

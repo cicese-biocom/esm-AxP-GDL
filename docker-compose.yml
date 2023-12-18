@@ -1,10 +1,8 @@
 version: '3'
 
 services:
-  samppred-gat-esm2-env:
+   esm-axp-gdl-env:
     build: .
-    ports:
-      - "5000:5000"
     command: nvidia-smi
     volumes:
       - .:/opt/project
@@ -15,3 +13,5 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+

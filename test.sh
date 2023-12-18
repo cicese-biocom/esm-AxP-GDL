@@ -1,45 +1,23 @@
 #! /bin/bash
 
-hd=64
+hd=128
 d=10
-esm2_representation="esm2_t6"
-trained_model="output_models/64_10_t6/64_10_t6_ckpt_1.pt"
-
+esm2_representation="esm2_t36"
+trained_model_path="output_models/AMPDiscover/amp_esmt36_d10_hd128/amp_esmt36_d10_hd128.pt"
+log_file_name="TestLog_AMPDiscover"
+test_result_file_name="TestResult_AMPDiscover"
 
 python test.py \
-    -dataset datasets/DeepAVPpred/DeepAVPpred.csv \
-    --esm2_representation "$esm2_representation" \
-    -tertiary_structure_method esmfold \
-    -tertiary_structure_path datasets/DeepAVPpred/ESMFold_pdbs/ \
-    --tertiary_structure_load_pdbs \
-    -b 512 \
-    -trained_model "$trained_model" \
-    -drop 0.5 \
-    --hd "$hd" \
-    -heads 8 \
-    --d "$d" \
-    --add_self_loop
-
-
-
-
-
-#!/bin/bash
-
-e=2
-hd=64
-d=10
-esm2_representation="esm2_t6"
-path_to_save_models="output_models/64_10_t8/"
-
-python train.py \
     --dataset datasets/AMPDiscover/AMPDiscover.csv \
     --esm2_representation "$esm2_representation" \
     --tertiary_structure_method esmfold \
     --tertiary_structure_path datasets/AMPDiscover/ESMFold_pdbs/ \
-    --tertiary_structure_load_pdbs \
-    --e "$e" \
+    --b 512 \
+    --trained_model_path "$trained_model_path" \
+    --drop 0.5 \
     --hd "$hd" \
-    --path_to_save_models "$path_to_save_models" \
+    --heads 8 \
     --d "$d" \
-    --add_self_loop
+    --log_file_name "$log_file_name" \
+    --test_result_file_name "$test_result_file_name"
+
