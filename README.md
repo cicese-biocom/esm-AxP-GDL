@@ -1,9 +1,9 @@
 # **esm-AxP-GDL**
 
 esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
-structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs). 
-This framework was designed to be easily extended to modeling any task related to the prediction of peptide and 
-protein biological activities (or properties).
+structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs).
+This framework was designed to be easily extended to any modeling task related to the prediction of 
+peptide and protein biological activities (or properties).
 
 ## **Install esm-AxP-GDL**
 Clone the repository:
@@ -23,8 +23,8 @@ esm-AxP-GDL
 ├── datasets                                    <- Input comma separated value (CSV) file.
 │   ├── AMPDiscover                                  
 │   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
-│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
-│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
+│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.                
+│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.
 ├── graph                                       <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
