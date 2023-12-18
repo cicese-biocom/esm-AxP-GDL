@@ -14,21 +14,17 @@ The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
 ├── best_models                                 <- Top models created using this framework. 
-│   ├── amp_top1_esmt36_d10_hd256                          
-│   │   ├── amp_esmt36_d10_hd256.pt             <- Best model.
+│   ├── amp_top1_esmt36_d10_hd256               <- Best model.           
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_top2_esmt36_d10_hd128                          
-│   │   ├── amp_esmt36_d10_hd128.pt             <- Second-best model
+│   ├── amp_top2_esmt36_d10_hd128               <- Second-best model           
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
 ├── datasets                                    <- Input comma separated value (CSV) file.
 │   ├── AMPDiscover                                  
-│   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.
-│   │   ├── Test(reduced-30)                    
-│   │   │   ├── Test(reduced-30).csv           <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
-│   │   ├── Test(reduced-100)                    
-│   │   │   ├── Test(reduced-100).csv           <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.
+│   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
+│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.                
+│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.
 ├── graph                                       <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
@@ -222,9 +218,9 @@ docker-compose run --rm esm-axp-gdl-env sh test.sh
 ### **Best models**
 Top two models created with AMPDiscover using the esm-AxP-GDL framework are as follows:  
 
-| Name                    | Dataset                                             | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                    |
-|-------------------------|-----------------------------------------------------|--------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| amp_esmt36_d10_hd256.pt | AMPDiscover (https://biocom-ampdiscover.cicese.mx/) | general-AMPs | 0.9521 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 256`. |
-| amp_esmt36_d10_hd128.pt | AMPDiscover (https://biocom-ampdiscover.cicese.mx/) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| Name                                                             | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                    |
+|------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [amp_esmt36_d10_hd256.pt](https://drive.google.com/file/d/1kRbinBqNhGclUtf4VSAL4Hz7O0lJhjCO/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9521 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 256`. |
+| [amp_esmt36_d10_hd128.pt](https://drive.google.com/file/d/1kWkRLIZ4KErcSfueQbxcJB3NtoUuXdae/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
 
-NOTE: These models are available at `/best_models` directory.
+NOTE:  The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.
