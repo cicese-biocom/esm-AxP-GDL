@@ -1,151 +1,226 @@
-# esm-AxP-GDL
+# **esm-AxP-GDL**
 
-## Requirements
-The majoy dependencies used in this project are as following:
+esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
+structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs).
+This framework was designed to be easily extended to any modeling task related to the prediction of 
+peptide and protein biological activities (or properties).
 
+## **Install esm-AxP-GDL**
+Clone the repository:
 ```
-python  3.7
-numpy 1.21.6
-tqdm  4.64.1
-pyyaml  6.0
-scikit-learn  1.0.2
-torch  1.11.0+cu113
-torch-cluster  1.6.0
-torch-scatter  2.0.9
-torch-sparse  0.6.15
-torch-geometric  1.7.2
-tensorflow  1.14.0
-tensorboardX  2.5.1
+git clone https://github.com/cicese-biocom/esm-AxP-GDL.git
 ```
-More detailed python libraries used in this project are referred to `requirements.txt`. 
-Check your CPU device and install the pytorch and pyG (torch-cluster, torch-scatter, torch-sparse, torch-geometric) according to your CUDA version.
-> **Note** that torch-geometric 1.7.2 and tensorflow 1.14.0 are required, becuase our trained model does not support the `torch-geometric` with higher version , and the model from trRosetta does not support the `tensorflow` with higher version.
-> 
-The The installed pyG (torch-cluster, torch-scatter, torch-sparse, torch-geometric) must be a GPU version according to your CUDA. If you installed a wrong vesion, there will be some unexpected errors like https://github.com/rusty1s/pytorch_scatter/issues/248 and https://github.com/pyg-team/pytorch_geometric/issues/2040. We provide the installation process of pytorch and pyG in our environment for reference:
-
+The directory structure of the framework is as follows:
 ```
-pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
-```
-```
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==1.7.2 -f https://data.pyg.org/whl/torch-1.11.0+cu113.html
-```
-## Tools
-Two multiple sequence alignment tools and three databases are required:
-```
-hhblits 3.3.0
-```
-Databases:
-```
-uniclust30_2018_08(https://wwwuser.gwdg.de/~compbiol/uniclust/2018_08/uniclust30_2018_08_hhsuite.tar.gz)
-```
-uniclust30_2018_08:You can download it dababase from https://wwwuser.gwdg.de/~compbiol/uniclust/2018_08/uniclust30_2018_08_hhsuite.tar.gz. Just decompress it in the directory utils/hhblits/ and rename this database folder to uniclust30_2018_08.
-
-**ESM-2**: Amino acid level characteristics are calculated by ESM-2 model (https://github.com/facebookresearch/esm)
-
-**trRosetta**: The structures are predicted by trRosetta(https://github.com/gjoni/trRosetta), you need to download and put the trRosetta pretrain model(https://files.ipd.uw.edu/pub/trRosetta/model2019_07.tar.bz2) and decompress it into `utils/trRosetta/`.
-
-> **Note** that all the defalut paths of the tools and databases are shown in `config.yaml`. You can change the paths of the tools and databases by configuring `config.yaml` as you need. 
-hhblist is recommended to be configured as the system envirenment path. Your can follow these steps to install them:
-
-## How to install hhblits
-You can download and install the hhblits througth conda quickly.
-```
-conda install -c conda-forge -c bioconda hhsuite==3.3.0
-```
-Check the installation:
-```
-hhblits -h
-```
-
-## Feature extraction
-
-`generate_features.py` is the entry of feature extraction process. An usage example is shown in `generate_features_example.sh`. 
-
-Run the example by: 
-```
-chmod +x generate_features_example.sh
-./generate_features_example.sh
-```
-The features of the examples will be genrerated if your tools are configured correctly. 
-
-If you want generate the features using your own file in fasta format, just follow the `generate_features_example.sh` and change the pathes into yours.
-
-## Usage
-It takes 3 steps to train/test our model:
-(1) copy the train/test soucre files in fasta format, which is supplied in `datasets` folder, into the `data` folder.
-(2) generate features, including the predicted sturctures and the sequential features.
-(3) train / test.
-
-`train.py` and `test.py` are used for training and testing, respectively. 
-Running `python train.py -h` and `python test.py -h` to learn the meaning of each parameter.
-
-The input folder should like:
-
+esm-AxP-GDL
+├── best_models                                 <- Top models created using this framework. 
+│   ├── amp_top1_esmt36_d10_hd256               <- Best model.           
+│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                      <- Parameters used to build the model.
+│   ├── amp_top2_esmt36_d10_hd128               <- Second-best model           
+│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                      <- Parameters used to build the model.
+├── datasets                                    <- Input comma separated value (CSV) file.
+│   ├── AMPDiscover                                  
+│   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
+│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
+│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
+├── graph                                       <- Scripts to build graphs.
+│   ├── construct_graphs.py                     
+│   ├── residues_level_features_encoding.py     
+│   ├── structure_feature_extraction.py         
+├── misc                                        <- Additional library to be installed to use the framework. 
+│   ├──linux-64_pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
+├── models                                      <- Models used by this framework.
+│   ├── esm2                                    <- ESM-2 module.
+│   │   ├── checkpoints                         <- Directory where the ESM-2 models are downloaded.
+│   │   ├── _init_.py                           <- Makes ESM-2 a Python module.
+│   │   ├── esm2_representation.py              <- Script to use the ESM-2 models.
+│   │   ├── esm2_representation.json            <- JSON with the ESM-2 representations that can be used.
+│   ├── esmfold                                 <- ESMFold module.
+│   │   ├── checkpoints                         <- Directory where the ESMFold model is downloaded.
+│   │   ├── _init_.py                           <- Makes ESMFold a Python module.
+│   │   ├── esmfold.py                          <- Script to use the ESMFold model.
+│   ├── GAT                                     <- GAT module.
+│   │   ├── _init_.py                           <- Makes GAT a Python module.
+│   │   ├── GAT.py                              <- Script to use the Graph Attention Network (GAT) architecture.
+│   ├── _init_.py                               
+├── tool                                         
+│   ├── data_preprocessing                       
+│   │   ├── _init_.py                           
+│   │   ├── data_preprocessing.py               <- Script to load and validate the input datasets.
+│   ├── _init_.py                               
+├── docker-compose.yml                          <- Configuration of the Docker container required by the framework.
+├── Dockerfile                                  <- Docker image with all the dependencies required by the framework. 
+├── README.md                                   <- README to use this framework
+├── requirements.txt                            <- Python libraries used in this project.
+├── test.py                                     <- Script to use a model for inference.
+├── test.sh                                     <- Example to use a model for inference.
+├── train.py                                    <- Script to train a model.
+├── train.sh                                    <- Example script for training.
 ```
 
--positive/
-XXX(name of the positive file).fasta
---pssm/
----output/
-----A.pssm
-----B.pssm
----- ...
---hhm/
----output/
-----A.hhm
-----B.hhm
----- ...
---npz/
----A.npz
----B.npz
+## **Dependencies**
+This framework is currently supported for Linux, Python 3.7, CUDA 11 and Pytorch 1.12. The major dependencies used in this project are as follows:
 
--negative
-XXX(name of the negative file).fasta
- --pssm/
----output/
-----C.pssm
-----D.pssm
----- ...
---hhm/
----output/
-----C.hhm
-----D.hhm
----- ...
---npz/
----C.npz
----D.npz
+>C++ compiler: https://gcc.gnu.org/ </br>
+CUDA Toolkit: https://developer.nvidia.com/ </br>
+Python: 3.7 </br>
+PyTorch: 1.12.0+cu113 </br>
+PyTorch Geometric: (torch-cluster: 1.6.1, torch-scatter: 2.0.9, torch-sparse: 0.6.15, torch-geometric: 2.3.1) </br>
+ESM-2 (fair-esm:2.0.0) </br> 
+ESMFold (fair-esm:2.0.0) 
 
+Additional libraries used in this project are specified in `requirements.txt`. 
+
+### **Installation (Linux)**
+> **Pytorch**, **PyTorch Geometric**, **ESM-2**, **ESMFold** and the dependencies into requirements.txt are installed as follows:
+#### PyTorch:
 ```
-The script `generate_features_example.sh` just generated the right folder structure. Just follow the example to generate the input folder.
-> **Note** that before you train and test the model, you must successfully run  `generate_features_example.sh`.
-
-
-
-### Test 
-
-A trained model for XUAMP is supplied in saved_models/samp.model as an example. Run `test.py` to predict the example sequences:
+conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.3 -c pytorch
 ```
-python test.py
+#### PyTorch Geometric:
+###### torch-cluster, torch-sparse and torch-geometric:
+```
+pip install --no-cache-dir torch-sparse==0.6.15 torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.12.0+cu113.html
+```
+###### torch-scatter:
+```
+conda install -y /misc/linux-64_pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
+```
+#### ESM-2:
+```
+pip install fair-esm
+```
+#### ESMFold:
+```
+pip install --no-cache-dir fair-esm[esmfold]
+pip install --no-cache-dir 'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
+pip install --no-cache-dir 'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307'
+```   
+#### requirements.txt:
+```
+pip install --no-cache-dir requirements.txt
+```  
+
+
+### **Managing dependencies using Docker container**
+We provide the `Dockerfile` and `docker-compose.yml` files with all the dependencies and configurations required by the framework.
+#### Prerequisites:
+1. Install Docker following the installation guidelines for your platform: https://docs.docker.com/engine/installation/
+2. Install CUDA Toolkit: https://developer.nvidia.com/
+
+#### Build the Docker image locally from the next command line:
+```
+docker-compose build
 ```
 
-If you want test the specific dataset, for example XUAMP, you should copy the corresponding files in fasta format in `datasets/independent test datasets/` directory into the `data/test_data/positive/` and `data/test_data/negative/`, and set the ***args*** relative to the inputs. An example is given by `test.sh`:
+NOTE: if a docker image is used to run this framework, then the path of the input files should be relative to
+the framework directory.
+
+## **Usage**
+### **Input data format**
+The framework esm-AxP-GDL is inputted with a comma separated value (CSV) file, which contains 
+the identifier, the amino acid sequence, the activity value, and the partition of each peptide. 
+We used the numbers 1, 2 and 3 to represent the training, validation, and test sets, respectively. 
+For training or using a model for inference, it should be specified the path for the input CSV file.
+
+### **For training or using a model for inference**
+train.py and test.py are used to carry out the training and inference steps, respectively. 
+The next command lines can be used to run the training and inference steps, respectively.
+
+#### Train
 ```
-chmod +x test.sh
-./test.sh
+usage: train.py [-h] --dataset DATASET
+                [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}]
+                [--tertiary_structure_method {esmfold}]
+                --tertiary_structure_path TERTIARY_STRUCTURE_PATH
+                [--tertiary_structure_load_pdbs] [--lr LR] [--drop DROP]
+                [--e E] [--b B] [--hd HD]
+                [--pretrained_model PRETRAINED_MODEL] --path_to_save_models
+                PATH_TO_SAVE_MODELS [--heads HEADS] [--d D]
+                [--log_file_name LOG_FILE_NAME]
+
+optional arguments: 
+  -h, --help            show this help message and exit
+  --dataset DATASET     Path to the input dataset in csv format
+  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}
+                        ESM-2 model to be used
+  --tertiary_structure_method {esmfold}
+                        3D structure prediction method
+  --tertiary_structure_path TERTIARY_STRUCTURE_PATH
+                        Path to load or save the generated tertiary structures
+  --tertiary_structure_load_pdbs
+                        True if specified, otherwise, False. True indicates to
+                        load existing tertiary structures from PDB files.
+  --lr LR               Learning rate
+  --drop DROP           Dropout rate
+  --e E                 Maximum number of epochs
+  --b B                 Batch size
+  --hd HD               Hidden layer dimension
+  --path_to_save_models PATH_TO_SAVE_MODELS
+                        The path to save the trained models
+  --heads HEADS         Number of heads
+  --d D                 Distance threshold to construct graph edges
+  --log_file_name LOG_FILE_NAME
+                        Log file name                
 ```
 
-### Train
-
-If you want train a model based on the specific dataset, for example XUAMP, you should copy the files in fasta format in `datasets/train datasets/` directory into the `data/train_data/positive/` and `data/train_data/negative/`, and set the ***args*** relative to the inputs. An example is given by `train.sh`:
+#### Test
 ```
-chmod +x train.sh
-./train.sh
+usage: test.py [-h] --dataset DATASET
+               [--esm2_representation  {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}]
+               [--tertiary_structure_method {esmfold}]
+               --tertiary_structure_path TERTIARY_STRUCTURE_PATH
+               [--tertiary_structure_load_pdbs] --trained_model_path
+               TRAINED_MODEL_PATH [--b B] [--drop DROP] [--hd HD]
+               [--heads HEADS] [--d D] [--log_file_name LOG_FILE_NAME]
+               [--test_result_file_name TEST_RESULT_FILE_NAME]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --dataset DATASET     Path to the input dataset in csv format
+  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}
+                        ESM-2 model to be used
+  --tertiary_structure_method {esmfold}
+                        3D structure prediction method
+  --tertiary_structure_path TERTIARY_STRUCTURE_PATH
+                        Path to load or save the generated tertiary structures
+  --tertiary_structure_load_pdbs
+                        True if specified, otherwise, False. True indicates to
+                        load existing tertiary structures from PDB files.
+  --trained_model_path TRAINED_MODEL_PATH
+                        The directory where the trained model to be used for inference is saved
+  --b B                 Batch size
+  --drop DROP           Dropout rate
+  --hd HD               Hidden layer dimension
+  --heads HEADS         Number of heads
+  --d D                 Distance threshold to construct graph edges
+  --log_file_name LOG_FILE_NAME
+                        Log file name
+  --test_result_file_name TEST_RESULT_FILE_NAME
+                        Results file                        
 ```
-When the training process finished, the `saved_models/auc_XU_final.model`(We have supplied a well trained model and rename it to `samp.model`) will be the model optimized by AUC as introduced in this paper . 
+### **Example**
+We provide the train.sh and test.sh example scripts to train or use a model for inference, respectively.
+In these scripts are used the AMPDiscover dataset as input set, the model `esm2_t36_3B_UR50D` to evolutionary 
+characterize the graph nodes, a `distance threshold equal to 10 angstroms`
+to build the graph edges, and a `hidden layer size equal to 128`.
 
+When using the Docker container the example scripts should be used as follows:
+```
+docker-compose run --rm esm-axp-gdl-env sh train.sh
+```
+```
+docker-compose run --rm esm-axp-gdl-env sh test.sh
+```
 
+### **Best models**
+Top two models created with AMPDiscover using the esm-AxP-GDL framework are as follows:  
 
+| Name                                                             | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                    |
+|------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [amp_esmt36_d10_hd256.pt](https://drive.google.com/file/d/1kRbinBqNhGclUtf4VSAL4Hz7O0lJhjCO/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9521 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 256`. |
+| [amp_esmt36_d10_hd128.pt](https://drive.google.com/file/d/1kWkRLIZ4KErcSfueQbxcJB3NtoUuXdae/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
 
-
-
-
+NOTE:  The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.

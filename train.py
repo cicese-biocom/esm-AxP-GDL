@@ -32,24 +32,23 @@ def train(args):
         dataset = args.dataset
         esm2_representation = args.esm2_representation
         tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_load_pdbs)
-        add_self_loop = args.add_self_loop
 
         # Load and validation dataset
         data = load_and_validate_dataset(dataset)
 
         # Filter rows where 'partition' is equal to 1 (training data) or 2 (validation data)
-        train_and_val_data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
+        train_and_val_data = data[data['partition'].isin([1,2])].reset_index(drop=True)
 
         # Check if train_and_val_data is empty
         if train_and_val_data.empty:
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, add_self_loop)
-        labels = data.activity
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold)
+        labels = train_and_val_data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
-        partitions = data.partition
+        partitions = train_and_val_data.partition
 
         partition_train = any(x == 1 for x in partitions)
         partition_val = any(x == 2 for x in partitions)
@@ -68,8 +67,7 @@ def train(args):
         # If only training or validation data were provided
         else:
             # split training dataset: 80% train y 20% test, with seed and shuffle
-            graphs_train, graphs_val, _, _ = train_test_split(graphs, labels, test_size=0.2, shuffle=True,
-                                                          random_state=41)
+            graphs_train, graphs_val, _, _ = train_test_split(graphs, labels, test_size=0.2, shuffle=True, random_state=41)
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -77,10 +75,7 @@ def train(args):
         n_class = 2
 
         # Load model
-        if args.pretrained_model == "":
-            model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads).to(device)
-        else:
-            model = torch.load(args.pretrained_model).to(device)
+        model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads).to(device)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
@@ -189,8 +184,10 @@ def train(args):
         )
         bar.close()
 
+
+
         if args.path_to_save_models:
-            log_file_in_path = os.path.join(args.path_to_save_models, 'log.txt')
+            log_file_in_path = os.path.join(args.path_to_save_models, args.LogFileName + '.txt')
             with open(log_file_in_path, 'a') as f:
                 localtime = time.asctime(time.localtime(time.time()))
                 f.write(str(localtime) + '\n')
@@ -201,7 +198,7 @@ def train(args):
                 f.write('Validation Loss result: ' + str(val_loss_of_the_best_mcc) + '\n')
                 f.write('Validation ACC result: ' + str(acc_of_the_best_mcc) + '\n')
                 f.write('Validation AUC result: ' + str(auc_of_the_best_mcc) + '\n')
-
+                f.write('MCC 200 Epoch result: ' + str(mcc) + '\n')
 
     except Exception as e:
         raise
@@ -210,16 +207,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('--dataset', type=str, required=True, help='Path to the dataset in csv format')
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the input dataset in csv format')
 
     # methods for graphs construction
-    parser.add_argument('--esm2_representation', type=str, default='esm2_t6',
-                        help='Representation derived from ESM models to be used')
+    parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
+                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t36', 'esm2_t48'],
+                        help='ESM-2 model to be used')
 
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
-                        help='Method of generation of 3D structures to be used')
+                        choices=['esmfold'],
+                        help='3D structure prediction method')
     parser.add_argument('--tertiary_structure_path', type=str, required=True,
-                       help='Path to load or save generated tertiary structures')
+                       help='Path to load or save the generated tertiary structures')
     parser.add_argument('--tertiary_structure_load_pdbs', action="store_true",
                         help="True if specified, otherwise, False. True indicates to load existing tertiary structures from PDB files.")
 
@@ -227,19 +226,18 @@ if __name__ == '__main__':
     # 0.001 for pretrain，0.0001 for train
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--drop', type=float, default=0.25, help='Dropout rate')
-    parser.add_argument('--e', type=int, default=3, help='Maximum number of epochs')
+    parser.add_argument('--e', type=int, default=200, help='Maximum number of epochs')
     parser.add_argument('--b', type=int, default=512, help='Batch size')
-    parser.add_argument('--hd', type=int, default=64, help='Hidden layer dim')
+    parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
 
     # model to be used for training and output path
-    parser.add_argument('--pretrained_model', type=str, default="",
-                        help='The path of pretraining model, if "", the model will be trained from scratch')
     parser.add_argument('--path_to_save_models', type=str, required=True,
-                        help='The path saving the trained models')
+                        help=' The path to save the trained models')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
 
-    parser.add_argument('--d', type=int, default=10, help='Distance threshold to construct a graph')
-    parser.add_argument('--add_self_loop', action="store_false", help='Add self loop to the same amino acid')
+    parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
+
+    parser.add_argument('--log_file_name', type=str, default='TrainingLog', help='Log file name')
 
     args = parser.parse_args()
 
