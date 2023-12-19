@@ -1,9 +1,9 @@
 # **esm-AxP-GDL**
 
 esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
-structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs).
-This framework was designed to be easily extended to any modeling task related to the prediction of 
-peptide and protein biological activities (or properties).
+structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs). 
+This framework was designed to be easily extended to modeling any task related to the prediction of peptide and 
+protein biological activities (or properties).
 
 ## **Install esm-AxP-GDL**
 Clone the repository:
