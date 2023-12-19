@@ -23,8 +23,8 @@ esm-AxP-GDL
 ├── datasets                                    <- Input comma separated value (CSV) file.
 │   ├── AMPDiscover                                  
 │   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
-│   │   ├── Test(reduced-100).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
-│   │   ├── Test(reduced-30).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
+│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
+│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
 ├── graph                                       <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
