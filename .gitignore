@@ -1,0 +1,4 @@
+/.idea/
+/models/esm2/checkpoints/
+/models/esmfold/checkpoints/
+/output_models/
