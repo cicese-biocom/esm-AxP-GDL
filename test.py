@@ -28,7 +28,7 @@ def independent_test(args):
         raise ValueError("No data available for training.")
 
     # to get the graph representations
-    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold)
+    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -136,6 +136,10 @@ if __name__ == '__main__':
     parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
     parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
+
+    parser.add_argument('--validation_mode', type=str, default=None,
+                        choices=['sequence_graph'],
+                        help='Graph construction method for validation of the approach')
 
     parser.add_argument('--log_file_name', type=str, default='TestLog', help='Log file name')
     parser.add_argument('--test_result_file_name', type=str, default='TestResult', help='Results file')

@@ -40,7 +40,7 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features):
+def get_embeddings(data, model_name, reduced_features, validation_mode):
     """
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
@@ -85,17 +85,12 @@ def get_embeddings(data, model_name, reduced_features):
                         if len(reduced_features) > 0:
                             layer_for_i = layer_for_i[:, reduced_features]
 
-#                        embedding = layer_for_i.cpu().numpy()
+                        embedding = layer_for_i.cpu().numpy()
 
-                        #if normalize_embedding:
-#                            min_values = embedding.min(axis=1)
-#                            max_values = embedding.max(axis=1)
-#                            embedding = (embedding - min_values[:, np.newaxis]) / (max_values - min_values)[:,
-#                                                                                           np.newaxis]
-                             #layer_for_i = normalize(layer_for_i)
+                        if validation_mode == 'embedding_scrambling':
+                            np.random.shuffle(embedding)
 
-#                        embeddings.append(embedding)
-                        embeddings.append(layer_for_i.cpu().numpy())
+                        embeddings.append(embedding)
 
         return embeddings
 

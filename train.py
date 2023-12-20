@@ -44,7 +44,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold)
+        graphs = construct_graphs(train_and_val_data.head(3), esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
         labels = train_and_val_data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -184,8 +184,6 @@ def train(args):
         )
         bar.close()
 
-
-
         if args.path_to_save_models:
             log_file_in_path = os.path.join(args.path_to_save_models, args.LogFileName + '.txt')
             with open(log_file_in_path, 'a') as f:
@@ -207,7 +205,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # dataset
-    parser.add_argument('--dataset', type=str, required=True, help='Path to the input dataset in csv format')
+    parser.add_argument('--dataset', type=str, required=False, help='Path to the input dataset in csv format')
 
     # methods for graphs construction
     parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
@@ -217,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
                         choices=['esmfold'],
                         help='3D structure prediction method')
-    parser.add_argument('--tertiary_structure_path', type=str, required=True,
+    parser.add_argument('--tertiary_structure_path', type=str, required=False,
                        help='Path to load or save the generated tertiary structures')
     parser.add_argument('--tertiary_structure_load_pdbs', action="store_true",
                         help="True if specified, otherwise, False. True indicates to load existing tertiary structures from PDB files.")
@@ -231,15 +229,25 @@ if __name__ == '__main__':
     parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
 
     # model to be used for training and output path
-    parser.add_argument('--path_to_save_models', type=str, required=True,
+    parser.add_argument('--path_to_save_models', type=str, required=False,
                         help=' The path to save the trained models')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
 
     parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
 
+    parser.add_argument('--validation_mode', type=str, default=None,
+                        choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
+                        help='Graph construction method for validation of the approach')
+
     parser.add_argument('--log_file_name', type=str, default='TrainingLog', help='Log file name')
 
     args = parser.parse_args()
+
+    args.dataset = os.path.join(os.getcwd(), 'datasets/AMPDiscover/AMPDiscover.csv')
+    args.tertiary_structure_path = os.path.join(os.getcwd(), 'datasets/AMPDiscover/ESMFold_pdbs/')
+    args.tertiary_structure_load_pdbs = True
+    args.path_to_save_models = 'output_models/debug_mode/'
+    args.validation_mode = 'sequence_graph'
 
     train(args)
 
