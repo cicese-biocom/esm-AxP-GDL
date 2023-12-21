@@ -44,7 +44,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data.head(3), esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
         labels = train_and_val_data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -108,13 +108,22 @@ def train(args):
                 optimizer.step()
                 arr_loss.append(loss.item())
 
-            torch.save({
-                'epoch': epoch,
-                'model': model,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict()
-            }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
+            if args.save_ckpt_per_epoch:
+                torch.save({
+                    'epoch': epoch,
+                    'model': model,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict()
+                }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
+            elif epoch==args.e:
+                torch.save({
+                    'epoch': epoch,
+                    'model': model,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict()
+                }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
 
             model.eval()
             with torch.no_grad():
@@ -239,15 +248,12 @@ if __name__ == '__main__':
                         choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
                         help='Graph construction method for validation of the approach')
 
+    parser.add_argument('--save_ckpt_per_epoch', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to save the models per epoch.")
+
     parser.add_argument('--log_file_name', type=str, default='TrainingLog', help='Log file name')
 
     args = parser.parse_args()
-
-    args.dataset = os.path.join(os.getcwd(), 'datasets/AMPDiscover/AMPDiscover.csv')
-    args.tertiary_structure_path = os.path.join(os.getcwd(), 'datasets/AMPDiscover/ESMFold_pdbs/')
-    args.tertiary_structure_load_pdbs = True
-    args.path_to_save_models = 'output_models/debug_mode/'
-    args.validation_mode = 'sequence_graph'
 
     train(args)
 
