@@ -194,7 +194,7 @@ def train(args):
         bar.close()
 
         if args.path_to_save_models:
-            log_file_in_path = os.path.join(args.path_to_save_models, args.LogFileName + '.txt')
+            log_file_in_path = os.path.join(args.path_to_save_models, args.log_file_name + '.txt')
             with open(log_file_in_path, 'a') as f:
                 localtime = time.asctime(time.localtime(time.time()))
                 f.write(str(localtime) + '\n')
