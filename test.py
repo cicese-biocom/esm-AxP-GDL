@@ -92,7 +92,7 @@ def independent_test(args):
                 Test_AUC=f"{auc:.4f}"
             )
 
-            log_file_in_path = os.path.join(os.path.dirname(trained_model), args.LogFileName + '.txt')
+            log_file_in_path = os.path.join(os.path.dirname(trained_model), args.log_file_name + '.txt')
             with open(log_file_in_path, 'a') as f:
                 localtime = time.asctime(time.localtime(time.time()))
                 f.write(str(localtime) + '\n')
@@ -105,7 +105,7 @@ def independent_test(args):
 
             res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
             df = pd.DataFrame(res_data)
-            output_file = os.path.join(os.path.dirname(trained_model), args.TestResultFileName + '.csv')
+            output_file = os.path.join(os.path.dirname(trained_model), args.test_result_file_name + '.csv')
             df.to_csv(output_file, index=False)
 
 
