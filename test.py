@@ -32,7 +32,7 @@ def independent_test(args):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    trained_model = os.path.join(os.getcwd(), args.trained_model)
+    trained_model = os.path.join(os.getcwd(), args.trained_model_path)
 
     checkpoint = torch.load(trained_model)
     model = checkpoint['model']
