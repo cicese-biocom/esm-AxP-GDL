@@ -31,7 +31,11 @@ def train(args):
         threshold = args.d
         dataset = args.dataset
         esm2_representation = args.esm2_representation
-        tertiary_structure_config = (args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path), args.tertiary_structure_load_pdbs)
+        tertiary_structure_config = (
+        args.tertiary_structure_method, os.path.join(os.getcwd(), args.tertiary_structure_path),
+        args.tertiary_structure_load_pdbs)
+
+        validation_config = (args.validation_mode, args.scrambling_percentage)
 
         # Load and validation dataset
         data = load_and_validate_dataset(dataset)
@@ -44,7 +48,7 @@ def train(args):
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
+        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, validation_config)
         labels = train_and_val_data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -247,6 +251,9 @@ if __name__ == '__main__':
     parser.add_argument('--validation_mode', type=str, default=None,
                         choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
                         help='Graph construction method for validation of the approach')
+
+    parser.add_argument('--scrambling_percentage', type=float, default=1,
+                        help='Percentage of rows to be scrambling')
 
     parser.add_argument('--save_ckpt_per_epoch', action="store_true",
                         help="True if specified, otherwise, False. True indicates to save the models per epoch.")

@@ -40,7 +40,7 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features, validation_mode):
+def get_embeddings(data, model_name, reduced_features, validation_config):
     """
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
@@ -71,6 +71,8 @@ def get_embeddings(data, model_name, reduced_features, validation_mode):
         repr_layers = model.num_layers
         embeddings = []
 
+        validation_mode, scrambling_percentage = validation_config
+
         with torch.no_grad():
                 for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader), total=len(data_loader), desc ="Generating esm2 embeddings"):
                     if torch.cuda.is_available() and not no_gpu:
@@ -86,9 +88,14 @@ def get_embeddings(data, model_name, reduced_features, validation_mode):
                             layer_for_i = layer_for_i[:, reduced_features]
 
                         embedding = layer_for_i.cpu().numpy()
+                        amino_acid_number = len(embedding)
 
                         if validation_mode == 'embedding_scrambling':
-                            np.random.shuffle(embedding)
+                            amino_acid_number_to_shuffle = max(int(amino_acid_number * scrambling_percentage), 2)
+                            indexes = np.random.choice(amino_acid_number , size=amino_acid_number_to_shuffle, replace=False)
+                            embedding_percent = embedding[indexes].copy()
+                            np.random.shuffle(embedding_percent)
+                            embedding[indexes] = embedding_percent
 
                         embeddings.append(embedding)
 
