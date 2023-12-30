@@ -27,8 +27,10 @@ def independent_test(args):
     if test_data.empty:
         raise ValueError("No data available for training.")
 
+    validation_config = (args.validation_mode, args.scrambling_percentage)
+
     # to get the graph representations
-    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold, args.validation_mode)
+    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold, validation_config)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -138,8 +140,11 @@ if __name__ == '__main__':
     parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
 
     parser.add_argument('--validation_mode', type=str, default=None,
-                        choices=['sequence_graph'],
+                        choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
                         help='Graph construction method for validation of the approach')
+
+    parser.add_argument('--scrambling_percentage', type=float, default=1,
+                        help='Percentage of rows to be scrambling')
 
     parser.add_argument('--log_file_name', type=str, default='TestLog', help='Log file name')
     parser.add_argument('--test_result_file_name', type=str, default='TestResult', help='Results file')
