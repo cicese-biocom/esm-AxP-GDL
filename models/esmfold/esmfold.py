@@ -48,16 +48,17 @@ def _adjacency_matrix(args):
 
     atom_coordinates = np.array(_atom_coordinates(pdb_str, atom_type), dtype=object)
 
-    amino_acid_number = len(atom_coordinates)
-
     validation_mode, scrambling_percentage = validation_config
     if validation_mode == 'coordinates_scrambling':
-        amino_acid_number_to_shuffle = max(int(amino_acid_number * scrambling_percentage), 2)
-        indexes = np.random.choice(amino_acid_number, size=amino_acid_number_to_shuffle, replace=False)
-        atom_coordinates_percent = atom_coordinates[indexes].copy()
-        np.random.shuffle(atom_coordinates_percent)
-        atom_coordinates[indexes] = atom_coordinates_percent
+        atom_coordinates_shape = atom_coordinates.shape
+        atom_coordinates = atom_coordinates.flatten()
+        coordinates_number = len(atom_coordinates)
+        coordinates_to_shuffle = max(int(coordinates_number * scrambling_percentage), 2)
+        indexes = np.random.choice(coordinates_number, size=coordinates_to_shuffle, replace=False)
+        atom_coordinates[indexes] = np.random.permutation(atom_coordinates[indexes])
+        atom_coordinates = atom_coordinates.reshape(atom_coordinates_shape)
 
+    amino_acid_number = len(atom_coordinates)
     A = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
     edges = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
 
