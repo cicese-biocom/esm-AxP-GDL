@@ -43,22 +43,38 @@ def _atom_coordinates(pdb_str, atom_type='CA'):
     return atom_coordinates
 
 
+def _coordinate_intervals(pdbs_str, atom_type):
+    atom_coordinates = []
+    for pdb_str in pdbs_str:
+        atom_coordinates.append(np.array(_atom_coordinates(pdb_str, atom_type), dtype=object))
+
+    atom_coordinates = np.concatenate(atom_coordinates, axis=0)
+
+    coordinate_min = np.min(atom_coordinates, axis=0)
+    coordinate_max = np.max(atom_coordinates, axis=0)
+
+    return coordinate_min, coordinate_max
+
+
 def _adjacency_matrix(args):
     pdb_str , threshold, distance_type, atom_type, validation_config = args
 
     atom_coordinates = np.array(_atom_coordinates(pdb_str, atom_type), dtype=object)
 
-    validation_mode, scrambling_percentage = validation_config
-    if validation_mode == 'coordinates_scrambling':
-        atom_coordinates_shape = atom_coordinates.shape
-        atom_coordinates = atom_coordinates.flatten()
-        coordinates_number = len(atom_coordinates)
-        coordinates_to_shuffle = max(int(coordinates_number * scrambling_percentage), 2)
-        indexes = np.random.choice(coordinates_number, size=coordinates_to_shuffle, replace=False)
-        atom_coordinates[indexes] = np.random.permutation(atom_coordinates[indexes])
-        atom_coordinates = atom_coordinates.reshape(atom_coordinates_shape)
+    validation_mode, scrambling_percentage, coordinate_min, coordinate_max = validation_config
 
     amino_acid_number = len(atom_coordinates)
+
+    if validation_mode == 'coordinates_scrambling':
+        atom_coordinates = np.zeros((atom_coordinates.shape))
+
+        # x coordinate
+        atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
+        # y coordinate
+        atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=amino_acid_number)
+        # z coordinate
+        atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
+
     A = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
     edges = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
 
@@ -166,6 +182,10 @@ def pdb_adjacency_matrices(data, path, threshold, validation_config):
     # adjacency matrix
     distance_type = 'euclidean'
     atom_type = 'CA'
+
+    coordinate_min, coordinate_max = _coordinate_intervals(pdbs_str, atom_type)
+    validation_mode, scrambling_percentage = validation_config
+    validation_config = (validation_mode, scrambling_percentage, coordinate_min, coordinate_max)
 
     num_cores = multiprocessing.cpu_count()
     args = [(pdb_str, threshold, distance_type, atom_type, validation_config) for pdb_str in pdbs_str]
