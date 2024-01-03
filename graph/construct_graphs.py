@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.data import Data, DataLoader
-from graph.residues_level_features_encoding import esm2_derived_features
-from graph.structure_feature_extraction import get_adjacency_and_weights_matrices
+from graph.nodes import esm2_derived_features
+from graph.edges import get_adjacency_and_weights_matrices
 from tqdm import tqdm
 import numpy as np
 
