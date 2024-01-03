@@ -57,10 +57,10 @@ def get_adjacency_and_weights_matrices(load_pdb, data, path, threshold, validati
                 future.add_done_callback(lambda p: progress.update())
                 futures.append(future)
 
-            edges = [future.result()[0] for future in futures]
-            weights_matrix = [future.result()[1] for future in futures]
+            adjacency_matrices = [future.result()[0] for future in futures]
+            weights_matrices = [future.result()[1] for future in futures]
 
-    return edges, weights_matrix
+    return adjacency_matrices, weights_matrices
 
 
 def _compute_adjacency_and_weights_matrices(args):
