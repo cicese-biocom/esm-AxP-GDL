@@ -21,39 +21,25 @@ def get_adjacency_and_weights_matrices(load_pdb, data, path, threshold, validati
     distance_type = 'euclidean'
     atom_type = 'CA'
 
-    ids = data.id
-    atom_coordinates_matrices = []
-    if load_pdb:
-        with tqdm(range(len(ids)), total=len(ids), desc="Loading pdb files", disable=False) as progress:
-            pdbs = []
-            for id in ids:
-                pdb_file = os.path.join(path, id + '.pdb')
-                pdb_str = _open_pdb(pdb_file)
-                pdbs.append(pdb_str)
-                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
-                progress.update(1)
-    else:
-        pdbs = _predict_structures(data)
-        pdb_names = [str(id) for id in ids]
-
-        with tqdm(range(len(pdbs)), total=len(pdbs), desc="Saving pdb files", disable=False) as progress:
-            for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
-                _save_pdb(pdb_str, pdb_name, path)
-                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
-                progress.update(1)
+    atom_coordinates_matrices = _get_atom_coordinates(load_pdb, data, path, atom_type)
 
     coordinate_min, coordinate_max = _get_atom_coordinates_intervals(atom_coordinates_matrices)
-    validation_mode, scrambling_percentage = validation_config
-    validation_config = (validation_mode, scrambling_percentage, coordinate_min, coordinate_max)
+    validation_config = (*validation_config, coordinate_min, coordinate_max)
 
+    adjacency_matrices, weights_matrices = _compute_adjacency_and_weights_matrices(atom_coordinates_matrices, threshold,
+                                                                                   distance_type, atom_type,
+                                                                                   validation_config, num_cores)
+    return adjacency_matrices, weights_matrices
+
+
+def _compute_adjacency_and_weights_matrices(atom_coordinates_matrices, threshold, distance_type, atom_type, validation_config, num_cores):
     args = [(atom_coordinates, threshold, distance_type, atom_type, validation_config) for atom_coordinates in
             atom_coordinates_matrices]
-
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs)), total=len(pdbs), desc="Generating adjacency matrices", disable=False) as progress:
+        with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
             futures = []
             for arg in args:
-                future = pool.submit(_compute_adjacency_and_weights_matrices, arg)
+                future = pool.submit(_adjacency_and_weights_matrix, arg)
                 future.add_done_callback(lambda p: progress.update())
                 futures.append(future)
 
@@ -63,19 +49,16 @@ def get_adjacency_and_weights_matrices(load_pdb, data, path, threshold, validati
     return adjacency_matrices, weights_matrices
 
 
-def _compute_adjacency_and_weights_matrices(args):
-    atom_coordinates, threshold, distance_type, atom_type, validation_config = args
-    validation_mode, scrambling_percentage, coordinate_min, coordinate_max = validation_config
+def _adjacency_and_weights_matrix(args):
+    atom_coordinates, threshold, distance_type, atom_type, (
+    validation_mode, scrambling_percentage, coordinate_min, coordinate_max) = args
 
     amino_acid_number = len(atom_coordinates)
 
     if validation_mode == 'coordinates_scrambling':
         atom_coordinates = np.zeros((atom_coordinates.shape))
-        # x coordinate
         atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
-        # y coordinate
         atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=amino_acid_number)
-        # z coordinate
         atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
 
     adjacency_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
@@ -102,6 +85,36 @@ def _compute_adjacency_and_weights_matrices(args):
     weights_matrix = np.expand_dims(weights_matrix, -1)
 
     return adjacency_matrix, weights_matrix
+
+def _coordinates_scrambling():
+    atom_coordinates = np.zeros((atom_coordinates.shape))
+    atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
+    atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=amino_acid_number)
+    atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
+
+def _get_atom_coordinates(load_pdb, data, path, atom_type):
+    ids = data.id
+    atom_coordinates_matrices = []
+    if load_pdb:
+        with tqdm(range(len(ids)), total=len(ids), desc="Loading pdb files", disable=False) as progress:
+            pdbs = []
+            for id in ids:
+                pdb_file = os.path.join(path, id + '.pdb')
+                pdb_str = _open_pdb(pdb_file)
+                pdbs.append(pdb_str)
+                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                progress.update(1)
+    else:
+        pdbs = _predict_structures(data)
+        pdb_names = [str(id) for id in ids]
+
+        with tqdm(range(len(pdbs)), total=len(pdbs), desc="Saving pdb files", disable=False) as progress:
+            for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
+                _save_pdb(pdb_str, pdb_name, path)
+                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                progress.update(1)
+
+    return atom_coordinates_matrices
 
 
 def _predict_structures(data):
