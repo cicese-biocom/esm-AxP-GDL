@@ -16,58 +16,61 @@ from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
 
 
-def _predict(model, sequence):
-    with torch.no_grad():
-        pdb_str = model.infer_pdb(sequence)
+def get_adjacency_and_weights_matrices(load_pdb, data, path, threshold, validation_config):
+    num_cores = multiprocessing.cpu_count()
+    distance_type = 'euclidean'
+    atom_type = 'CA'
 
-    return pdb_str
+    ids = data.id
+    atom_coordinates_matrices = []
+    if load_pdb:
+        with tqdm(range(len(ids)), total=len(ids), desc="Loading pdb files", disable=False) as progress:
+            pdbs = []
+            for id in ids:
+                pdb_file = os.path.join(path, id + '.pdb')
+                pdb_str = _open_pdb(pdb_file)
+                pdbs.append(pdb_str)
+                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                progress.update(1)
+    else:
+        pdbs = _predict_structures(data)
+        pdb_names = [str(id) for id in ids]
+
+        with tqdm(range(len(pdbs)), total=len(pdbs), desc="Saving pdb files", disable=False) as progress:
+            for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
+                _save_pdb(pdb_str, pdb_name, path)
+                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                progress.update(1)
+
+    coordinate_min, coordinate_max = _get_atom_coordinates_intervals(atom_coordinates_matrices)
+    validation_mode, scrambling_percentage = validation_config
+    validation_config = (validation_mode, scrambling_percentage, coordinate_min, coordinate_max)
+
+    args = [(atom_coordinates, threshold, distance_type, atom_type, validation_config) for atom_coordinates in
+            atom_coordinates_matrices]
+
+    with ProcessPoolExecutor(max_workers=num_cores) as pool:
+        with tqdm(range(len(pdbs)), total=len(pdbs), desc="Generating adjacency matrices", disable=False) as progress:
+            futures = []
+            for arg in args:
+                future = pool.submit(_compute_adjacency_and_weights_matrices, arg)
+                future.add_done_callback(lambda p: progress.update())
+                futures.append(future)
+
+            edges = [future.result()[0] for future in futures]
+            weights_matrix = [future.result()[1] for future in futures]
+
+    return edges, weights_matrix
 
 
-def _atom_coordinates(pdb_str, atom_type='CA'):
-    pdb_filehandle = io.StringIO(pdb_str)
-    parser = PDBParser()
-    structure = parser.get_structure("pdb", pdb_filehandle)
-
-    # Create a list to store the coordinates of Cβ atoms
-    atom_coordinates = []
-
-    # Iterate through the PDB structure and extract the coordinates of Cβ atoms
-    for model in structure:
-        for chain in model:
-            for residue in chain:
-                if residue.has_id(atom_type):
-                    atom = residue[atom_type]
-                    atom_coordinates.append(atom.coord)
-
-    pdb_filehandle.close()
-    return atom_coordinates
-
-
-def _coordinate_intervals(pdbs_str, atom_type):
-    atom_coordinates = []
-    for pdb_str in pdbs_str:
-        atom_coordinates.append(np.array(_atom_coordinates(pdb_str, atom_type), dtype=object))
-
-    atom_coordinates = np.concatenate(atom_coordinates, axis=0)
-
-    coordinate_min = np.min(atom_coordinates, axis=0)
-    coordinate_max = np.max(atom_coordinates, axis=0)
-
-    return coordinate_min, coordinate_max
-
-
-def _adjacency_matrix(args):
-    pdb_str , threshold, distance_type, atom_type, validation_config = args
-
-    atom_coordinates = np.array(_atom_coordinates(pdb_str, atom_type), dtype=object)
-
+def _compute_adjacency_and_weights_matrices(args):
+    atom_coordinates, threshold, distance_type, atom_type, validation_config = args
     validation_mode, scrambling_percentage, coordinate_min, coordinate_max = validation_config
 
     amino_acid_number = len(atom_coordinates)
 
     if validation_mode == 'coordinates_scrambling':
         atom_coordinates = np.zeros((atom_coordinates.shape))
-
         # x coordinate
         atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
         # y coordinate
@@ -75,32 +78,79 @@ def _adjacency_matrix(args):
         # z coordinate
         atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
 
-    A = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
-    edges = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
+    adjacency_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
+    weights_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
 
     if validation_mode == 'sequence_graph':
         for i in range(amino_acid_number-1):
             dist = _distance(atom_coordinates[i], atom_coordinates[i+1], distance_type)
-            A[i][i+1] = 1
-            A[i+1][i] = 1
-            edges[i][i+1] = dist
-            edges[i+1][i] = dist
+            adjacency_matrix[i][i+1] = 1
+            adjacency_matrix[i+1][i] = 1
+            weights_matrix[i][i+1] = dist
+            weights_matrix[i+1][i] = dist
     else:
         for i in range(amino_acid_number):
             for j in range(i + 1, amino_acid_number):
                 dist = _distance(atom_coordinates[i], atom_coordinates[j], distance_type)
-
                 if dist <= threshold:
-                    A[i][j] = 1
-                    A[j][i] = 1
-                    edges[i][j] = dist
-                    edges[j][i] = dist
+                    adjacency_matrix[i][j] = 1
+                    adjacency_matrix[j][i] = 1
+                    weights_matrix[i][j] = dist
+                    weights_matrix[j][i] = dist
 
-    A[np.eye(A.shape[0]) == 1] = 0
+    adjacency_matrix[np.eye(adjacency_matrix.shape[0]) == 1] = 0
+    weights_matrix = np.expand_dims(weights_matrix, -1)
 
-    edges = np.expand_dims(edges, -1)
+    return adjacency_matrix, weights_matrix
 
-    return A, edges
+
+def _predict_structures(data):
+    hub.set_dir(os.getcwd() + os.sep + "models/esmfold/")
+    model = esm.pretrained.esmfold_v1()
+    model = model.eval().cuda()
+
+    sequences = data.sequence
+    with tqdm(range(len(sequences)), total=len(sequences), desc="Generating 3D structure") as progress_bar:
+        pdbs = []
+        for i, sequence in enumerate(sequences):
+            pdb_str = _predict(model, sequence)
+            pdbs.append(pdb_str)
+            progress_bar.update(1)
+
+    return pdbs
+
+def _predict(model, sequence):
+    with torch.no_grad():
+        pdb_str = model.infer_pdb(sequence)
+    return pdb_str
+
+
+def _get_atom_coordinates_from_pdb(pdb_str, atom_type='CA'):
+    try:
+        pdb_filehandle = io.StringIO(pdb_str)
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure("pdb", pdb_filehandle)
+
+        atom_coordinates = []
+        for model in structure:
+            for chain in model:
+                for residue in chain:
+                    if residue.has_id(atom_type):
+                        atom = residue[atom_type]
+                        atom_coordinates.append(np.float64(atom.coord))
+
+        pdb_filehandle.close()
+        return atom_coordinates
+
+    except Exception as e:
+        raise ValueError(f"Error parsing the PDB structure: {e}")
+
+
+def _get_atom_coordinates_intervals(atom_coordinates_matrices):
+    atom_coordinates = np.concatenate(atom_coordinates_matrices, axis=0)
+    coordinate_min = np.min(atom_coordinates, axis=0)
+    coordinate_max = np.max(atom_coordinates, axis=0)
+    return coordinate_min, coordinate_max
 
 
 def _save_pdb(pdb_str, pdb_name, path):
@@ -115,94 +165,6 @@ def _open_pdb(pdb_file):
     with open(pdb_file, "r") as f:
         pdb_str = f.read()
         return pdb_str
-
-
-def adjacency_matrices(data, path, threshold, validation_config):
-    hub.set_dir(os.getcwd() + os.sep + "models/esmfold/")
-
-    model = esm.pretrained.esmfold_v1()
-    model = model.eval().cuda()
-
-    sequences = data.sequence
-    ids = data.id
-
-    with tqdm(range(len(sequences)), total=len(sequences), desc ="Generating 3D structure") as progress_bar:
-        pdbs = []
-        for i, sequence in enumerate(sequences):
-            pdb_str = _predict(model, sequence)
-            pdbs.append(pdb_str)
-            progress_bar.update(1)
-
-    pdb_names = [str(id) for id in ids]
-
-    with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Saving pdb files", disable=False) as progress:
-        for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
-            _save_pdb(pdb_str, pdb_name, path)
-            progress.update(1)
-
-    # adjacency matrix
-    num_cores = multiprocessing.cpu_count()
-    distance_type = 'euclidean'
-    atom_type = 'CA'
-
-    args = [(pdb, threshold, distance_type, atom_type, validation_config) for pdb in pdbs]
-
-    with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Generating adjacency matrices", disable=False) as progress:
-            futures = []
-            for arg in args:
-                future = pool.submit(_adjacency_matrix, arg)
-                future.add_done_callback(lambda p: progress.update())
-                futures.append(future)
-
-            list_A = [future.result()[0] for future in futures]
-            list_E = [future.result()[1] for future in futures]
-
-    return list_A, list_E
-
-
-def pdb_adjacency_matrices(data, path, threshold, validation_config):
-    #pdb_files = glob.glob(path + "*.pdb", recursive=True)
-
-    ids = data['id']
-
-    #pdb_files_to_load = [f for f in pdb_files if os.path.basename(f) in ]
-
-    #pdb_files = sorted(pdb_files, key=lambda name: int(os.path.basename(name).split("AVP")[1].split("_")[0]))
-
-    # Load pdbs
-    with tqdm(range(len(ids)), total=len(ids), desc ="Loading pdb files", disable=False) as progress:
-        pdbs_str = []
-        for id in ids:
-            pdb_file = os.path.join(path, id + '.pdb')
-            pdb_str = _open_pdb(pdb_file)
-            pdbs_str.append(pdb_str)
-            progress.update(1)
-
-    # adjacency matrix
-    distance_type = 'euclidean'
-    atom_type = 'CA'
-
-    coordinate_min, coordinate_max = _coordinate_intervals(pdbs_str, atom_type)
-    validation_mode, scrambling_percentage = validation_config
-    validation_config = (validation_mode, scrambling_percentage, coordinate_min, coordinate_max)
-
-    num_cores = multiprocessing.cpu_count()
-    args = [(pdb_str, threshold, distance_type, atom_type, validation_config) for pdb_str in pdbs_str]
-
-    with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(pdbs_str)), total=len(pdbs_str), desc ="Generating adjacency matrices") as progress:
-            futures = []
-
-            for arg in args:
-                future = pool.submit(_adjacency_matrix, arg)
-                future.add_done_callback(lambda p: progress.update())
-                futures.append(future)
-
-            list_A = [future.result()[0] for future in futures]
-            list_E = [future.result()[1] for future in futures]
-
-    return list_A, list_E
 
 
 def _distance(atom1, atom2, distance_type='euclidean'):
@@ -226,26 +188,10 @@ def _distance(atom1, atom2, distance_type='euclidean'):
 def main(args):
     path = args.tertiary_structure_path
     dataset = args.dataset
-
     data = pd.read_csv(dataset)
-
-    hub.set_dir(os.getcwd() + os.sep + "models/esmfold/")
-
-    model = esm.pretrained.esmfold_v1()
-    model = model.eval().cuda()
-
-    sequences = data.sequence
     ids = data.id
 
-    with tqdm(range(len(sequences)), total=len(sequences), desc ="Generating 3D structure") as progress_bar:
-        pdbs = []
-        for i, sequence in enumerate(sequences):
-            pdb_str = _predict(model, sequence)
-            pdbs.append(pdb_str)
-
-            progress_bar.update(1)
-
-    #pdb_names = [str(id) + '_Pos' if label == 1 else str(id) + '_Neg' for id, label in zip(ids, labels)]
+    pdbs = _predict_structures(data)
     pdb_names = [str(id) for id in ids]
 
     with tqdm(range(len(pdbs)), total=len(pdbs), desc ="Saving pdb files", disable=False) as progress:

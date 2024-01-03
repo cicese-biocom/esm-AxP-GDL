@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.data import Data, DataLoader
 from graph.residues_level_features_encoding import esm2_derived_features
-from graph.structure_feature_extraction import adjacency_matrix
+from graph.structure_feature_extraction import get_adjacency_and_weights_matrices
 from tqdm import tqdm
 import numpy as np
 
@@ -23,7 +23,7 @@ def construct_graphs(data, esm2_representation, tertiary_structure_config, thres
     Xs = esm2_derived_features(data, esm2_representation, validation_config)
 
     # load contact map
-    As, Es = adjacency_matrix(data, tertiary_structure_config, threshold, validation_config)
+    As, Es = get_adjacency_and_weights_matrices(data, tertiary_structure_config, threshold, validation_config)
 
     labels = data.activity
     n_samples = len(As)
