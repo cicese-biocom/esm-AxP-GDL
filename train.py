@@ -211,7 +211,7 @@ if __name__ == '__main__':
 
     # methods for graphs construction
     parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
-                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t36', 'esm2_t48'],
+                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48'],
                         help='ESM-2 model to be used')
 
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
