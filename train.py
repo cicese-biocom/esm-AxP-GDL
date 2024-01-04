@@ -67,7 +67,7 @@ def train(args):
         # If only training or validation data were provided
         else:
             # split training dataset: 80% train y 20% test, with seed and shuffle
-            graphs_train, graphs_val, _, _ = train_test_split(graphs, labels, test_size=0.2, shuffle=True, random_state=41)
+            graphs_train, graphs_val, _, _ = train_test_split(graphs, labels, test_size=0.2, shuffle=True, random_state=41, stratify=labels)
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
