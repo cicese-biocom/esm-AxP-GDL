@@ -85,8 +85,8 @@ def independent_test(args):
 
             progress.set_description("Test result")
             progress.set_postfix(
-                Recall_Pos=f"{sp:.4f}",
-                Recall_Neg=f"{sn:.4f}",
+                Recall_Pos=f"{sn:.4f}",
+                Recall_Neg=f"{sp:.4f}",
                 Test_MCC=f"{mcc:.4f}",
                 Test_ACC=f"{acc:.4f}",
                 Test_AUC=f"{auc:.4f}"
@@ -100,8 +100,8 @@ def independent_test(args):
                 f.write('Test MCC result: ' + str(mcc) + '\n')
                 f.write('Test ACC result: ' + str(acc) + '\n')
                 f.write('Test AUC result: ' + str(auc) + '\n')
-                f.write('Recall Pos result: ' + str(sp) + '\n')
-                f.write('Recall Neg result: ' + str(sn) + '\n')
+                f.write('Recall Pos result: ' + str(sn) + '\n')
+                f.write('Recall Neg result: ' + str(sp) + '\n')
 
             res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
             df = pd.DataFrame(res_data)
