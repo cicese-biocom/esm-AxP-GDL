@@ -77,7 +77,7 @@ def independent_test(args):
             auc = roc_auc_score(y_true, prob)
             acc = accuracy_score(y_true, y_pred)
 
-            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
             mcc = matthews_corrcoef(y_true, y_pred)
             sn = tp / (tp + fn)
