@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch_geometric.loader import DataLoader
 import argparse
-from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, matthews_corrcoef, confusion_matrix
+from sklearn.metrics import roc_auc_score, accuracy_score, matthews_corrcoef, confusion_matrix
 import torch.nn.functional as F
 import pandas as pd
 from tools.data_preprocessing.dataset_processing import load_and_validate_dataset
@@ -12,6 +12,7 @@ from tqdm import tqdm
 import time
 
 def independent_test(args):
+    distance_function = args.distance
     threshold = args.d
     dataset = args.dataset
     esm2_representation = args.esm2_representation
@@ -30,7 +31,11 @@ def independent_test(args):
     validation_config = (args.validation_mode, args.scrambling_percentage)
 
     # to get the graph representations
-    graphs = construct_graphs(test_data, esm2_representation, tertiary_structure_config, threshold, validation_config)
+    graphs, similarity = construct_graphs(test_data, esm2_representation, tertiary_structure_config, distance_function, threshold, validation_config)
+
+    if not similarity.empty:
+        csv_file_path = os.path.join(args.path_to_save_models, 'similarity.csv')
+        similarity.to_csv(csv_file_path, index=False)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -79,7 +84,7 @@ def independent_test(args):
             auc = roc_auc_score(y_true, prob)
             acc = accuracy_score(y_true, y_pred)
 
-            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
             mcc = matthews_corrcoef(y_true, y_pred)
             sn = tp / (tp + fn)
@@ -87,8 +92,8 @@ def independent_test(args):
 
             progress.set_description("Test result")
             progress.set_postfix(
-                Recall_Pos=f"{sp:.4f}",
-                Recall_Neg=f"{sn:.4f}",
+                Recall_Pos=f"{sn:.4f}",
+                Recall_Neg=f"{sp:.4f}",
                 Test_MCC=f"{mcc:.4f}",
                 Test_ACC=f"{acc:.4f}",
                 Test_AUC=f"{auc:.4f}"
@@ -102,10 +107,10 @@ def independent_test(args):
                 f.write('Test MCC result: ' + str(mcc) + '\n')
                 f.write('Test ACC result: ' + str(acc) + '\n')
                 f.write('Test AUC result: ' + str(auc) + '\n')
-                f.write('Recall Pos result: ' + str(sp) + '\n')
-                f.write('Recall Neg result: ' + str(sn) + '\n')
+                f.write('Recall Pos result: ' + str(sn) + '\n')
+                f.write('Recall Neg result: ' + str(sp) + '\n')
 
-            res_data = {'AMP_label': y_true, 'score': prob, 'pred': y_pred}
+            res_data = {'id': test_data.id,'sequence': test_data.sequence,'activity': y_true, 'score': prob, 'predicted_activity': y_pred}
             df = pd.DataFrame(res_data)
             output_file = os.path.join(os.path.dirname(trained_model), args.test_result_file_name + '.csv')
             df.to_csv(output_file, index=False)
@@ -119,7 +124,7 @@ if __name__ == '__main__':
 
     # methods for graphs construction
     parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
-                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t36', 'esm2_t48'],
+                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48'],
                         help='ESM-2 model to be used')
 
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
@@ -137,7 +142,12 @@ if __name__ == '__main__':
     parser.add_argument('--drop', type=float, default=0.5, help='Dropout rate')
     parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
-    parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
+
+    parser.add_argument('--distance', type=str, default='euclidean',
+                        choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel', 'bhattacharyya',
+                                 'angular_separation'],
+                        help='Distance function to construct graph edges')
+    parser.add_argument('--d', type=float, default=15, help='Distance threshold to construct graph edges')
 
     parser.add_argument('--validation_mode', type=str, default=None,
                         choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
