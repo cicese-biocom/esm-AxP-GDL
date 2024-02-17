@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import os
 from tqdm import tqdm
 import time
+import copy
 
 def train(args):
     try:
@@ -28,6 +29,7 @@ def train(args):
             os.makedirs(model_path)
 
         # load arguments
+        distance_function = args.distance
         threshold = args.d
         dataset = args.dataset
         esm2_representation = args.esm2_representation
@@ -41,14 +43,19 @@ def train(args):
         data = load_and_validate_dataset(dataset)
 
         # Filter rows where 'partition' is equal to 1 (training data) or 2 (validation data)
-        train_and_val_data = data[data['partition'].isin([1,2])].reset_index(drop=True)
+        train_and_val_data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
 
         # Check if train_and_val_data is empty
         if train_and_val_data.empty:
             raise ValueError("No data available for training.")
 
         # to get the graph representations
-        graphs = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, threshold, validation_config)
+        graphs, similarity = construct_graphs(train_and_val_data, esm2_representation, tertiary_structure_config, distance_function, threshold, validation_config)
+
+        if not similarity.empty:
+            csv_file_path = os.path.join(args.path_to_save_models, 'similarity.csv')
+            similarity.to_csv(csv_file_path, index=False)
+
         labels = train_and_val_data.activity
 
         # Apply the mask to 'graph_representations' to training and validation data
@@ -96,6 +103,8 @@ def train(args):
 
         # Training and Validation
         best_mcc = -2
+        current_model = {}
+        model_with_best_mcc = {}
         epochs = args.e
         bar = tqdm(total=epochs, desc="Training and Validation:")
         for epoch in range(1, epochs + 1):
@@ -112,22 +121,14 @@ def train(args):
                 optimizer.step()
                 arr_loss.append(loss.item())
 
+            current_model['epoch'] = epoch
+            current_model['model'] = model
+            current_model['model_state_dict'] = model.state_dict()
+            current_model['optimizer_state_dict'] = optimizer.state_dict()
+            current_model['scheduler_state_dict'] = scheduler.state_dict()
+            
             if args.save_ckpt_per_epoch:
-                torch.save({
-                    'epoch': epoch,
-                    'model': model,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict()
-                }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
-            elif epoch==args.e:
-                torch.save({
-                    'epoch': epoch,
-                    'model': model,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict()
-                }, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
+                torch.save(current_model, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
 
             model.eval()
             with torch.no_grad():
@@ -184,8 +185,15 @@ def train(args):
                     val_loss_of_the_best_mcc = val_loss
                     train_loss_of_the_best_mcc = train_loss
                     epoch_of_the_best_mcc = epoch
+                    model_with_best_mcc = current_model.copy()
 
             scheduler.step()
+
+        if not args.save_ckpt_per_epoch:
+            torch.save(current_model, os.path.join(model_path, f"{model_name}_ckpt_{epoch}.pt"))
+            torch.save(model_with_best_mcc,
+                       os.path.join(model_path, f"best_model_{model_name}_ckpt_{epoch_of_the_best_mcc}.pt"))
+            torch.save(model_with_best_mcc, os.path.join(model_path, f"best_model_{model_name}.pt"))
 
         bar.set_postfix(
             Epoch_Best_MCC=f"{epoch_of_the_best_mcc}",
@@ -222,7 +230,7 @@ if __name__ == '__main__':
 
     # methods for graphs construction
     parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
-                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t36', 'esm2_t48'],
+                        choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48'],
                         help='ESM-2 model to be used')
 
     parser.add_argument('--tertiary_structure_method', type=str, default='esmfold',
@@ -246,7 +254,11 @@ if __name__ == '__main__':
                         help=' The path to save the trained models')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
 
-    parser.add_argument('--d', type=int, default=15, help='Distance threshold to construct graph edges')
+    parser.add_argument('--distance', type=str, default='euclidean',
+                        choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel', 'bhattacharyya',
+                                 'angular_separation'],
+                        help='Distance function to construct graph edges')
+    parser.add_argument('--d', type=float, default=15, help='Distance threshold to construct graph edges')
 
     parser.add_argument('--validation_mode', type=str, default=None,
                         choices=['sequence_graph', 'coordinates_scrambling', 'embedding_scrambling'],
@@ -261,6 +273,16 @@ if __name__ == '__main__':
     parser.add_argument('--log_file_name', type=str, default='TrainingLog', help='Log file name')
 
     args = parser.parse_args()
+
+    #args.dataset = os.path.join(os.getcwd(), 'datasets/TestDataset/TestDataset.csv')
+    #args.esm2_representation = 'esm2_t6'
+    #args.tertiary_structure_path = os.path.join(os.getcwd(), 'datasets/AMPDiscover/ESMFold_pdbs/')
+    #args.tertiary_structure_load_pdbs = True
+    #args.e = 5
+    #args.hd = 64
+    #args.path_to_save_models = 'output_models/debug_cesar/'
+    #args.d = 0
+    #args.save_ckpt_per_epoch = False
 
     train(args)
 
