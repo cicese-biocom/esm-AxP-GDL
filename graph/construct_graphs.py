@@ -5,7 +5,7 @@ from graph.edges import get_adjacency_and_weights_matrices
 from tqdm import tqdm
 import numpy as np
 
-def construct_graphs(data, esm2_representation, tertiary_structure_config, threshold, validation_config):
+def construct_graphs(data, esm2_representation, tertiary_structure_config, distance_function, threshold, validation_config):
     """
     :param data: data (id, sequence itself, activity, label)
     :param esm2_representation: name of the esm2 representation to be used
@@ -23,7 +23,7 @@ def construct_graphs(data, esm2_representation, tertiary_structure_config, thres
     nodes_features = esm2_derived_features(data, esm2_representation, validation_config)
 
     # edges
-    adjacency_matrices, weights_matrices = get_adjacency_and_weights_matrices(data, tertiary_structure_config, threshold, validation_config)
+    adjacency_matrices, weights_matrices, similarity = get_adjacency_and_weights_matrices(data, tertiary_structure_config, distance_function, threshold, validation_config)
 
     labels = data.activity
     n_samples = len(adjacency_matrices)
@@ -33,7 +33,7 @@ def construct_graphs(data, esm2_representation, tertiary_structure_config, thres
             graphs.append(to_parse_matrix(adjacency_matrices[i], nodes_features[i], weights_matrices[i], labels[i]))
             progress.update(1)
 
-    return graphs
+    return graphs, similarity
 
 
 def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps=1e-6):
@@ -59,8 +59,10 @@ def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps
     edge_index = torch.tensor([rows, cols], dtype=torch.int64)
     x = torch.tensor(nodes_features, dtype=torch.float32)
     edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
-    y = torch.tensor([label], dtype=torch.long)
+    y = torch.tensor([label], dtype=torch.int64)
 
-    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+    data.validate(raise_on_error=True)
+    return data
 
 

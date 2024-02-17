@@ -14,27 +14,45 @@ from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
+from tools.distances.distances import *
+from tools.distances.similarity import *
 
 
-def get_adjacency_and_weights_matrices(load_pdb, data, path, threshold, validation_config):
-    num_cores = multiprocessing.cpu_count()
-    distance_type = 'euclidean'
+def get_adjacency_and_weights_matrices(load_pdb, data, path, distance_function, threshold, validation_config):
     atom_type = 'CA'
 
     atom_coordinates_matrices = _get_atom_coordinates(load_pdb, data, path, atom_type)
 
-    coordinate_min, coordinate_max = _get_atom_coordinates_intervals(atom_coordinates_matrices)
-    validation_config = (*validation_config, coordinate_min, coordinate_max)
+    args = (atom_coordinates_matrices, distance_function, threshold, validation_config)
+    adjacency_matrices, weights_matrices = _compute_adjacency_and_weights_matrices(args)
+    similarity = pd.DataFrame()
 
-    adjacency_matrices, weights_matrices = _compute_adjacency_and_weights_matrices(atom_coordinates_matrices, threshold,
-                                                                                   distance_type, atom_type,
-                                                                                   validation_config, num_cores)
-    return adjacency_matrices, weights_matrices
+    validation_mode, scrambling_percentage = validation_config
+    if validation_mode == 'coordinates_scrambling':
+        coordinates_matrices_scrambling, adjacency_matrices_scrambling, weights_matrices_scrambling = _coordinates_scrambling(args)
+
+        coordinates_matrices_similarity = matrix_similarity(atom_coordinates_matrices, coordinates_matrices_scrambling)
+        adjacency_matrices_similarity = matrix_similarity(adjacency_matrices, adjacency_matrices_scrambling)
+
+        data = {
+            'sequences': data.sequence,
+            'coordinates_matrices_similarity': coordinates_matrices_similarity,
+            'adjacency_matrices_similarity': adjacency_matrices_similarity
+        }
+        similarity = pd.DataFrame(data)
+
+        adjacency_matrices = adjacency_matrices_scrambling
+        weights_matrices = weights_matrices_scrambling
+
+    return adjacency_matrices, weights_matrices, similarity
 
 
-def _compute_adjacency_and_weights_matrices(atom_coordinates_matrices, threshold, distance_type, atom_type, validation_config, num_cores):
-    args = [(atom_coordinates, threshold, distance_type, atom_type, validation_config) for atom_coordinates in
+def _compute_adjacency_and_weights_matrices(args):
+    atom_coordinates_matrices, distance_function, threshold, validation_config = args
+
+    args = [(atom_coordinates, distance_function, threshold, validation_config) for atom_coordinates in
             atom_coordinates_matrices]
+    num_cores = multiprocessing.cpu_count()
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
         with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
             futures = []
@@ -50,23 +68,16 @@ def _compute_adjacency_and_weights_matrices(atom_coordinates_matrices, threshold
 
 
 def _adjacency_and_weights_matrix(args):
-    atom_coordinates, threshold, distance_type, atom_type, (
-    validation_mode, scrambling_percentage, coordinate_min, coordinate_max) = args
+    atom_coordinates, distance_function, threshold, validation_config = args
 
     amino_acid_number = len(atom_coordinates)
-
-    if validation_mode == 'coordinates_scrambling':
-        atom_coordinates = np.zeros((atom_coordinates.shape))
-        atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
-        atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=amino_acid_number)
-        atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
-
     adjacency_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.int)
     weights_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
 
+    validation_mode, scrambling_percentage = validation_config
     if validation_mode == 'sequence_graph':
         for i in range(amino_acid_number-1):
-            dist = _distance(atom_coordinates[i], atom_coordinates[i+1], distance_type)
+            dist = distance(atom_coordinates[i], atom_coordinates[i+1], distance_function)
             adjacency_matrix[i][i+1] = 1
             adjacency_matrix[i+1][i] = 1
             weights_matrix[i][i+1] = dist
@@ -74,7 +85,7 @@ def _adjacency_and_weights_matrix(args):
     else:
         for i in range(amino_acid_number):
             for j in range(i + 1, amino_acid_number):
-                dist = _distance(atom_coordinates[i], atom_coordinates[j], distance_type)
+                dist = distance(atom_coordinates[i], atom_coordinates[j], distance_function)
                 if dist <= threshold:
                     adjacency_matrix[i][j] = 1
                     adjacency_matrix[j][i] = 1
@@ -86,11 +97,6 @@ def _adjacency_and_weights_matrix(args):
 
     return adjacency_matrix, weights_matrix
 
-def _coordinates_scrambling():
-    atom_coordinates = np.zeros((atom_coordinates.shape))
-    atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=amino_acid_number)
-    atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=amino_acid_number)
-    atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=amino_acid_number)
 
 def _get_atom_coordinates(load_pdb, data, path, atom_type):
     ids = data.id
@@ -102,7 +108,9 @@ def _get_atom_coordinates(load_pdb, data, path, atom_type):
                 pdb_file = os.path.join(path, id + '.pdb')
                 pdb_str = _open_pdb(pdb_file)
                 pdbs.append(pdb_str)
-                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                coordinates_matrix = np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype='float64')
+                coordinates_matrix = np.array(translate_positive_coordinates(coordinates_matrix), dtype='float64')
+                atom_coordinates_matrices.append(coordinates_matrix)
                 progress.update(1)
     else:
         pdbs = _predict_structures(data)
@@ -111,7 +119,9 @@ def _get_atom_coordinates(load_pdb, data, path, atom_type):
         with tqdm(range(len(pdbs)), total=len(pdbs), desc="Saving pdb files", disable=False) as progress:
             for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
                 _save_pdb(pdb_str, pdb_name, path)
-                atom_coordinates_matrices.append(np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype=object))
+                coordinates_matrix = np.array(_get_atom_coordinates_from_pdb(pdb_str, atom_type), dtype='float64')
+                coordinates_matrix = np.array(translate_positive_coordinates(coordinates_matrix), dtype='float64')
+                atom_coordinates_matrices.append(coordinates_matrix)
                 progress.update(1)
 
     return atom_coordinates_matrices
@@ -180,22 +190,28 @@ def _open_pdb(pdb_file):
         return pdb_str
 
 
-def _distance(atom1, atom2, distance_type='euclidean'):
-    """
-    Calculate the distance between two 3D ºpoints.
+def _coordinates_scrambling(args):
+    coordinates_matrices, threshold, distance_type, validation_config = args
 
-    Args:
-        atom1 (tuple): The coordinates of the first point (x, y, z).
-        atom2 (tuple): The coordinates of the second point (x, y, z).
-        distance_type (str): The type of distance to calculate ('euclidean', etc.).
+    coordinate_min, coordinate_max = _get_atom_coordinates_intervals(coordinates_matrices)
 
-    Returns:
-        float: The calculated distance between the two points.
-    """
-    try:
-        return pairwise_distances([atom1], [atom2], metric=distance_type)[0][0]
-    except Exception as e:
-        raise ValueError("Error calculating distance: " + str(e))
+    coordinates_matrices_scrambling = []
+    for atom_coordinates in coordinates_matrices:
+        coordinates_matrices_scrambling.append(_get_random_coordinates(atom_coordinates, coordinate_min, coordinate_max))
+
+    args = (coordinates_matrices_scrambling, threshold, distance_type, validation_config)
+    adjacency_matrices_scrambling, weights_matrices_scrambling = _compute_adjacency_and_weights_matrices(args)
+
+    return coordinates_matrices_scrambling, adjacency_matrices_scrambling, weights_matrices_scrambling
+
+
+def _get_random_coordinates(atom_coordinates, coordinate_min, coordinate_max):
+    random_atom_coordinates = np.zeros(atom_coordinates.shape)
+    random_atom_coordinates[:, 0] = np.random.uniform(coordinate_min[0], coordinate_max[0], size=atom_coordinates.shape[0])
+    random_atom_coordinates[:, 1] = np.random.uniform(coordinate_min[1], coordinate_max[1], size=atom_coordinates.shape[0])
+    random_atom_coordinates[:, 2] = np.random.uniform(coordinate_min[2], coordinate_max[2], size=atom_coordinates.shape[0])
+
+    return random_atom_coordinates
 
 
 def main(args):
