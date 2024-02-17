@@ -12,7 +12,7 @@ Applying pyG lib
 
 
 class GATModel(nn.Module):
-    def __init__(self, node_feature_dim, hidden_dim, output_dim, drop, nheads=1, k=10):
+    def __init__(self, node_feature_dim, hidden_dim, output_dim, drop, nheads=1, k=10, add_self_loops=True):
         super(GATModel, self).__init__()
 
         self.node_feature_dim = node_feature_dim
@@ -24,9 +24,9 @@ class GATModel(nn.Module):
 
         # self.conv0 = GATConv(node_feature_dim, hidden_dim, heads=nheads)
 
-        self.conv1 = GATConv(node_feature_dim, hidden_dim, heads=nheads)
-        self.conv2 = GATConv(nheads * hidden_dim, hidden_dim, heads=nheads)
-        self.conv3 = GATConv(nheads * hidden_dim, hidden_dim, heads=nheads, concat=False)
+        self.conv1 = GATConv(node_feature_dim, hidden_dim, heads=nheads, add_self_loops=True)
+        self.conv2 = GATConv(nheads * hidden_dim, hidden_dim, heads=nheads, add_self_loops=True)
+        self.conv3 = GATConv(nheads * hidden_dim, hidden_dim, heads=nheads, concat=False, add_self_loops=True)
 
         # self.norm0 = LayerNorm(nheads * hidden_dim)
         self.norm1 = LayerNorm(nheads * hidden_dim)
