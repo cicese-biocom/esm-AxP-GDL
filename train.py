@@ -86,7 +86,8 @@ def train(args):
         n_class = 2
 
         # Load model
-        model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads).to(device)
+        k = 10  # Graph pooling ratio
+        model = GATModel(node_feature_dim, args.hd, n_class, args.drop, args.heads, k, args.add_self_loops).to(device)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
@@ -114,7 +115,11 @@ def train(args):
                 optimizer.zero_grad()
                 data = data.to(device)
 
-                output = model(data.x, data.edge_index, data.batch)
+                if args.use_edge_attr:
+                    output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+                else:
+                    output = model(data.x, data.edge_index, None, data.batch)
+
                 out = output[0]
                 loss = criterion(out, data.y)
                 loss.backward()
@@ -141,7 +146,11 @@ def train(args):
                 for data in val_dataloader:
                     data = data.to(device)
 
-                    output = model(data.x, data.edge_index, data.batch)
+                    if args.use_edge_attr:
+                        output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+                    else:
+                        output = model(data.x, data.edge_index, None, data.batch)
+
                     out = output[0]
 
                     loss = criterion(out, data.y)
@@ -248,8 +257,12 @@ if __name__ == '__main__':
     parser.add_argument('--e', type=int, default=200, help='Maximum number of epochs')
     parser.add_argument('--b', type=int, default=512, help='Batch size')
     parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
+    parser.add_argument('--add_self_loops', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to use auto loops in attention layer.")
+    parser.add_argument('--use_edge_attr', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to use edge attributes in graph learning.")
 
-    # model to be used for training and output path
+        # model to be used for training and output path
     parser.add_argument('--path_to_save_models', type=str, required=False,
                         help=' The path to save the trained models')
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
@@ -276,13 +289,15 @@ if __name__ == '__main__':
 
     #args.dataset = os.path.join(os.getcwd(), 'datasets/TestDataset/TestDataset.csv')
     #args.esm2_representation = 'esm2_t6'
-    #args.tertiary_structure_path = os.path.join(os.getcwd(), 'datasets/AMPDiscover/ESMFold_pdbs/')
+   # args.tertiary_structure_path = os.path.join(os.getcwd(), 'datasets/AMPDiscover/ESMFold_pdbs/')
     #args.tertiary_structure_load_pdbs = True
     #args.e = 5
     #args.hd = 64
-    #args.path_to_save_models = 'output_models/debug_cesar/'
-    #args.d = 0
+   # args.path_to_save_models = 'output_models/debug_GAT/'
+   # args.d = 20
     #args.save_ckpt_per_epoch = False
+   # args.add_self_loops = False
+    #args.use_edge_attr = False
 
     train(args)
 
