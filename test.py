@@ -62,7 +62,11 @@ def independent_test(args):
             for data in test_dataloader:
                 data = data.to(device)
 
-                output = model(data.x, data.edge_index, data.batch)
+                if args.use_edge_attr:
+                    output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+                else:
+                    output = model(data.x, data.edge_index, None, data.batch)
+
                 out = output[0]
 
                 pred = out.argmax(dim=1)
@@ -141,6 +145,8 @@ if __name__ == '__main__':
     parser.add_argument('--b', type=int, default=512, help='Batch size')
     parser.add_argument('--drop', type=float, default=0.5, help='Dropout rate')
     parser.add_argument('--hd', type=int, default=128, help='Hidden layer dimension')
+    parser.add_argument('--use_edge_attr', action="store_true",
+                        help="True if specified, otherwise, False. True indicates to use edge attributes in graph learning.")
     parser.add_argument('--heads', type=int, default=8, help='Number of heads')
 
     parser.add_argument('--distance', type=str, default='euclidean',
