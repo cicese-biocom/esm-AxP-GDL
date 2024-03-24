@@ -10,6 +10,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
 from torch.nn.functional import normalize
 
+
 def get_models(esm2_representation):
     """
     :param esm2_representation: residual-level features representation name

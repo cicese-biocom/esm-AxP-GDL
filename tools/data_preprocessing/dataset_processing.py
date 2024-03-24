@@ -8,7 +8,7 @@ def is_valid_sequence(sequence):
     return not pattern.search(sequence)
 
 
-def load_and_validate_dataset(dataset):
+def load_and_validate_dataset(dataset, mode=None):
     # Check if the file exists
     if not os.path.exists(dataset):
         raise FileNotFoundError(f"The file '{dataset}' does not exist at the specified path.")
@@ -17,9 +17,14 @@ def load_and_validate_dataset(dataset):
     data = pd.read_csv(dataset)
 
     # Verify that the columns are 'id', 'sequence', 'activity', and 'partition'
-    expected_columns = ['id', 'sequence', 'activity', 'partition']
+    if mode == 'inference':
+        data = data.assign(activity=0)
+        expected_columns = ['id', 'sequence', 'activity']
+    else:
+        expected_columns = ['id', 'sequence', 'activity', 'partition']
+
     if not all(column in data.columns for column in expected_columns):
-        raise ValueError("The CSV file must contain columns 'id', 'sequence', 'activity', and 'partition'.")
+        raise ValueError(f"The CSV file must contain columns {expected_columns}.")
 
     # Eliminate synthetic sequences
     valid_mask = data['sequence'].apply(is_valid_sequence)
@@ -33,13 +38,14 @@ def load_and_validate_dataset(dataset):
     data['id'] = data['id'].str.replace(' ', '')
     data['sequence'] = data['sequence'].str.replace(' ', '')
 
-    # Verify that the 'activity' column only contains values 0 or 1
-    if not set(data['activity']).issubset({0, 1}):
-        raise ValueError("The 'activity' column must contain only values 0 or 1.")
+    if mode != 'inference':
+        # Verify that the 'activity' column only contains values 0 or 1
+        if not set(data['activity']).issubset({0, 1}):
+            raise ValueError("The 'activity' column must contain only values 0 or 1.")
 
-    # Verify that the 'partition' column only contains values 1, 2, or 3
-    if not set(data['partition']).issubset({1, 2, 3}):
-        raise ValueError("The 'partition' column must contain only values 1, 2, or 3.")
+        # Verify that the 'partition' column only contains values 1, 2, or 3
+        if not set(data['partition']).issubset({1, 2, 3}):
+            raise ValueError("The 'partition' column must contain only values 1, 2, or 3.")
 
     # Filters out instances with sequence lengths between 5 and 30 amino acids.
     #data = data[data['sequence'].str.len().between(5, 30)]

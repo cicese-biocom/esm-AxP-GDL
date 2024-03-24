@@ -27,7 +27,7 @@ def construct_graphs(data, esm2_representation, tertiary_structure_config, dista
 
     labels = data.activity
     n_samples = len(adjacency_matrices)
-    with tqdm(range(n_samples), total=len(adjacency_matrices), desc ="Generating graphs", disable=False) as progress:
+    with tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs", disable=False) as progress:
         graphs = []
         for i in range(n_samples):
             graphs.append(to_parse_matrix(adjacency_matrices[i], nodes_features[i], weights_matrices[i], labels[i]))
