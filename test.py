@@ -26,7 +26,7 @@ def independent_test(args):
 
     # Check if test_data is empty
     if test_data.empty:
-        raise ValueError("No data available for training.")
+        raise ValueError("No data available for test.")
 
     validation_config = (args.validation_mode, args.scrambling_percentage)
 
