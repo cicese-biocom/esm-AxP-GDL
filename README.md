@@ -1,3 +1,6 @@
+[![Made with Python](https://img.shields.io/badge/Python-=3.7-blue?logo=python&logoColor=white)](https://python.org "Go to Python homepage")
+[![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://www.docker.com/)
+
 # **esm-AxP-GDL**
 
 esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
@@ -216,11 +219,12 @@ docker-compose run --rm esm-axp-gdl-env sh test.sh
 ```
 
 ### **Best models**
-Top two models created with AMPDiscover using the esm-AxP-GDL framework are as follows:  
+Top three models created with AMPDiscover using the esm-AxP-GDL framework are as follows:  
 
 | Name                                                             | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                    |
 |------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [amp_esmt36_d10_hd256.pt](https://drive.google.com/file/d/1kRbinBqNhGclUtf4VSAL4Hz7O0lJhjCO/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9521 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 256`. |
-| [amp_esmt36_d10_hd128.pt](https://drive.google.com/file/d/1kWkRLIZ4KErcSfueQbxcJB3NtoUuXdae/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt33_d10_hd128_(Model2).pt](https://drive.google.com/file/d/1oKBo1pRIdZeJKemW4ZwijgbacDQQlAJU/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9389 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t33_650M_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt36_d10_hd128_(Model3).pt](https://drive.google.com/file/d/1oFdNEpINtavPvMFWGW9NE8qntXPPQ-Cr/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt30_d15_hd128_(Model5).pt](https://drive.google.com/file/d/1oJHs3tjigP4gJFFmOZv7QQ7qU_Pn9Wsa/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9379 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t30_150M_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 15 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
 
 NOTE:  The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.
