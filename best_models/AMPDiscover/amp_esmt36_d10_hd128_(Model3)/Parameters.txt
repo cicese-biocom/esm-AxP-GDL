@@ -1,4 +1,4 @@
-esm2_representation: esm2_t36,
+esm2_representation: esm2_t36
 tertiary_structure_method: esmfold
 edge_construction_functions: distance_threshold
 distance_function: euclidean
