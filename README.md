@@ -34,7 +34,7 @@ esm-AxP-GDL
 │   │   ├── Test(reduced-100).csv                           <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
 │   │   ├── Test(reduced-30).csv                            <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
 │   │   ├── External.csv                                    <- External test set created by joining the ABPDiscover, AFPDiscover, AVPDiscover, AniAMPpred, Deep-ABPpred, Deep-AFPpred, and Deep-AVPpred datasets.
-│   │   ├── External-per-class(reduced_identity_per-umbral) <- Directory containing test sets that were created by eliminating AMP/non-AMP pairs whose similarities are below a threshold between AMPDiscover (training, validation and test) and External sets.
+│   │   ├── External-per_class(reduced_identity-per_umbral) <- Directory containing test sets that were created by eliminating AMP/non-AMP pairs whose similarities are below a threshold between AMPDiscover (training, validation and test) and External sets.
 ├── graph                                                   <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
