@@ -136,75 +136,135 @@ The next command lines can be used to run the training and inference steps, resp
 
 #### Train
 ```
-usage: train.py [-h] --dataset DATASET
-                [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}]
-                [--tertiary_structure_method {esmfold}]
-                --tertiary_structure_path TERTIARY_STRUCTURE_PATH
-                [--tertiary_structure_load_pdbs] [--lr LR] [--drop DROP]
-                [--e E] [--b B] [--hd HD]
-                [--pretrained_model PRETRAINED_MODEL] --path_to_save_models
-                PATH_TO_SAVE_MODELS [--heads HEADS] [--d D]
-                [--log_file_name LOG_FILE_NAME]
+usage: train.py [-h] [--dataset DATASET]
+                [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}]
+                [--tertiary_structure_method {esmfold}] [--pdb_path PDB_PATH]
+                [--edge-construction-functions {distance_threshold,contact_map_esm2,peptide_bond}]
+                [--distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}]
+                [--threshold THRESHOLD] [--granularity GRANULARITY]
+                [--number_of_heads NUMBER_OF_HEADS]
+                [--hidden_layer_dimension HIDDEN_LAYER_DIMENSION]
+                [--add_self_loops] [--use_edge_attr]
+                [--learning_rate LEARNING_RATE] [--dropout_rate DROPOUT_RATE]
+                [--batch_size BATCH_SIZE]
+                [--number_of_epochs NUMBER_OF_EPOCHS]
+                [--model_path MODEL_PATH] [--save_ckpt_per_epoch]
+                [--validation_mode {coordinates_scrambling,embedding_scrambling}]
+                [--scrambling_percentage SCRAMBLING_PERCENTAGE]
+                [--log_filename LOG_FILENAME]
 
-optional arguments: 
+optional arguments:
   -h, --help            show this help message and exit
-  --dataset DATASET     Path to the input dataset in csv format
-  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}
+  --dataset DATASET     Path to the input dataset in CSV format
+  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}
                         ESM-2 model to be used
   --tertiary_structure_method {esmfold}
-                        3D structure prediction method
-  --tertiary_structure_path TERTIARY_STRUCTURE_PATH
-                        Path to load or save the generated tertiary structures
-  --tertiary_structure_load_pdbs
-                        True if specified, otherwise, False. True indicates to
-                        load existing tertiary structures from PDB files.
-  --lr LR               Learning rate
-  --drop DROP           Dropout rate
-  --e E                 Maximum number of epochs
-  --b B                 Batch size
-  --hd HD               Hidden layer dimension
-  --path_to_save_models PATH_TO_SAVE_MODELS
+                        3D structure prediction method. None indicates to load
+                        existing tertiary structures from PDB files ,
+                        otherwise, sequences in input CSV file are predicted
+                        using the specified method
+  --pdb_path PDB_PATH   Path where tertiary structures are saved in or loaded
+                        from PDB files
+  --edge-construction-functions {distance_threshold,contact_map_esm2,peptide_bond}
+                        Functions to build edges
+  --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
+                        Distance function to construct graph edges
+  --threshold THRESHOLD
+                        Distance threshold to construct graph edges
+  --granularity GRANULARITY
+                        Atom identifiers
+  --number_of_heads NUMBER_OF_HEADS
+                        Number of heads
+  --hidden_layer_dimension HIDDEN_LAYER_DIMENSION
+                        Hidden layer dimension
+  --add_self_loops      True if specified, otherwise, False. True indicates to
+                        use auto loops in attention layer.
+  --use_edge_attr       True if specified, otherwise, False. True indicates to
+                        use edge attributes in graph learning.
+  --learning_rate LEARNING_RATE
+                        Learning rate
+  --dropout_rate DROPOUT_RATE
+                        Dropout rate
+  --batch_size BATCH_SIZE
+                        Batch size
+  --number_of_epochs NUMBER_OF_EPOCHS
+                        Maximum number of epochs
+  --model_path MODEL_PATH
                         The path to save the trained models
-  --heads HEADS         Number of heads
-  --d D                 Distance threshold to construct graph edges
-  --log_file_name LOG_FILE_NAME
-                        Log file name                
+  --save_ckpt_per_epoch
+                        True if specified, otherwise, False. True indicates to
+                        save the models per epoch.
+  --validation_mode {coordinates_scrambling,embedding_scrambling}
+                        Graph construction method for validation of the
+                        approach
+  --scrambling_percentage SCRAMBLING_PERCENTAGE
+                        Percentage of rows to be scrambling
+  --log_filename LOG_FILENAME
+                        Log filename             
 ```
 
 #### Test
 ```
-usage: test.py [-h] --dataset DATASET
-               [--esm2_representation  {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}]
-               [--tertiary_structure_method {esmfold}]
-               --tertiary_structure_path TERTIARY_STRUCTURE_PATH
-               [--tertiary_structure_load_pdbs] --trained_model_path
-               TRAINED_MODEL_PATH [--b B] [--drop DROP] [--hd HD]
-               [--heads HEADS] [--d D] [--log_file_name LOG_FILE_NAME]
-               [--test_result_file_name TEST_RESULT_FILE_NAME]
+usage: test.py [-h] [--dataset DATASET]
+                [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}]
+                [--tertiary_structure_method {esmfold}] [--pdb_path PDB_PATH]
+                [--edge-construction-functions {distance_threshold,contact_map_esm2,peptide_bond}]
+                [--distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}]
+                [--threshold THRESHOLD] [--granularity GRANULARITY]
+                [--hidden_layer_dimension HIDDEN_LAYER_DIMENSION]
+                [--add_self_loops] [--use_edge_attr]
+                [--dropout_rate DROPOUT_RATE]
+                [--batch_size BATCH_SIZE]
+                [--model_path MODEL_PATH] [--save_ckpt_per_epoch]
+                [--validation_mode {coordinates_scrambling,embedding_scrambling}]
+                [--scrambling_percentage SCRAMBLING_PERCENTAGE]
+                [--log_filename LOG_FILENAME]
+                [--prediction_filename PREDICTION_FILENAME]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --dataset DATASET     Path to the input dataset in csv format
-  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t36,esm2_t48}
+  --dataset DATASET     Path to the input dataset in CSV format
+  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}
                         ESM-2 model to be used
   --tertiary_structure_method {esmfold}
-                        3D structure prediction method
-  --tertiary_structure_path TERTIARY_STRUCTURE_PATH
-                        Path to load or save the generated tertiary structures
-  --tertiary_structure_load_pdbs
-                        True if specified, otherwise, False. True indicates to
-                        load existing tertiary structures from PDB files.
-  --trained_model_path TRAINED_MODEL_PATH
-                        The directory where the trained model to be used for inference is saved
-  --b B                 Batch size
-  --drop DROP           Dropout rate
-  --hd HD               Hidden layer dimension
-  --heads HEADS         Number of heads
-  --d D                 Distance threshold to construct graph edges
-  --log_file_name LOG_FILE_NAME
-                        Log file name
-  --test_result_file_name TEST_RESULT_FILE_NAME
-                        Results file                        
+                        3D structure prediction method. None indicates to load
+                        existing tertiary structures from PDB files ,
+                        otherwise, sequences in input CSV file are predicted
+                        using the specified method
+  --pdb_path PDB_PATH   Path where tertiary structures are saved in or loaded
+                        from PDB files
+  --edge-construction-functions {distance_threshold,contact_map_esm2,peptide_bond}
+                        Functions to build edges
+  --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
+                        Distance function to construct graph edges
+  --threshold THRESHOLD
+                        Distance threshold to construct graph edges
+  --granularity GRANULARITY
+                        Atom identifiers
+  --hidden_layer_dimension HIDDEN_LAYER_DIMENSION
+                        Hidden layer dimension
+  --add_self_loops      True if specified, otherwise, False. True indicates to
+                        use auto loops in attention layer.
+  --use_edge_attr       True if specified, otherwise, False. True indicates to
+                        use edge attributes in graph learning.
+  --dropout_rate DROPOUT_RATE
+                        Dropout rate                        
+  --batch_size BATCH_SIZE
+                        Batch size
+  --seed SEED           
+                        Seed to run                        
+  --model_path MODEL_PATH
+                        Path where a trained model is loaded for test mode
+  --validation_mode {coordinates_scrambling,embedding_scrambling}
+                        Graph construction method for validation of the
+                        approach
+  --scrambling_percentage SCRAMBLING_PERCENTAGE
+                        Percentage of rows to be scrambling
+  --log_filename LOG_FILENAME
+                        Log filename 
+  --prediction_filename PREDICTION_FILENAME
+                        Prediction filename
+                                                
 ```
 ### **Example**
 We provide the train.sh and test.sh example scripts to train or use a model for inference, respectively.
