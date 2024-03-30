@@ -19,10 +19,13 @@ The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
 ├── best_models                                 <- Top models created using this framework. 
-│   ├── amp_top1_esmt36_d10_hd256               <- Best model.           
+│   ├── amp_esmt36_d10_hd128_(Model3)           <- Best model.           
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_top2_esmt36_d10_hd128               <- Second-best model           
+│   ├── amp_esmt33_d10_hd128_(Model2)           <- Second-best model           
+│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                      <- Parameters used to build the model.
+│   ├── amp_esmt30_d15_hd128_(Model5)           <- Third-best model           
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
 ├── datasets                                    <- Input comma separated value (CSV) file.
@@ -30,6 +33,7 @@ esm-AxP-GDL
 │   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
 │   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
 │   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
+│   │   ├── External.csv                        <- External test set created by joining the ABPDiscover, AFPDiscover, AVPDiscover, AniAMPpred, Deep-ABPpred, Deep-AFPpred, and Deep-AVPpred datasets.
 ├── graph                                       <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
