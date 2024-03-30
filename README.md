@@ -8,6 +8,8 @@ structures and ESM-2 models-based amino acid featurization for the prediction of
 This framework was designed to be easily extended to modeling any task related to the prediction of peptide and 
 protein biological activities (or properties).
 
+![workflow_framework](https://github.com/cicese-biocom/esm-AxP-GDL/assets/136017848/99191e5d-d1a5-470b-a905-126bf96e307f)
+
 ## **Install esm-AxP-GDL**
 Clone the repository:
 ```
