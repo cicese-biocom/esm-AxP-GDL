@@ -18,55 +18,56 @@ git clone https://github.com/cicese-biocom/esm-AxP-GDL.git
 The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
-├── best_models                                 <- Top models created using this framework. 
-│   ├── amp_esmt36_d10_hd128_(Model3)           <- Best model.           
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_esmt33_d10_hd128_(Model2)           <- Second-best model           
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_esmt30_d15_hd128_(Model5)           <- Third-best model           
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.txt                      <- Parameters used to build the model.
-├── datasets                                    <- Input comma separated value (CSV) file.
+├── best_models                                             <- Top models created using this framework. 
+│   ├── amp_esmt36_d10_hd128_(Model3)                       <- Best model.           
+│   │   ├── Metrics.txt                                     <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                                  <- Parameters used to build the model.
+│   ├── amp_esmt33_d10_hd128_(Model2)                       <- Second-best model           
+│   │   ├── Metrics.txt                                     <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                                  <- Parameters used to build the model.
+│   ├── amp_esmt30_d15_hd128_(Model5)                       <- Third-best model           
+│   │   ├── Metrics.txt                                     <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   ├── Parameters.txt                                  <- Parameters used to build the model.
+├── datasets                                                <- Input comma separated value (CSV) file.
 │   ├── AMPDiscover                                  
-│   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
-│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
-│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
-│   │   ├── External.csv                        <- External test set created by joining the ABPDiscover, AFPDiscover, AVPDiscover, AniAMPpred, Deep-ABPpred, Deep-AFPpred, and Deep-AVPpred datasets.
-├── graph                                       <- Scripts to build graphs.
+│   │   ├── AMPDiscover.csv                                 <- Dataset used to evaluate the usefulness of the proposed framework.              
+│   │   ├── Test(reduced-100).csv                           <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
+│   │   ├── Test(reduced-30).csv                            <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
+│   │   ├── External.csv                                    <- External test set created by joining the ABPDiscover, AFPDiscover, AVPDiscover, AniAMPpred, Deep-ABPpred, Deep-AFPpred, and Deep-AVPpred datasets.
+│   │   ├── External-per-class(reduced_identity_per-umbral) <- Directory containing test sets that were created by eliminating AMP/non-AMP pairs whose similarities are below a threshold between AMPDiscover (training, validation and test) and External sets.
+├── graph                                                   <- Scripts to build graphs.
 │   ├── construct_graphs.py                     
 │   ├── residues_level_features_encoding.py     
 │   ├── structure_feature_extraction.py         
-├── misc                                        <- Additional library to be installed to use the framework. 
+├── misc                                                    <- Additional library to be installed to use the framework. 
 │   ├──linux-64_pytorch-scatter-2.0.9-py37_torch_1.12.0_cu113.tar.bz2
-├── models                                      <- Models used by this framework.
-│   ├── esm2                                    <- ESM-2 module.
-│   │   ├── checkpoints                         <- Directory where the ESM-2 models are downloaded.
-│   │   ├── _init_.py                           <- Makes ESM-2 a Python module.
-│   │   ├── esm2_representation.py              <- Script to use the ESM-2 models.
-│   │   ├── esm2_representation.json            <- JSON with the ESM-2 representations that can be used.
-│   ├── esmfold                                 <- ESMFold module.
-│   │   ├── checkpoints                         <- Directory where the ESMFold model is downloaded.
-│   │   ├── _init_.py                           <- Makes ESMFold a Python module.
-│   │   ├── esmfold.py                          <- Script to use the ESMFold model.
-│   ├── GAT                                     <- GAT module.
-│   │   ├── _init_.py                           <- Makes GAT a Python module.
-│   │   ├── GAT.py                              <- Script to use the Graph Attention Network (GAT) architecture.
+├── models                                                  <- Models used by this framework.
+│   ├── esm2                                                <- ESM-2 module.
+│   │   ├── checkpoints                                     <- Directory where the ESM-2 models are downloaded.
+│   │   ├── _init_.py                                       <- Makes ESM-2 a Python module.
+│   │   ├── esm2_representation.py                          <- Script to use the ESM-2 models.
+│   │   ├── esm2_representation.json                        <- JSON with the ESM-2 representations that can be used.
+│   ├── esmfold                                             <- ESMFold module.
+│   │   ├── checkpoints                                     <- Directory where the ESMFold model is downloaded.
+│   │   ├── _init_.py                                       <- Makes ESMFold a Python module.
+│   │   ├── esmfold.py                                      <- Script to use the ESMFold model.
+│   ├── GAT                                                 <- GAT module.
+│   │   ├── _init_.py                                       <- Makes GAT a Python module.
+│   │   ├── GAT.py                                          <- Script to use the Graph Attention Network (GAT) architecture.
 │   ├── _init_.py                               
 ├── tool                                         
 │   ├── data_preprocessing                       
 │   │   ├── _init_.py                           
-│   │   ├── data_preprocessing.py               <- Script to load and validate the input datasets.
+│   │   ├── data_preprocessing.py                           <- Script to load and validate the input datasets.
 │   ├── _init_.py                               
-├── docker-compose.yml                          <- Configuration of the Docker container required by the framework.
-├── Dockerfile                                  <- Docker image with all the dependencies required by the framework. 
-├── README.md                                   <- README to use this framework
-├── requirements.txt                            <- Python libraries used in this project.
-├── test.py                                     <- Script to use a model for inference.
-├── test.sh                                     <- Example to use a model for inference.
-├── train.py                                    <- Script to train a model.
-├── train.sh                                    <- Example script for training.
+├── docker-compose.yml                                      <- Configuration of the Docker container required by the framework.
+├── Dockerfile                                              <- Docker image with all the dependencies required by the framework. 
+├── README.md                                               <- README to use this framework
+├── requirements.txt                                        <- Python libraries used in this project.
+├── test.py                                                 <- Script to use a model for inference.
+├── test.sh                                                 <- Example to use a model for inference.
+├── train.py                                                <- Script to train a model.
+├── train.sh                                                <- Example script for training.
 ```
 
 ## **Dependencies**
