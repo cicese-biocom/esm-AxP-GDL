@@ -4,11 +4,6 @@
 [![CUDA](https://img.shields.io/badge/CUDA-11-%2376B900.svg?style=flat&logo=NVIDIA&logoColor=white)](https://developer.nvidia.com/cuda-11-3-1-download-archive)
 [![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
-
-https://img.shields.io/badge/play-station-blue.svg?logo=https://github.com/cicese-biocom/esm-AxP-GDL/assets/136017848/c699b29d-706a-4010-9f47-11845d1e3a9a
-
-
-
 # **esm-AxP-GDL**
 
 esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
