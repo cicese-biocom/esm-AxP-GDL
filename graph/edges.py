@@ -21,12 +21,20 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
 def _construct_edges(atom_coordinates_matrices: np.array, esm2_contact_maps, workflow_settings: ParameterSetter):
     num_cores = multiprocessing.cpu_count()
 
-    args = [(workflow_settings.edge_construction_functions,
-             workflow_settings.distance_function,
-             workflow_settings.distance_threshold,
-             esm2_contact_map,
-             atom_coordinates) for (atom_coordinates, esm2_contact_map) in
-            zip(atom_coordinates_matrices, esm2_contact_maps)]
+    if workflow_settings.use_esm2_contact_map:
+        args = [(workflow_settings.edge_construction_functions,
+                 workflow_settings.distance_function,
+                 workflow_settings.distance_threshold,
+                 esm2_contact_map,
+                 atom_coordinates) for (atom_coordinates, esm2_contact_map) in
+                zip(atom_coordinates_matrices, esm2_contact_maps)]
+    else:
+        args = [(workflow_settings.edge_construction_functions,
+                 workflow_settings.distance_function,
+                 workflow_settings.distance_threshold,
+                 None,
+                 atom_coordinates) for atom_coordinates in
+                atom_coordinates_matrices]
 
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
         with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
