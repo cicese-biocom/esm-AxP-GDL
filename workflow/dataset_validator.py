@@ -83,7 +83,8 @@ class DatasetValidator(ABC):
         if not sequences_to_exclude.empty:
             sequences_to_exclude.sort_values(by='sequence')
             sequences_to_exclude.to_csv(csv_file, index=False)
-            raise ValueError(f"Duplicate sequences IDs. See: {csv_file}")
+            logging.getLogger('workflow_logger').\
+                warning(f"Duplicate sequences. See: {csv_file}")
         return sequence_df
 
 
