@@ -27,16 +27,16 @@ The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
 ├── best_models                                 <- Top models created using this framework. 
-│   ├── amp_esmt36_d10_hd128_(Model3)           <- Best model.           
+│   ├── amp_esmt36_d10_hd128_(Model3)                    
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_esmt33_d10_hd128_(Model2)           <- Second-best model           
+│   ├── amp_esmt33_d10_hd128_(Model2)                     
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
-│   ├── amp_esmt30_d15_hd128_(Model5)           <- Third-best model           
+│   ├── amp_esmt30_d15_hd128_(Model5)                      
 │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
 │   │   ├── Parameters.txt                      <- Parameters used to build the model.
-├── datasets                                    <- Input comma separated value (CSV) file.
+├── datasets                                    
 │   ├── AMPDiscover                                  
 │   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
 │   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
@@ -47,10 +47,10 @@ esm-AxP-GDL
 │   ├── construct_graphs.py                     <- Script to construct graphs.
 │   ├── nodes.py                                <- Script to construct the graph nodes.
 │   ├── edges.py                                <- Script to construct the graph edges.
-│   ├── edge_construction.py                    <- Classes implementing different edge construction functions.               
+│   ├── edge_construction_functions.py          <- Classes implementing different edge construction functions.               
 │   ├── tertiary_structure_handler.py           <- Script to load or predict tertiary structures.
 ├── workflow                                        
-│   ├── _init_.py                               <- Module with framework workflow.
+│   ├── _init_.py                               <- Framework workflow module.
 │   ├── application_context.py                  <- Classes to handle dependencies.
 │   ├── args_parser_handler.py                  <- Classes to parse input arguments.
 │   ├── parameters_setter.py                    <- Classes to configure execution parameters.
@@ -80,18 +80,24 @@ esm-AxP-GDL
 │   │   ├── json_parser.py                      <- Parses files in JSON format.
 │   │   ├── file_system_handler.py              <- Manages file system operations               
 ├── settings
-│   │   ├── _init_.py            
+│   │   ├── _init_.py                           <- Settings module
 │   │   ├── esm2_representation.json            <- The ESM-2 representations settings that can be used for this framework.
 │   │   ├── logger_setting.json                 <- Configuration of the workflow event logger.
 │   │   ├── output_settings.json                <- Workflow output file system configuration.
+├── example      
+│   │   ├── Dataset                             
+│   │   │   ├── ExampleDataset.csv              <- Example dataset.
+│   │   │   ├── ESMFold_pdbs                    <- Path where tertiary structures are saved in or loaded from PDB files. 
+├── README.md                                   <- README to use this framework
 ├── environment.yml                             <- Python libraries requiered by the framework.
 ├── Dockerfile                                  <- Docker image with all the dependencies required by the framework.
 ├── docker-compose.yml                          <- Configuration of the Docker container required by the framework.
-├── README.md                                   <- README to use this framework
-├── test.py                                     <- Script to use a model for inference.
-├── test.sh                                     <- Example to use a model for inference.
 ├── train.py                                    <- Script to train a model.
+├── test.py                                     <- Script to test a model.
+├── inference.py                                <- Script to use a model for inference.
 ├── train.sh                                    <- Example script for training.
+├── test.sh                                     <- Example script for test.
+├── inference.sh                                <- Example to use a model for inference.
 ```
 
 ## **Dependencies**
