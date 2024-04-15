@@ -1,16 +1,21 @@
 import numpy as np
-from models.esm2.esm2_representation import *
+import pandas as pd
+
+from models.esm2 import esm2_model_handler as esm2_model_handler
+from workflow.parameters_setter import ParameterSetter
 
 
-def esm2_derived_features(data, esm2_representation, validation_config):
+def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame):
     """
+    esm2_derived_features
+    :param workflow_settings:
     :param data: (ids: sequences identifier, sequences: sequences itself)
     :param esm2_representation: name of the esm2 representation to be used
     :return:
         residual_level_features: residual-level features vector
     """
 
-    models = get_models(esm2_representation)
+    models = esm2_model_handler.get_models(workflow_settings.esm2_representation)
 
     residual_level_features = []
     if not models.empty:
@@ -19,14 +24,19 @@ def esm2_derived_features(data, esm2_representation, validation_config):
             reduced_features = model_info["reduced_features"]
             reduced_features = [x - 1 for x in reduced_features]
 
-            embeddings = get_embeddings(data, model_name, reduced_features, validation_config)
+            embeddings, contact_maps = esm2_model_handler.get_embeddings(data,
+                                                                         model_name,
+                                                                         reduced_features,
+                                                                         workflow_settings.validation_mode,
+                                                                         workflow_settings.scrambling_percentage,
+                                                                         workflow_settings.use_esm2_contact_map)
 
             if len(residual_level_features) == 0:
-                residual_level_features = np.array(embeddings, dtype=object).copy()
+                node_features = np.array(embeddings, dtype=object).copy()
             else:
-                residual_level_features = cat(residual_level_features, embeddings)
+                node_features = cat(residual_level_features, embeddings)
 
-    return residual_level_features
+    return node_features, contact_maps
 
 
 def cat(*args):

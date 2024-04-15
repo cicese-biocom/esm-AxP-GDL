@@ -1,43 +1,45 @@
-import torch
-from torch_geometric.data import Data, DataLoader
-from graph.nodes import esm2_derived_features
-from graph.edges import get_adjacency_and_weights_matrices
+import pandas as pd
+from graph import nodes, edges
 from tqdm import tqdm
 import numpy as np
+from workflow.parameters_setter import ParameterSetter
+import os
+import torch
+from torch_geometric.data import Data
 
-def construct_graphs(data, esm2_representation, tertiary_structure_config, distance_function, threshold, validation_config):
+
+def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
     """
-    :param data: data (id, sequence itself, activity, label)
-    :param esm2_representation: name of the esm2 representation to be used
-    :param tertiary_structure_info: Method of generation of 3D structures to be used and path of the tertiary
-                                    structures generated
-    :param threshold: threshold for build adjacency matrix
-    :param add_self_loop: add_self_loop
+    construct_graphs
+    :param workflow_settings:
+    :param data: List (id, sequence itself, activity, label)
     :return:
         graphs_representations: list of Data
         labels: list of labels
-        partition: identification of the data partition each instance belongs to
+        partition: identification of the old_data partition each instance belongs to
     """
-
-    # nodes 
-    nodes_features = esm2_derived_features(data, esm2_representation, validation_config)
+    # nodes
+    nodes_features, esm2_contact_maps = nodes.esm2_derived_features(workflow_settings, data)
 
     # edges
-    adjacency_matrices, weights_matrices, similarity = get_adjacency_and_weights_matrices(data, tertiary_structure_config, distance_function, threshold, validation_config)
+    adjacency_matrices, weights_matrices, data = edges.get_edges(workflow_settings, data, esm2_contact_maps)
 
-    labels = data.activity
     n_samples = len(adjacency_matrices)
     with tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs", disable=False) as progress:
         graphs = []
         for i in range(n_samples):
-            graphs.append(to_parse_matrix(adjacency_matrices[i], nodes_features[i], weights_matrices[i], labels[i]))
+            graphs.append(to_parse_matrix(adjacency_matrix=adjacency_matrices[i],
+                                          nodes_features=nodes_features[i],
+                                          weights_matrix=weights_matrices[i],
+                                          label=data.iloc[i]['activity'] if 'activity' in data.columns else None))
             progress.update(1)
 
-    return graphs, similarity
+    return graphs, data
 
 
 def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps=1e-6):
     """
+    :param label: label
     :param adjacency_matrix: Adjacency matrix with shape (n_nodes, n_nodes)
     :param weights_matrix: Edge matrix with shape (n_nodes, n_nodes, n_edge_features)
     :param nodes_features: node embedding with shape (n_nodes, n_node_features)
@@ -64,5 +66,3 @@ def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps
     data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
     data.validate(raise_on_error=True)
     return data
-
-
