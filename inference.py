@@ -18,10 +18,4 @@ if __name__ == '__main__':
     args_handler = ArgsParserHandler()
     args = args_handler.get_eval_arguments()
 
-    args['dataset'] = Path('datasets/TestDataset/TestDataset.csv')
-    args['pdb_path'] = Path('datasets/AMPDiscover/ESMFold_pdbs/')
-    args['gdl_model_path'] = Path('output_models/TestNewImplementation/Checkpoints/epoch=2_train-loss=0.70_val-loss=0'
-                                  '.70.pt')
-    args['output_path'] = Path('output_models/TestNewImplementation/')
-
     inference(args)
