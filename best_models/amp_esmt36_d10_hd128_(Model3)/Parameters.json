@@ -1,0 +1,16 @@
+{
+    "esm2_representation": "esm2_t36",
+    "tertiary_structure_method": "esmfold",
+    "edge_construction_functions": "distance_based_threshold",
+    "distance_function": "euclidean",
+    "threshold": 10,
+    "granularity": "CA",
+    "number_of_heads": 8,
+    "hidden_layer_dimension": 128,
+    "add_self_loops": true,
+    "use_edge_attr": false,
+    "learning_rate": 0.0001,
+    "dropout_rate": 0.25,
+    "batch_size": 512,
+    "number_of_epoch": 200
+}
