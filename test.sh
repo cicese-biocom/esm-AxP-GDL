@@ -1,23 +1,19 @@
-#! /bin/bash
+#!/bin/bash
 
-hd=128
-d=10
-esm2_representation="esm2_t36"
-trained_model_path="output_models/AMPDiscover/amp_esmt36_d10_hd128/amp_esmt36_d10_hd128.pt"
-log_file_name="TestLog_AMPDiscover"
-test_result_file_name="TestResult_AMPDiscover"
+dataset="datasets/TestDataset/TestDataset.csv"
+pdb_path="datasets/TestDataset/ESMFold_pdbs/"
+tertiary_structure_method='esmfold'
+gdl_model_path="output/TestDataset/Checkpoints/epoch=2_train-loss=0.68_val-loss=0.68.pt"
+output_path="output/TestDataset/"
+dropout_rate=0.25
+batch_size=512
 
 python test.py \
-    --dataset datasets/AMPDiscover/AMPDiscover.csv \
-    --esm2_representation "$esm2_representation" \
-    --tertiary_structure_method esmfold \
-    --tertiary_structure_path datasets/AMPDiscover/ESMFold_pdbs/ \
-    --b 512 \
-    --trained_model_path "$trained_model_path" \
-    --drop 0.5 \
-    --hd "$hd" \
-    --heads 8 \
-    --d "$d" \
-    --log_file_name "$log_file_name" \
-    --test_result_file_name "$test_result_file_name"
+    --dataset "$dataset" \
+    --pdb_path "$pdb_path" \
+    --gdl_model_path="$gdl_model_path" \
+    --tertiary_structure_method="$tertiary_structure_method"  \
+    --output_path="$output_path"  \
+    --dropout_rate="$dropout_rate" \
+    --batch_size="$batch_size"
 
