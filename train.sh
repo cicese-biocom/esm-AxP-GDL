@@ -1,9 +1,9 @@
 #!/bin/bash
 
-dataset="datasets/TestDataset/TestDataset.csv"
-pdb_path="datasets/TestDataset/ESMFold_pdbs/"
+dataset="example/dataset/ExampleDataset.csv"
+pdb_path="example/dataset/ESMFold_pdbs/"
 tertiary_structure_method='esmfold'
-gdl_model_path="output/TestDataset/amp_esmt33_d10_hd128/"
+gdl_model_path="example/output/"
 esm2_representation="esm2_t33"
 edge_construction_functions="distance_based_threshold"
 distance_function="euclidean"
