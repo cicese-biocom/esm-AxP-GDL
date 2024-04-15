@@ -6,7 +6,6 @@ import esm
 from esm import FastaBatchedDataset
 import os
 from tqdm import tqdm
-from sklearn.preprocessing import MinMaxScaler
 from utils import json_parser
 
 
