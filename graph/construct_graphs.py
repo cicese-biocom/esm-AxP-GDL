@@ -3,7 +3,6 @@ from graph import nodes, edges
 from tqdm import tqdm
 import numpy as np
 from workflow.parameters_setter import ParameterSetter
-import os
 import torch
 from torch_geometric.data import Data
 
