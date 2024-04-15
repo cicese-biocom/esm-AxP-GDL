@@ -1,10 +1,10 @@
 #!/bin/bash
 
-dataset="datasets/TestDataset/TestDataset.csv"
-pdb_path="datasets/TestDataset/ESMFold_pdbs/"
+dataset="example/dataset/ExampleDataset.csv"
+pdb_path="example/dataset/ESMFold_pdbs/"
 tertiary_structure_method='esmfold'
-gdl_model_path="output/TestDataset/Checkpoints/epoch=2_train-loss=0.68_val-loss=0.68.pt"
-output_path="output/TestDataset/"
+gdl_model_path="example/output/Checkpoints/epoch=5_train-loss=0.88_val-loss=0.88.pt"
+output_path="example/output/"
 dropout_rate=0.25
 batch_size=512
 
