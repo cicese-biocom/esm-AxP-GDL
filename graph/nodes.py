@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-
 from models.esm2 import esm2_model_handler as esm2_model_handler
 from workflow.parameters_setter import ParameterSetter
 
