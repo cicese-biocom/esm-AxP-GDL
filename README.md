@@ -107,7 +107,7 @@ This framework is currently supported for Linux, Python 3.7, CUDA 11 and Pytorch
 CUDA Toolkit: https://developer.nvidia.com/ </br>
 Python: 3.7 </br>
 PyTorch: 1.12.0+cu113 </br>
-PyTorch Geometric: (torch-cluster: 1.6.1, torch-scatter: 2.0.9, torch-sparse: 0.6.15, torch-geometric: 2.3.1) </br>
+PyTorch Geometric: (torch-cluster: 1.6.1, torch-scatter: 2.1.0, torch-sparse: 0.6.15, torch-geometric: 2.3.1) </br>
 ESM-2 (fair-esm:2.0.0) </br> 
 ESMFold (fair-esm:2.0.0) 
 
