@@ -5,10 +5,9 @@ from torch import hub
 import esm
 from esm import FastaBatchedDataset
 import os
-import json
 from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
-from torch.nn.functional import normalize
+from utils import json_parser
 
 
 def get_models(esm2_representation):
@@ -18,11 +17,9 @@ def get_models(esm2_representation):
         models: models corresponding to the specified esm 2 representation
     """
 
-    esm2_representations_json = os.getcwd() + os.sep + "models/esm2/esm2_representations.json"
+    esm2_representations_json = os.getcwd() + os.sep + "settings/esm2_representations.json"
+    data = json_parser.load_json(esm2_representations_json)
 
-    # Read JSON in a DataFrame
-    with open(esm2_representations_json, 'r') as json_file:
-        data = json.load(json_file)
 
     # Create a DataFrame
     representations = pd.DataFrame(data["representations"])
@@ -41,13 +38,16 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features, validation_config):
+def get_embeddings(data, model_name, reduced_features, validation_mode, scrambling_percentage, use_esm2_contact_map):
     """
+    get_embeddings
+    :param use_esm2_contact_map:
+    :param scrambling_percentage:
+    :param validation_mode:
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
     :param model_name: esm2 model name
     :param reduced_features: vector of positions of the features to be used
-    :param normalize_embedding: whether to normalize the embedding using Min-Max scaling
     :return:
         embeddings: reduced embedding of each sequence of the fasta file according to reduced_features
     """
@@ -65,21 +65,23 @@ def get_embeddings(data, model_name, reduced_features, validation_config):
 
         dataset = FastaBatchedDataset(data.id, data.sequence)
         batches = dataset.get_batch_indices(toks_per_batch=1, extra_toks_per_seq=1)
-        data_loader = torch.utils.data.DataLoader(dataset, collate_fn=alphabet.get_batch_converter(), batch_sampler=None)
-        #print(f"Read FASTA file with {len(dataset)} sequences")
+        data_loader = torch.utils.data.DataLoader(dataset, collate_fn=alphabet.get_batch_converter(),
+                                                  batch_sampler=None)
 
-        scaler = MinMaxScaler()
+        # scaler = MinMaxScaler()
         repr_layers = model.num_layers
         embeddings = []
-
-        validation_mode, scrambling_percentage = validation_config
+        contact_maps = []
 
         with torch.no_grad():
-                for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader), total=len(data_loader), desc ="Generating esm2 embeddings"):
+                for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader),
+                                                            total=len(data_loader),
+                                                            desc ="Generating esm2 embeddings"):
                     if torch.cuda.is_available() and not no_gpu:
                         toks = toks.to(device="cuda", non_blocking=True)
 
-                    representation = model(toks, repr_layers=[repr_layers], return_contacts=False)["representations"][repr_layers]
+                    result = model(toks, repr_layers=[repr_layers], return_contacts=use_esm2_contact_map)
+                    representation = result["representations"][repr_layers]
 
                     for i, label in enumerate(labels):
                         layer_for_i = representation[i, 1:len(strs[i]) + 1]
@@ -93,14 +95,19 @@ def get_embeddings(data, model_name, reduced_features, validation_config):
 
                         if validation_mode == 'embedding_scrambling':
                             amino_acid_number_to_shuffle = max(int(amino_acid_number * scrambling_percentage), 2)
-                            indexes = np.random.choice(amino_acid_number , size=amino_acid_number_to_shuffle, replace=False)
+                            indexes = np.random.choice(amino_acid_number, size=amino_acid_number_to_shuffle,
+                                                       replace=False)
                             embedding_percent = embedding[indexes].copy()
                             np.random.shuffle(embedding_percent)
                             embedding[indexes] = embedding_percent
 
                         embeddings.append(embedding)
 
-        return embeddings
+                        if use_esm2_contact_map:
+                            contact_map = result["contacts"][0]
+                            contact_map = contact_map.cpu().numpy()
+                            contact_maps.append(contact_map)
+        return embeddings, contact_maps
 
     except Exception as e:
         print(f"Error in get_embeddings function: {e}")
