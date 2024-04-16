@@ -21,16 +21,17 @@ git clone https://github.com/cicese-biocom/esm-AxP-GDL.git
 The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
-├── best_models                                 <- Top models created using this framework. 
-│   ├── amp_esmt36_d10_hd128_(Model3)                    
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.json                     <- Parameters used to build the model.
-│   ├── amp_esmt33_d10_hd128_(Model2)                     
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.json                     <- Parameters used to build the model.
-│   ├── amp_esmt30_d15_hd128_(Model5)                      
-│   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   ├── Parameters.json                     <- Parameters used to build the model.
+├── best_models                                  
+│   ├── AMPDiscover                             <- Top models created using this framework.
+│   │   ├── amp_esmt36_d10_hd128_(Model3)                    
+│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
+│   │   ├── amp_esmt33_d10_hd128_(Model2)                     
+│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
+│   │   ├── amp_esmt30_d15_hd128_(Model5)                      
+│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
 ├── datasets                                    
 │   ├── AMPDiscover                                  
 │   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
