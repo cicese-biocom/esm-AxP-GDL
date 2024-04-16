@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser
 from pathlib import Path
-
 from workflow.classification_metrics import ClassificationMetricsContext, BinaryClassificationMetrics
 from workflow.data_loader import DataLoaderContext, CSVLoader, FASTALoader
 from workflow.dataset_validator import DatasetValidatorContext, LabeledDatasetValidator, DatasetValidator
@@ -20,7 +18,7 @@ import numpy as np
 import random
 from utils import json_parser as json_parser
 from .application_context import ApplicationContext
-from .dto_workflow import ModelParameters
+from .dto_workflow import ModelParameters, TrainingOutputParameter, EvalOutputParameter
 from .logging_handler import LoggingHandler
 from .path_creator import PathCreatorContext
 
@@ -30,12 +28,16 @@ class GDLWorkflow(ABC):
 
         # Initialization of workflow parameters
         output_setting = self.create_path(path_creator_context=context.path_creator, parameters=parameters)
+
         self.initialize_logger(log_output_path=output_setting['log_file'])
+
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
         # Workflow execution
         data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
+
         data = self.filter_data(data=data)
+
         graphs, data = self.construct_graph(workflow_settings=workflow_settings, data=data)
 
         if self.is_mode_training(workflow_settings.mode):
@@ -43,8 +45,10 @@ class GDLWorkflow(ABC):
             graphs = (train_graphs, val_graph)
 
         model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
+
         self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
                      classification_metrics=context.classification_metrics, data=data)
+
         self.save_parameters(workflow_settings=workflow_settings)
 
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
@@ -69,7 +73,6 @@ class GDLWorkflow(ABC):
         model.to(workflow_settings.device)
         return model
 
-
     @staticmethod
     def initialize_logger(log_output_path: Path):
         LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
@@ -91,7 +94,8 @@ class GDLWorkflow(ABC):
 
     def save_parameters(self, workflow_settings: ParameterSetter):
         json_file = workflow_settings.output_setting['parameter_file']
-        json_data = workflow_settings.model_dump()
+        parameters = EvalOutputParameter(**workflow_settings.model_dump())
+        json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
 
     def filter_data(self, data):
@@ -134,6 +138,12 @@ class TrainingWorkflow(GDLWorkflow):
             train_graphs, val_graphs, _, _ = train_test_split(graphs, activities, test_size=0.2, shuffle=True,
                                                               random_state=41)
         return train_graphs, val_graphs
+
+    def save_parameters(self, workflow_settings: ParameterSetter):
+        json_file = workflow_settings.output_setting['parameter_file']
+        parameters = TrainingOutputParameter(**workflow_settings.model_dump())
+        json_data = parameters.model_dump()
+        json_parser.save_json(json_file, json_data)
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
         train_graphs, val_graphs = graphs
