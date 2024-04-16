@@ -1,2 +1,0 @@
-Validation MCC: 0.9953
-Test MCC: 0.9389
