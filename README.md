@@ -7,7 +7,7 @@
 # **esm-AxP-GDL**
 
 esm-AxP-GDL is a framework to build Graph Deep Learning (GDL)-based models leveraging ESMFold-predicted peptide 
-structures and ESM-2 models-based amino acid featurization for the prediction of antimicrobial peptides (AMPs). 
+structures and ESM-2 based amino acid-level characteristics for the prediction of antimicrobial peptides (AMPs). 
 This framework was designed to be easily extended to modeling any task related to the prediction of peptide and 
 protein biological activities (or properties).
 
@@ -21,73 +21,72 @@ git clone https://github.com/cicese-biocom/esm-AxP-GDL.git
 The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
-├── best_models                                  
-│   ├── AMPDiscover                             <- Top models created using this framework.
+├── best_models                                 <- Best models created using this framework.
+│   ├── AMPDiscover                                <- Best models created on the AMPDiscover benchmarking dataset.
 │   │   ├── amp_esmt36_d10_hd128_(Model3)                    
-│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
+│   │   │   ├── Metrics.txt                           <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                       <- Parameters used to build the model.
 │   │   ├── amp_esmt33_d10_hd128_(Model2)                     
-│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
+│   │   │   ├── Metrics.txt                           <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                       <- Parameters used to build the model.
 │   │   ├── amp_esmt30_d15_hd128_(Model5)                      
-│   │   │   ├── Metrics.txt                         <- Matthew correlation coefficient (MCC) achieved by this model. 
-│   │   │   ├── Parameters.json                     <- Parameters used to build the model.
+│   │   │   ├── Metrics.txt                           <- Matthew correlation coefficient (MCC) achieved by this model. 
+│   │   │   ├── Parameters.json                       <- Parameters used to build the model.
 ├── datasets                                    
-│   ├── AMPDiscover                                  
-│   │   ├── AMPDiscover.csv                     <- Dataset used to evaluate the usefulness of the proposed framework.              
-│   │   ├── Test(reduced-100).csv               <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 100 amino acids.                
-│   │   ├── Test(reduced-30).csv                <- Reduced test set built from AMPDiscover test set and comprised of sequences of up to 30 amino acids.
-│   │   ├── External.csv                        <- External test set created by joining the ABPDiscover, AFPDiscover, AVPDiscover, AniAMPpred, Deep-ABPpred, Deep-AFPpred, and Deep-AVPpred datasets.
+│   ├── AMPDiscover                             <- AMPDiscover benchmarking dataset.     
+│   │   ├── AMPDiscover.csv                        <- Training, validation and test sets.              
+│   │   ├── Test(reduced-100).csv                  <- Reduced test set comprised of sequences of up to 100 amino acids.                
+│   │   ├── Test(reduced-30).csv                   <- Reduced test set comprised of sequences of up to 30 amino acids.
+│   │   ├── External.csv                           <- External test set containing non-duplicated sequences with the AMPDiscover set.
+├── example                          
+│   │   ├── ExampleDataset.csv                  <- Example set to run the framework.
+│   │   ├── ESMFold_pdbs                        <- Path where example tertiary structures are saved in or loaded from PDB files. 
 ├── graph                                        
 │   ├── _init_.py                               <- Module to build graphs.
-│   ├── construct_graphs.py                     <- Script to construct graphs.
-│   ├── nodes.py                                <- Script to construct the graph nodes.
-│   ├── edges.py                                <- Script to construct the graph edges.
-│   ├── edge_construction_functions.py          <- Classes implementing different edge construction functions.               
+│   ├── construct_graphs.py                     <- Script to build graphs.
+│   ├── nodes.py                                <- Script to build the graph nodes.
+│   ├── edges.py                                <- Script to build the graph edges.
+│   ├── edge_construction_functions.py          <- Classes to build graph edges according to different criteria.               
 │   ├── tertiary_structure_handler.py           <- Script to load or predict tertiary structures.
 ├── workflow                                        
 │   ├── _init_.py                               <- Framework workflow module.
 │   ├── application_context.py                  <- Classes to handle dependencies.
 │   ├── args_parser_handler.py                  <- Classes to parse input arguments.
 │   ├── parameters_setter.py                    <- Classes to configure execution parameters.
-│   ├── path_creator.py                         <- Classes to create the workflow output file system.
+│   ├── path_creator.py                         <- Classes to create the workflow output path.
 │   ├── logging_handler.py                      <- Classes to handle event logger. 
-│   ├── data_loader.py                          <- Classes to load the input data.
-│   ├── dataset_validator.py                    <- Classes to validate the input data.
-│   ├── gdl_workflow.py                         <- Classes to execute the workflow in training, test and inference modes.
-│   ├── classification_metrics.py               <- Classes to calculate classification metrics.
+│   ├── data_loader.py                          <- Classes to load input data.
+│   ├── dataset_validator.py                    <- Classes to validate input data.
+│   ├── gdl_workflow.py                         <- Classes to run the workflow in training, test and inference modes.
+│   ├── classification_metrics.py               <- Classes to calculate performance metrics.
 ├── models                                      
 │   ├── _init_.py                               
 │   ├── esm2                                    
 │   │   ├── _init_.py                           <- ESM-2 module.
-│   │   ├── esm2_model_handler.py               <- Script to use the ESM-2 models.
+│   │   ├── esm2_model_handler.py               <- Script to use a given ESM-2 model.
 │   │   ├── checkpoints                         <- Directory where the ESM-2 models are downloaded.
 │   ├── esmfold                                 
 │   │   ├── _init_.py                           <- ESMFold module.
-│   │   ├── esmfold_handler.py                  <- Script to use the ESMFold models.
-│   │   ├── checkpoints                         <- Directory where the ESMFold models are downloaded.
+│   │   ├── esmfold_handler.py                  <- Script to use the ESMFold model.
+│   │   ├── checkpoints                         <- Directory where the ESMFold model is downloaded.
 │   ├── GAT                                     
-│   │   ├── _init_.py                           <- GAT module.
-│   │   ├── GAT.py                              <- Script to use the Graph Attention Network (GAT) architecture.                              
+│   │   ├── _init_.py                           <- Graph Attention Network (GAT) module.
+│   │   ├── GAT.py                              <- Script to use the implemented GAT architecture.
 ├── utils                                                             
 │   │   ├── _init_.py                           
-│   │   ├── distances.py                        <- Calculates distances between pairs of atoms using various distance functions.
+│   │   ├── distances.py                        <- Calculates the distance between atom-pairs using different functions.
 │   │   ├── pdb_parser.py                       <- Parses files in PDB format.
 │   │   ├── json_parser.py                      <- Parses files in JSON format.
 │   │   ├── file_system_handler.py              <- Manages file system operations               
 ├── settings
 │   │   ├── _init_.py                           <- Settings module
-│   │   ├── esm2_representation.json            <- The ESM-2 representations settings that can be used for this framework.
-│   │   ├── logger_setting.json                 <- Configuration of the workflow event logger.
-│   │   ├── output_settings.json                <- Workflow output file system configuration.
-├── example      
-│   │   ├── Dataset                             
-│   │   │   ├── ExampleDataset.csv              <- Example dataset.
-│   │   │   ├── ESMFold_pdbs                    <- Path where tertiary structures are saved in or loaded from PDB files. 
-├── README.md                                   <- README to use this framework
-├── environment.yml                             <- Python libraries requiered by the framework.
-├── Dockerfile                                  <- Docker image with all the dependencies required by the framework.
-├── docker-compose.yml                          <- Configuration of the Docker container required by the framework.
+│   │   ├── esm2_representation.json            <- ESM-2 representation that can be used.
+│   │   ├── logger_setting.json                 <- Configuration of the event logger.
+│   │   ├── output_settings.json                <- Output file system configuration.
+├── README.md                                   <- README
+├── environment.yml                             <- Python libraries required.
+├── Dockerfile                                  <- Docker image.
+├── docker-compose.yml                          <- Configuration of the Docker container.
 ├── train.py                                    <- Script to train a model.
 ├── test.py                                     <- Script to test a model.
 ├── inference.py                                <- Script to use a model for inference.
@@ -97,7 +96,7 @@ esm-AxP-GDL
 ```
 
 ## **Dependencies**
-This framework is currently supported for Linux, Python 3.7, CUDA 11 and Pytorch 1.12. The major dependencies used in this project are as follows:
+This framework is currently supported for Linux, Python 3.7, CUDA 11 and Pytorch 1.12. The major dependencies used in this project are:
 
 >C++ compiler: https://gcc.gnu.org/ </br>
 CUDA Toolkit: https://developer.nvidia.com/ </br>
@@ -107,7 +106,7 @@ PyTorch Geometric: (torch-cluster: 1.6.1, torch-scatter: 2.1.0, torch-sparse: 0.
 ESM-2 (fair-esm:2.0.0) </br> 
 ESMFold (fair-esm:2.0.0) 
 
-The Python libraries used in the workflow are specified in `environment.yml`.
+The Python libraries used in the workflow are specified in the `environment.yml` file.
 
 ### **Python environment configuration via conda**
 We provide the steps to create a Python environment from an `environment.yml` file using conda:
@@ -173,17 +172,17 @@ optional arguments:
   --batch_size BATCH_SIZE
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
-                        The path to save the trained models
+                        The path where the trained models are saved
   --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}
                         ESM-2 model to be used
   --edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS
-                        Functions to build edges. the options available are:
+                        Functions to build edges. The options available are:
                         'distance_based_threshold', 'esm2_contact_map',
                         'peptide_backbone'
   --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
-                        Distance function to construct graph edges
+                        Distance function to build graph edges
   --distance_threshold DISTANCE_THRESHOLD
-                        Distance threshold to construct graph edges
+                        Distance threshold to build graph edges
   --amino_acid_representation {CA}
                         Amino acid representations
   --number_of_heads NUMBER_OF_HEADS
@@ -191,9 +190,9 @@ optional arguments:
   --hidden_layer_dimension HIDDEN_LAYER_DIMENSION
                         Hidden layer dimension
   --add_self_loops      True if specified, otherwise, False. True indicates to
-                        use auto loops in attention layer.
+                        use auto loops in attention layers.
   --use_edge_attr       True if specified, otherwise, False. True indicates to
-                        use edge attributes in graph learning.
+                        use edge attributes during the learning.
   --learning_rate LEARNING_RATE
                         Learning rate
   --dropout_rate DROPOUT_RATE
@@ -230,7 +229,7 @@ optional arguments:
   --batch_size BATCH_SIZE
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
-                        The path to save the trained models
+                        The path where the trained models are saved
   --dropout_rate DROPOUT_RATE
                         Dropout rate
   --output_path OUTPUT_PATH
@@ -274,7 +273,7 @@ In these scripts are used the AMPDiscover dataset as input set, the model `esm2_
 characterize the graph nodes, a `distance threshold equal to 10 angstroms`
 to build the graph edges, and a `hidden layer size equal to 128`.
 
-When using the Docker container the example scripts should be used as follows:
+When using the Docker container, the example scripts should be used as follows:
 ```
 docker-compose run --rm esm-axp-gdl-env sh train.sh
 ```
@@ -286,12 +285,12 @@ docker-compose run --rm esm-axp-gdl-env sh inference.sh
 ```
 
 ### **Best models**
-Top three models created with AMPDiscover using the esm-AxP-GDL framework are as follows:  
+Best models created. So far, the only models are to predict general-AMP.  
 
 | Name                                                             | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                    |
 |------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [amp_esmt33_d10_hd128_(Model2).pt](https://drive.google.com/file/d/1oKBo1pRIdZeJKemW4ZwijgbacDQQlAJU/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9389 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t33_650M_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
-| [amp_esmt36_d10_hd128_(Model3).pt](https://drive.google.com/file/d/1oFdNEpINtavPvMFWGW9NE8qntXPPQ-Cr/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
-| [amp_esmt30_d15_hd128_(Model5).pt](https://drive.google.com/file/d/1oJHs3tjigP4gJFFmOZv7QQ7qU_Pn9Wsa/view?usp=drive_link) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9379 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t30_150M_UR50D` to evolutionary characterize the graph nodes, a `distance threshold equal to 15 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt33_d10_hd128_(Model2).pt](https://drive.google.com/file/d/1oKBo1pRIdZeJKemW4ZwijgbacDQQlAJU/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9389 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t33_650M_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt36_d10_hd128_(Model3).pt](https://drive.google.com/file/d/1oFdNEpINtavPvMFWGW9NE8qntXPPQ-Cr/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt30_d15_hd128_(Model5).pt](https://drive.google.com/file/d/1oJHs3tjigP4gJFFmOZv7QQ7qU_Pn9Wsa/view?usp=drive_link) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9379 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t30_150M_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 15 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
 
 NOTE:  The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.
