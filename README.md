@@ -40,7 +40,6 @@ esm-AxP-GDL
 │   │   ├── External.csv                           <- External test set containing non-duplicated sequences with the AMPDiscover set.
 ├── example                          
 │   │   ├── ExampleDataset.csv                  <- Example set to run the framework.
-│   │   ├── ESMFold_pdbs                        <- Path where example tertiary structures are saved in or loaded from PDB files. 
 ├── graph                                        
 │   ├── _init_.py                               <- Module to build graphs.
 │   ├── construct_graphs.py                     <- Script to build graphs.
