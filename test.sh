@@ -1,7 +1,7 @@
 #!/bin/bash
 
-dataset="example/dataset/ExampleDataset.csv"
-pdb_path="example/dataset/ESMFold_pdbs/"
+dataset="example/ExampleDataset.csv"
+pdb_path="example/ESMFold_pdbs/"
 tertiary_structure_method='esmfold'
 gdl_model_path="example/output/Checkpoints/gdl_model_name.pt"
 output_path="example/output/"
