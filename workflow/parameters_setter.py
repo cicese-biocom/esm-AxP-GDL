@@ -29,7 +29,7 @@ class ParameterSetter(BaseModel):
 
     esm2_representation: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
                                                     'esm2_t48']],
-                                   Field(description='ESM-2 model to be used')] = 'esm2_t33'
+                                   Field(description='ESM-2 model to be used')] = None
 
     tertiary_structure_method: Annotated[Optional[Literal['esmfold']],
                                          Field(description='3D structure prediction method. None indicates to load '
