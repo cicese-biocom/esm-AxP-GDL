@@ -129,6 +129,18 @@ docker-compose build
 NOTE: if a docker image is used to run this framework, then the path of the input files should be relative to
 the framework directory.
 
+## **Install on computer clusters**
+The installation on computer clusters depends on the applications available to users through modular environment commands. 
+A installation example could be:
+```
+1. module load python/ondemand-jupyter-python3.8
+2. module load gcc/9.2.0
+3. module load cuda/11.3.0
+4. conda env create -f environment.yml
+```
+
+NOTE: we provide template scripts to run training/test/inference Slurm batch jobs.
+
 ## **Usage**
 ### **Input data format**
 The framework esm-AxP-GDL is inputted with a comma separated value (CSV) file, which contains 
