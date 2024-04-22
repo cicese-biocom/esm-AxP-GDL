@@ -8,6 +8,9 @@ from utils import pdb_parser, distances
 
 
 def load_tertiary_structures(workflow_settings: ParameterSetter, data: pd.DataFrame):
+    if workflow_settings.pdb_path is None:
+        return [None] * len(data), data
+
     sequences_to_exclude = pd.DataFrame()
     atom_coordinates_matrices = []
     with tqdm(range(len(data)), total=len(data), desc="Loading pdb files", disable=False) as progress:
