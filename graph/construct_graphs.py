@@ -56,12 +56,14 @@ def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps
             if adjacency_matrix[i][j] >= eps:
                 rows.append(i)
                 cols.append(j)
-                e_vec.append(weights_matrix[i][j])
+                if weights_matrix.size > 0:
+                    e_vec.append(weights_matrix[i][j])
     edge_index = torch.tensor([rows, cols], dtype=torch.int64)
     x = torch.tensor(nodes_features, dtype=torch.float32)
-    edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
-    y = torch.tensor([label], dtype=torch.int64)
+    if len(e_vec) > 0:
+        edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
+    y = torch.tensor([label], dtype=torch.int64) if label is not None else None
 
-    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr if len(e_vec) else None, y=y)
     data.validate(raise_on_error=True)
     return data
