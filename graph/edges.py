@@ -1,3 +1,5 @@
+from typing import List
+
 from workflow.parameters_setter import ParameterSetter
 import numpy as np
 from tqdm import tqdm
@@ -15,26 +17,27 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
         atom_coordinates_matrices, data = load_tertiary_structures(workflow_settings, data)
 
     adjacency_matrices, weights_matrices = _construct_edges(atom_coordinates_matrices,
+                                                            data['sequence'],
                                                             esm2_contact_maps,
                                                             workflow_settings)
     return adjacency_matrices, weights_matrices, data
 
 
-def _construct_edges(atom_coordinates_matrices: np.array, esm2_contact_maps, workflow_settings: ParameterSetter):
+def _construct_edges(atom_coordinates_matrices: np.array, sequences: List[str], esm2_contact_maps, workflow_settings: ParameterSetter):
     num_cores = multiprocessing.cpu_count()
 
     if not workflow_settings.use_esm2_contact_map:
         esm2_contact_maps = [None] * len(atom_coordinates_matrices)
 
-    if workflow_settings.use_esm2_contact_map:
-        args = [(workflow_settings.edge_construction_functions,
-                 workflow_settings.distance_function,
-                 workflow_settings.distance_threshold,
-                 esm2_contact_map,
-                 atom_coordinates,
-                 workflow_settings.use_edge_attr
-                 ) for (atom_coordinates, esm2_contact_map) in
-                zip(atom_coordinates_matrices, esm2_contact_maps)]
+    args = [(workflow_settings.edge_construction_functions,
+             workflow_settings.distance_function,
+             workflow_settings.distance_threshold,
+             atom_coordinates,
+             sequence,
+             esm2_contact_map,
+             workflow_settings.use_edge_attr
+             ) for (atom_coordinates, sequence, esm2_contact_map) in
+            zip(atom_coordinates_matrices, sequences, esm2_contact_maps)]
 
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
         with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
