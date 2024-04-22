@@ -8,14 +8,20 @@ class Edges:
     """
     """
 
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
 
 class EmptyEdges(Edges):
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        amino_acid_number = len(atom_coordinates)
-        return np.zeros((amino_acid_number, amino_acid_number), dtype=int), np.empty((0, 0))
+    def __init__(self, number_of_amino_acid: int) -> None:
+        self._number_of_amino_acid = number_of_amino_acid
+
+    @property
+    def number_of_amino_acid(self) -> Edges:
+        return self._number_of_amino_acid
+
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        return np.zeros((self.number_of_amino_acid, self.number_of_amino_acid), dtype=int), np.empty((0, 0))
 
 
 class EdgeConstructionFunction(Edges):
@@ -28,123 +34,175 @@ class EdgeConstructionFunction(Edges):
     def edges(self) -> Edges:
         return self._edges
 
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        return self._edges.compute_edges(atom_coordinates=atom_coordinates)
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self._edges.compute_edges()
 
 
 class PeptideBackbone(EdgeConstructionFunction):
-    def __init__(self, edges: Edges, distance_function: str):
+    def __init__(self, edges: Edges, distance_function: str, atom_coordinates: np.ndarray, use_edge_attr: bool):
         super().__init__(edges)
         self._distance_function = distance_function
+        self._atom_coordinates = atom_coordinates
+        self._use_edge_attr = use_edge_attr
 
     @property
     def distance_function(self) -> str:
         return self._distance_function
 
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        adjacency_matrix, weight_matrix = self.edges.compute_edges(atom_coordinates=atom_coordinates)
+    @property
+    def use_edge_attr(self) -> str:
+        return self._use_edge_attr
+    
+    @property
+    def atom_coordinates(self) -> str:
+        return self._atom_coordinates
 
-        amino_acid_number = len(atom_coordinates)
-        new_weights_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        adjacency_matrix, weight_matrix = self.edges.compute_edges()
 
-        for i in range(amino_acid_number - 1):
+        number_of_amino_acid = len(self.atom_coordinates)
+        new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
+
+        for i in range(number_of_amino_acid - 1):
             adjacency_matrix[i][i + 1] = 1
             adjacency_matrix[i + 1][i] = 1
 
-            if self._distance_function:
-                dist = distance(atom_coordinates[i], atom_coordinates[i + 1], self._distance_function)
+            if self.use_edge_attr and self.distance_function:
+                dist = distance(self.atom_coordinates[i], self.atom_coordinates[i + 1], self.distance_function)
                 new_weights_matrix[i][i + 1] = dist
                 new_weights_matrix[i + 1][i] = dist
 
-                new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
-
+        if self.use_edge_attr and self.distance_function:
+            new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
             if weight_matrix.size > 0:
-                new_weights_matrix = np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
-                return adjacency_matrix, new_weights_matrix
+                return adjacency_matrix, np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
             else:
-                return adjacency_matrix, weight_matrix
+                return adjacency_matrix, new_weights_matrix
+        else:
+            return adjacency_matrix, weight_matrix
 
 
 class ESM2ContactMap(EdgeConstructionFunction):
-    def __init__(self, edges: Edges, esm2_contact_map: Tuple[np.ndarray, np.ndarray]):
+    def __init__(self, edges: Edges, esm2_contact_map: Tuple[np.ndarray, np.ndarray], use_edge_attr: bool):
         super().__init__(edges)
         self._esm2_contact_map = esm2_contact_map
+        self._use_edge_attr = use_edge_attr
 
     @property
     def esm2_contact_map(self) -> Tuple[np.ndarray, np.ndarray]:
         return self._esm2_contact_map
 
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        adjacency_matrix, weight_matrix = self.edges.compute_edges(atom_coordinates=atom_coordinates)
+    @property
+    def use_edge_attr(self) -> str:
+        return self._use_edge_attr
 
-        amino_acid_number = len(atom_coordinates)
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        adjacency_matrix, weight_matrix = self.edges.compute_edges()
 
-        for i in range(amino_acid_number):
-            for j in range(i + 1, amino_acid_number):
-                adjacency_matrix[i][j] = adjacency_matrix[i][j] or self.esm2_contact_map[i][j]
+        number_of_amino_acid = len(self.esm2_contact_map)
+        new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
+
+        for i in range(number_of_amino_acid):
+            for j in range(i + 1, number_of_amino_acid):
+                adjacency_matrix[i][j] = adjacency_matrix[i][j] or (1 if self.esm2_contact_map[i][j] > 0.5 else 0)
                 adjacency_matrix[j][i] = adjacency_matrix[i][j]
 
-        return adjacency_matrix, weight_matrix
+                if self.use_edge_attr:
+                    new_weights_matrix[i][j] = self.esm2_contact_map[i][j]
+                    new_weights_matrix[j][i] = self.esm2_contact_map[i][j]
+
+        if self.use_edge_attr:
+            new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
+            if weight_matrix.size > 0:
+                return adjacency_matrix, np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
+            else:
+                return adjacency_matrix, new_weights_matrix
+        else:
+            return adjacency_matrix, weight_matrix
 
 
-class DistanceThreshold(EdgeConstructionFunction):
-    def __init__(self, edges: Edges, distance_function: str, threshold: float):
+class DistanceBasedThreshold(EdgeConstructionFunction):
+    def __init__(self, edges: Edges, distance_function: str, threshold: float, atom_coordinates: np.ndarray,
+                 use_edge_attr: bool):
         super().__init__(edges)
         self._distance_function = distance_function
         self._threshold = threshold
+        self._atom_coordinates = atom_coordinates
+        self._use_edge_attr = use_edge_attr
 
     @property
-    def distance_function(self) -> Tuple[np.ndarray, np.ndarray]:
+    def distance_function(self) -> str:
         return self._distance_function
 
     @property
     def threshold(self) -> Tuple[np.ndarray, np.ndarray]:
         return self._threshold
 
-    def compute_edges(self, atom_coordinates: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        adjacency_matrix, weight_matrix = self.edges.compute_edges(atom_coordinates=atom_coordinates)
+    @property
+    def use_edge_attr(self) -> str:
+        return self._use_edge_attr
 
-        amino_acid_number = len(atom_coordinates)
-        new_weights_matrix = np.zeros((amino_acid_number, amino_acid_number), dtype=np.float64)
+    @property
+    def atom_coordinates(self) -> str:
+        return self._atom_coordinates
 
-        for i in range(amino_acid_number):
-            for j in range(i + 1, amino_acid_number):
-                dist = distance(atom_coordinates[i], atom_coordinates[j], self.distance_function)
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        adjacency_matrix, weight_matrix = self.edges.compute_edges()
+
+        number_of_amino_acid = len(self.atom_coordinates)
+        new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
+
+        for i in range(number_of_amino_acid):
+            for j in range(i + 1, number_of_amino_acid):
+                dist = distance(self.atom_coordinates[i], self.atom_coordinates[j], self.distance_function)
                 if dist <= self.threshold:
                     adjacency_matrix[i][j] = 1
                     adjacency_matrix[j][i] = 1
-                    new_weights_matrix[i][j] = dist
-                    new_weights_matrix[j][i] = dist
+                    
+                    if self.use_edge_attr:
+                        new_weights_matrix[i][j] = dist
+                        new_weights_matrix[j][i] = dist
 
-        new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
-
-        if weight_matrix.size > 0:
-            new_weights_matrix = np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
-        return adjacency_matrix, new_weights_matrix
+        if self.use_edge_attr:
+            new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
+            if weight_matrix.size > 0:
+                return adjacency_matrix, np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
+            else:
+                return adjacency_matrix, new_weights_matrix
+        else:
+            return adjacency_matrix, weight_matrix
 
 
 class EdgeConstructionContext:
     @staticmethod
     def compute_edges(args):
-        edge_construction_functions, distance_function, distance_threshold, esm2_contact_map, atom_coordinates = args
+        edge_construction_functions, distance_function, distance_threshold, esm2_contact_map, atom_coordinates, use_edge_attr = args
 
         construction_functions = [
             ('distance_based_threshold',
-             partial(DistanceThreshold,
+             partial(DistanceBasedThreshold,
                      edges=None,
                      distance_function=distance_function,
-                     threshold=distance_threshold)),
+                     threshold=distance_threshold,
+                     atom_coordinates=atom_coordinates,
+                     use_edge_attr=use_edge_attr
+                     )),
             ('esm2_contact_map',
              partial(ESM2ContactMap,
-                     edges=None,
-                     esm2_contact_map=esm2_contact_map)),
+                     edges=None,                     
+                     esm2_contact_map=esm2_contact_map,
+                     use_edge_attr=use_edge_attr)),
             ('peptide_backbone',
              partial(PeptideBackbone,
                      edges=None,
-                     distance_function=distance_function))
+                     distance_function=distance_function,
+                     atom_coordinates=atom_coordinates,
+                     use_edge_attr=use_edge_attr
+                     ))
         ]
 
-        edges_functions = EmptyEdges()
+        number_of_amino_acid = len(atom_coordinates) if atom_coordinates is not None else len(esm2_contact_map)
+        edges_functions = EmptyEdges(number_of_amino_acid)
 
         for name in edge_construction_functions:
             for func_name, func in construction_functions:
@@ -154,7 +212,7 @@ class EdgeConstructionContext:
                     edges_functions = func(**params)
                     break
 
-        return edges_functions.compute_edges(atom_coordinates=atom_coordinates)
+        return edges_functions.compute_edges()
 
 
 if __name__ == "__main__":
@@ -173,48 +231,18 @@ if __name__ == "__main__":
     ])
 
     distance_function = 'euclidean'
-    threshold = 5
+    # distance_function = None
+    distance_threshold = 5
 
-    function_names = ['distance_threshold', 'esm2_contact_map', 'peptide_backbone']
+    # function_names = ['distance_based_threshold', 'esm2_contact_map', 'peptide_backbone']
+    edge_construction_functions = ['peptide_backbone', 'esm2_contact_map', 'distance_based_threshold']
 
-    edge_construction_funcs = [
-        ('distance_threshold',
-         partial(DistanceThreshold, edges=None, distance_function=distance_function, threshold=threshold)),
-        ('esm2_contact_map',
-         partial(ESM2ContactMap, edges=None, esm2_contact_map=esm2_contact_map)),
-        ('peptide_backbone',
-         partial(PeptideBackbone, edges=None, distance_function=distance_function))
-    ]
+    use_edge_attr = True
+    args = (edge_construction_functions, distance_function, distance_threshold, esm2_contact_map,
+            atom_coordinates, use_edge_attr)
 
-    # run
-    edges = EmptyEdges()
+    edges = EdgeConstructionContext()
 
-    for name in function_names:
-        for func_name, func in edge_construction_funcs:
-            if func_name == name:
-                params = func.keywords
-                params['edges'] = edges
-                edges = func(**params)
-                break
+    adjacency_matrix, weight_matrix = edges.compute_edges(args)
 
-    adjacency_matrix_2, weight_matrix_2 = \
-        edges.compute_edges(atom_coordinates=atom_coordinates)
-
-    ####################
-
-    empty_edges = EmptyEdges()
-    adjacency_matrix, weight_matrix = empty_edges.compute_edges(atom_coordinates=atom_coordinates)
-
-    peptide_backbone = PeptideBackbone(edges=empty_edges,
-                                       distance_function=distance_function)
-
-    peptide_bond_with_distance_threshold = DistanceThreshold(edges=peptide_backbone,
-                                                             distance_function=distance_function,
-                                                             threshold=threshold)
-
-    peptide_bond_with_esm2_contact_map = ESM2ContactMap(edges=peptide_backbone, esm2_contact_map=esm2_contact_map)
-
-    adjacency_matrix, weight_matrix = \
-        peptide_bond_with_esm2_contact_map.compute_edges(atom_coordinates=atom_coordinates)
-
-    print(adjacency_matrix, weight_matrix)
+    a = (adjacency_matrix, weight_matrix)
