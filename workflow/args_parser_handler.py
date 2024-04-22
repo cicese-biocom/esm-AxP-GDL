@@ -22,7 +22,7 @@ class ArgsParserHandler:
                                       'structures from PDB files , otherwise, sequences in input CSV file are '
                                       'predicted using the specified method')
 
-        self.parser.add_argument('--pdb_path', type=Path, required=True,
+        self.parser.add_argument('--pdb_path', type=Path, default=None,
                                  help='Path where tertiary structures are saved in or loaded from PDB files')
 
         self.parser.add_argument('--batch_size', type=int, default=512, help='Batch size')
