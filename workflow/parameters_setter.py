@@ -116,24 +116,48 @@ class ParameterSetter(BaseModel):
 
             # pdb_path
             if self.pdb_path:
-                if {'distance_based_threshold', 'peptide_backbone'}.intersection(self.edge_construction_functions):
+                if 'distance_based_threshold' in self.edge_construction_functions \
+                        or 'peptide_backbone' in self.edge_construction_functions \
+                        and self.distance_function is not None:
                     self.pdb_path = file_system_handler.check_file_exists(self.pdb_path)
                 else:
                     self.pdb_path = None
+                    self.tertiary_structure_method = None
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"with distance_function={self.distance_function} do not require "
+                        f"tertiary structures. Parameters pdb_path and tertiary_structure_method are set to None")
 
             # distance_function
-            if self.distance_function and 'distance_based_threshold' in self.edge_construction_functions:
-                raise ValueError('Parameter distance_function is required')
+            if self.distance_function is None:
+                if 'distance_based_threshold' in self.edge_construction_functions:
+                    raise ValueError('Parameter distance_function is required')
+            else:
+                if not {'distance_based_threshold', 'peptide_backbone'}.intersection(self.edge_construction_functions):
+                    self.distance_function = None
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"do not require the parameter distance_function. It has been set to None")
 
             # distance_threshold
-            if self.distance_threshold and 'distance_based_threshold' in self.edge_construction_functions:
-                raise ValueError('Parameter distance_threshold is required')
+            if self.distance_threshold is None:
+                if 'distance_based_threshold' in self.edge_construction_functions:
+                    raise ValueError('Parameter distance_threshold is required')
+            else:
+                if not {'distance_based_threshold'}.intersection(self.edge_construction_functions):
+                    self.distance_threshold = None
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"do not require the parameter distance_threshold. It has been set to None")
 
             # use_edge_attr
             if self.use_edge_attr:
                 if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(self.edge_construction_functions) \
-                        or 'peptide_backbone' in self.edge_construction_functions and not self.distance_function:
+                        and 'peptide_backbone' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"do not generate weight matrices. Parameter use_edge_attr has been set to False")
 
             # validation_mode
             if self.validation_mode and not self.scrambling_percentage:
@@ -144,8 +168,10 @@ class ParameterSetter(BaseModel):
 
             # use_esm2_contact_map
             self.use_esm2_contact_map = True if 'esm2_contact_map' in self.edge_construction_functions else False
+            logging.getLogger('workflow_logger').warning(
+                f"The parameter use_esm2_contact_map has been set to {self.use_esm2_contact_map}")
 
             return self
         except Exception as e:
-            logging.getLogger('workflow_logger').critical(e.error())
+            logging.getLogger('workflow_logger').critical(e)
             quit()
