@@ -1,5 +1,7 @@
 from typing import Tuple
 import numpy as np
+import pandas as pd
+
 from utils.distances import distance
 from functools import partial
 
@@ -39,10 +41,12 @@ class EdgeConstructionFunction(Edges):
 
 
 class PeptideBackbone(EdgeConstructionFunction):
-    def __init__(self, edges: Edges, distance_function: str, atom_coordinates: np.ndarray, use_edge_attr: bool):
+    def __init__(self, edges: Edges, distance_function: str, atom_coordinates: np.ndarray, sequence: str,
+                 use_edge_attr: bool):
         super().__init__(edges)
         self._distance_function = distance_function
         self._atom_coordinates = atom_coordinates
+        self._sequence = sequence
         self._use_edge_attr = use_edge_attr
 
     @property
@@ -57,11 +61,17 @@ class PeptideBackbone(EdgeConstructionFunction):
     def atom_coordinates(self) -> str:
         return self._atom_coordinates
 
+    @property
+    def sequence(self) -> str:
+        return self._sequence
+
     def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
         adjacency_matrix, weight_matrix = self.edges.compute_edges()
 
-        number_of_amino_acid = len(self.atom_coordinates)
-        new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
+        number_of_amino_acid = len(self.sequence)
+
+        if self.use_edge_attr and self.distance_function:
+            new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
 
         for i in range(number_of_amino_acid - 1):
             adjacency_matrix[i][i + 1] = 1
@@ -176,7 +186,7 @@ class DistanceBasedThreshold(EdgeConstructionFunction):
 class EdgeConstructionContext:
     @staticmethod
     def compute_edges(args):
-        edge_construction_functions, distance_function, distance_threshold, esm2_contact_map, atom_coordinates, use_edge_attr = args
+        edge_construction_functions, distance_function, distance_threshold, atom_coordinates, sequence, esm2_contact_map, use_edge_attr = args
 
         construction_functions = [
             ('distance_based_threshold',
@@ -197,11 +207,12 @@ class EdgeConstructionContext:
                      edges=None,
                      distance_function=distance_function,
                      atom_coordinates=atom_coordinates,
+                     sequence=sequence,
                      use_edge_attr=use_edge_attr
                      ))
         ]
 
-        number_of_amino_acid = len(atom_coordinates) if atom_coordinates is not None else len(esm2_contact_map)
+        number_of_amino_acid = len(sequence)
         edges_functions = EmptyEdges(number_of_amino_acid)
 
         for name in edge_construction_functions:
