@@ -42,7 +42,7 @@ class ParameterSetter(BaseModel):
                               exclude=True)] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'peptide_backbone']],
+                                                        'sequence_based']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],
@@ -117,7 +117,7 @@ class ParameterSetter(BaseModel):
             # pdb_path
             if self.pdb_path:
                 if 'distance_based_threshold' in self.edge_construction_functions \
-                        or 'peptide_backbone' in self.edge_construction_functions \
+                        or 'sequence_based' in self.edge_construction_functions \
                         and self.distance_function is not None:
                     self.pdb_path = file_system_handler.check_file_exists(self.pdb_path)
                 else:
@@ -133,7 +133,7 @@ class ParameterSetter(BaseModel):
                 if 'distance_based_threshold' in self.edge_construction_functions:
                     raise ValueError('Parameter distance_function is required')
             else:
-                if not {'distance_based_threshold', 'peptide_backbone'}.intersection(self.edge_construction_functions):
+                if not {'distance_based_threshold', 'sequence_based'}.intersection(self.edge_construction_functions):
                     self.distance_function = None
                     logging.getLogger('workflow_logger').warning(
                         f"Edge construction methods {self.edge_construction_functions} "
@@ -153,7 +153,7 @@ class ParameterSetter(BaseModel):
             # use_edge_attr
             if self.use_edge_attr:
                 if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(self.edge_construction_functions) \
-                        and 'peptide_backbone' in self.edge_construction_functions and self.distance_function is None:
+                        and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
                     logging.getLogger('workflow_logger').warning(
                         f"Edge construction methods {self.edge_construction_functions} "
