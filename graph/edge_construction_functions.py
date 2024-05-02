@@ -202,7 +202,7 @@ class EdgeConstructionContext:
                      edges=None,                     
                      esm2_contact_map=esm2_contact_map,
                      use_edge_attr=use_edge_attr)),
-            ('peptide_backbone',
+            ('sequence_based',
              partial(PeptideBackbone,
                      edges=None,
                      distance_function=distance_function,
@@ -245,8 +245,8 @@ if __name__ == "__main__":
     # distance_function = None
     distance_threshold = 5
 
-    # function_names = ['distance_based_threshold', 'esm2_contact_map', 'peptide_backbone']
-    edge_construction_functions = ['peptide_backbone', 'esm2_contact_map', 'distance_based_threshold']
+    # function_names = ['distance_based_threshold', 'esm2_contact_map', 'sequence_based']
+    edge_construction_functions = ['sequence_based', 'esm2_contact_map', 'distance_based_threshold']
 
     use_edge_attr = True
     args = (edge_construction_functions, distance_function, distance_threshold, esm2_contact_map,

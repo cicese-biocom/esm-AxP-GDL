@@ -189,7 +189,7 @@ optional arguments:
   --edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS
                         Functions to build edges. The options available are:
                         'distance_based_threshold', 'esm2_contact_map',
-                        'peptide_backbone'
+                        'sequence_based'
   --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
                         Distance function to build graph edges
   --distance_threshold DISTANCE_THRESHOLD

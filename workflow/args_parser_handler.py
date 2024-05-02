@@ -38,7 +38,7 @@ class ArgsParserHandler:
 
         self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
                                  help="Functions to build edges. the options available are: "
-                                      "'distance_based_threshold', 'esm2_contact_map', 'peptide_backbone'")
+                                      "'distance_based_threshold', 'esm2_contact_map', 'sequence_based'")
 
         self.parser.add_argument('--distance_function', type=str, default=None,
                                  choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',

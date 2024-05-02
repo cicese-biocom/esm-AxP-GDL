@@ -15,7 +15,7 @@ class ModelParameters(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[Set[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                       'peptide_backbone']],
+                                                       'sequence_based']],
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
@@ -67,7 +67,7 @@ class TrainingOutputParameter(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'peptide_backbone']],
+                                                        'sequence_based']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],
@@ -144,7 +144,7 @@ class EvalOutputParameter(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'peptide_backbone']],
+                                                        'sequence_based']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],
