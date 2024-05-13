@@ -1,5 +1,3 @@
-version: '3'
-
 services:
    esm-axp-gdl-env:
     build: .
@@ -13,5 +11,3 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
-
