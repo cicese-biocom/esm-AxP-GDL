@@ -37,9 +37,10 @@ class ArgsParserHandler:
                                  help='ESM-2 model to be used')
 
         self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
-                                 help="Functions to build edges. the options available are: "
-                                      "'distance_based_threshold', 'esm2_contact_map', 'sequence_based'")
-
+                                 help="Functions to build edges. the options available are: 'distance_based_threshold', "
+                                      "'sequence_based', 'esm2_contact_map_50', 'esm2_contact_map_60', "
+                                      "'esm2_contact_map_70', 'esm2_contact_map_80', 'esm2_contact_map_90'")
+                                 
         self.parser.add_argument('--distance_function', type=str, default=None,
                                  choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                           'bhattacharyya',

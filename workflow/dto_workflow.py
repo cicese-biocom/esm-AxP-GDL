@@ -14,8 +14,10 @@ class ModelParameters(BaseModel):
                                                            'sequences in input CSV file are predicted using the '
                                                            'specified method')] = None
 
-    edge_construction_functions: Annotated[Set[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                       'sequence_based']],
+    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
+                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
+                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
+                                                        'esm2_contact_map_90']],
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
@@ -66,8 +68,10 @@ class TrainingOutputParameter(BaseModel):
                                                            'sequences in input CSV file are predicted using the '
                                                            'specified method')] = None
 
-    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'sequence_based']],
+    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
+                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
+                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
+                                                        'esm2_contact_map_90']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],
@@ -143,8 +147,10 @@ class EvalOutputParameter(BaseModel):
                                                            'sequences in input CSV file are predicted using the '
                                                            'specified method')] = None
 
-    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'sequence_based']],
+    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
+                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
+                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
+                                                        'esm2_contact_map_90']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],

@@ -1,11 +1,11 @@
 import logging
 from pathlib import Path
-from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator, \
-    field_validator, validator
+from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator
 from typing import Optional, List, Dict
 from typing_extensions import Annotated, Literal, Type
 import torch
 from utils import file_system_handler as file_system_handler
+import re
 
 
 class ParameterSetter(BaseModel):
@@ -41,8 +41,10 @@ class ParameterSetter(BaseModel):
                         Field(description='Path where tertiary structures are saved in or loaded from PDB files',
                               exclude=True)] = None
 
-    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'esm2_contact_map',
-                                                        'sequence_based']],
+    edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
+                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
+                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
+                                                        'esm2_contact_map_90']],
                                            Field(description='Functions to build edges')]
 
     use_esm2_contact_map: Annotated[Optional[bool],
@@ -106,6 +108,9 @@ class ParameterSetter(BaseModel):
     @model_validator(mode='after')
     def check_distance_function(self) -> 'ParameterSetter':
         try:
+            # device
+            logging.getLogger('workflow_logger').info(f"Device: {self.device}")
+
             self.gdl_model_path = self.gdl_model_path.resolve()
             self.checkpoint = str(self.gdl_model_path.name)
 
@@ -113,6 +118,16 @@ class ParameterSetter(BaseModel):
             self.dataset = file_system_handler.check_file_exists(self.dataset)
             self.dataset_name = self.dataset.name
             self.dataset_extension = file_system_handler.check_file_format(self.dataset)
+
+            # edge_construction_functions
+            esm2_contact_map_functions = []
+            for function_name in self.edge_construction_functions:
+                 if re.search(r'esm2_contact_map', function_name):
+                     esm2_contact_map_functions.append(function_name)
+                 if len(esm2_contact_map_functions) > 1:
+                    raise ValueError('You must specify only one type of esm2_contact_map function')
+
+            esm2_contact_map_function = esm2_contact_map_functions.pop()
 
             # pdb_path
             if self.pdb_path:
@@ -152,7 +167,7 @@ class ParameterSetter(BaseModel):
 
             # use_edge_attr
             if self.use_edge_attr:
-                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(self.edge_construction_functions) \
+                if not {'distance_based_threshold', esm2_contact_map_function}.intersection(self.edge_construction_functions) \
                         and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
                     logging.getLogger('workflow_logger').warning(
@@ -167,7 +182,7 @@ class ParameterSetter(BaseModel):
                 self.scrambling_percentage = None
 
             # use_esm2_contact_map
-            self.use_esm2_contact_map = True if 'esm2_contact_map' in self.edge_construction_functions else False
+            self.use_esm2_contact_map = True if esm2_contact_map_function in self.edge_construction_functions else False
             logging.getLogger('workflow_logger').warning(
                 f"The parameter use_esm2_contact_map has been set to {self.use_esm2_contact_map}")
 
