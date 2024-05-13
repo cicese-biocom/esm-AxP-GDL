@@ -40,7 +40,7 @@ class EdgeConstructionFunction(Edges):
         return self._edges.compute_edges()
 
 
-class PeptideBackbone(EdgeConstructionFunction):
+class SequenceBased(EdgeConstructionFunction):
     def __init__(self, edges: Edges, distance_function: str, atom_coordinates: np.ndarray, sequence: str,
                  use_edge_attr: bool):
         super().__init__(edges)
@@ -75,12 +75,10 @@ class PeptideBackbone(EdgeConstructionFunction):
 
         for i in range(number_of_amino_acid - 1):
             adjacency_matrix[i][i + 1] = 1
-            adjacency_matrix[i + 1][i] = 1
 
             if self.use_edge_attr and self.distance_function:
                 dist = distance(self.atom_coordinates[i], self.atom_coordinates[i + 1], self.distance_function)
                 new_weights_matrix[i][i + 1] = dist
-                new_weights_matrix[i + 1][i] = dist
 
         if self.use_edge_attr and self.distance_function:
             new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
@@ -203,7 +201,7 @@ class EdgeConstructionContext:
                      esm2_contact_map=esm2_contact_map,
                      use_edge_attr=use_edge_attr)),
             ('sequence_based',
-             partial(PeptideBackbone,
+             partial(SequenceBased,
                      edges=None,
                      distance_function=distance_function,
                      atom_coordinates=atom_coordinates,
