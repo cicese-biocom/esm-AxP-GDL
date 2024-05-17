@@ -78,7 +78,7 @@ class ArgsParserHandler:
                                       "epoch.")
 
         self.parser.add_argument('--validation_mode', type=str, default=None,
-                                 choices=['coordinates_scrambling', 'embedding_scrambling'],
+                                 choices=['coordinate_scrambling', 'embedding_scrambling'],
                                  help='Graph construction method for validation of the approach')
 
         self.parser.add_argument('--scrambling_percentage', type=float, default=None,
