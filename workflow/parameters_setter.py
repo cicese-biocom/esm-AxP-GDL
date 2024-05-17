@@ -98,7 +98,7 @@ class ParameterSetter(BaseModel):
                                Field(description='Graph construction method for validation of the approach')] = None
 
     scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambling')] = None
+                                     Field(description='Percentage of rows to be scrambling', ge=0, le=100)] = None
 
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
@@ -122,12 +122,14 @@ class ParameterSetter(BaseModel):
             # edge_construction_functions
             esm2_contact_map_functions = []
             for function_name in self.edge_construction_functions:
-                 if re.search(r'esm2_contact_map', function_name):
-                     esm2_contact_map_functions.append(function_name)
-                 if len(esm2_contact_map_functions) > 1:
+                if re.search(r'esm2_contact_map', function_name):
+                    esm2_contact_map_functions.append(function_name)
+                if len(esm2_contact_map_functions) > 1:
                     raise ValueError('You must specify only one type of esm2_contact_map function')
 
-            esm2_contact_map_function = esm2_contact_map_functions.pop()
+            esm2_contact_map_function = None
+            if len(esm2_contact_map_functions) > 0:
+                esm2_contact_map_function = esm2_contact_map_functions.pop()
 
             # pdb_path
             if self.pdb_path:
@@ -167,7 +169,8 @@ class ParameterSetter(BaseModel):
 
             # use_edge_attr
             if self.use_edge_attr:
-                if not {'distance_based_threshold', esm2_contact_map_function}.intersection(self.edge_construction_functions) \
+                if not {'distance_based_threshold', esm2_contact_map_function}.intersection(
+                        self.edge_construction_functions) \
                         and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
                     logging.getLogger('workflow_logger').warning(
