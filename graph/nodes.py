@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+
 from models.esm2 import esm2_model_handler as esm2_model_handler
+from utils.scrambling import scrambling_matrix_rows
 from workflow.parameters_setter import ParameterSetter
 
 
@@ -9,7 +12,6 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
     esm2_derived_features
     :param workflow_settings:
     :param data: (ids: sequences identifier, sequences: sequences itself)
-    :param esm2_representation: name of the esm2 representation to be used
     :return:
         residual_level_features: residual-level features vector
     """
@@ -29,6 +31,14 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                                                                          workflow_settings.validation_mode,
                                                                          workflow_settings.scrambling_percentage,
                                                                          workflow_settings.use_esm2_contact_map)
+
+            if workflow_settings.validation_mode == 'embedding_scrambling':
+                scrambling_percentage = workflow_settings.scrambling_percentage
+                with tqdm(range(len(embeddings)), total=len(embeddings),
+                          desc="Scrambling embeddings ", disable=False) as progress:
+                    for i, embedding in enumerate(embeddings):
+                        embeddings[i] = scrambling_matrix_rows(embedding, scrambling_percentage)
+                    progress.update(1)
 
             if len(residual_level_features) == 0:
                 node_features = np.array(embeddings, dtype=object).copy()

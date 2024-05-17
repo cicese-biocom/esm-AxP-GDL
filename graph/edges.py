@@ -8,6 +8,7 @@ from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
 from .tertiary_structure_handler import predict_tertiary_structures, load_tertiary_structures
 from .edge_construction_functions import EdgeConstructionContext
+from utils.scrambling import scrambling_matrix_rows
 
 
 def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_contact_maps):
@@ -15,6 +16,14 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
         atom_coordinates_matrices = predict_tertiary_structures(workflow_settings, data)
     else:
         atom_coordinates_matrices, data = load_tertiary_structures(workflow_settings, data)
+
+    if workflow_settings.validation_mode == 'coordinates_scrambling':
+        scrambling_percentage = workflow_settings.scrambling_percentage
+        with tqdm(range(len(atom_coordinates_matrices)), total=len(atom_coordinates_matrices),
+                  desc="Scrambling atom coordinates ", disable=False) as progress:
+            for i, atom_coordinates_matrix in enumerate(atom_coordinates_matrices):
+                atom_coordinates_matrices[i] = scrambling_matrix_rows(atom_coordinates_matrix, scrambling_percentage)
+            progress.update(1)
 
     adjacency_matrices, weights_matrices = _construct_edges(atom_coordinates_matrices,
                                                             data['sequence'],

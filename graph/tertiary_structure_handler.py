@@ -63,3 +63,4 @@ def predict_tertiary_structures(workflow_settings: ParameterSetter, data: pd.Dat
         info(f"Predicted tertiary structures available in: {workflow_settings.pdb_path}")
     return atom_coordinates_matrices
 
+

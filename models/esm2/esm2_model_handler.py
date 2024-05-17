@@ -19,7 +19,6 @@ def get_models(esm2_representation):
     esm2_representations_json = os.getcwd() + os.sep + "settings/esm2_representations.json"
     data = json_parser.load_json(esm2_representations_json)
 
-
     # Create a DataFrame
     representations = pd.DataFrame(data["representations"])
 
@@ -60,7 +59,7 @@ def get_embeddings(data, model_name, reduced_features, validation_mode, scrambli
 
         if torch.cuda.is_available() and not no_gpu:
             model = model.cuda()
-            #print("Transferred model to GPU")
+            # print("Transferred model to GPU")
 
         dataset = FastaBatchedDataset(data.id, data.sequence)
         batches = dataset.get_batch_indices(toks_per_batch=1, extra_toks_per_seq=1)
@@ -73,39 +72,29 @@ def get_embeddings(data, model_name, reduced_features, validation_mode, scrambli
         contact_maps = []
 
         with torch.no_grad():
-                for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader),
-                                                            total=len(data_loader),
-                                                            desc ="Generating esm2 embeddings"):
-                    if torch.cuda.is_available() and not no_gpu:
-                        toks = toks.to(device="cuda", non_blocking=True)
+            for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader),
+                                                        total=len(data_loader),
+                                                        desc="Generating esm2 embeddings"):
+                if torch.cuda.is_available() and not no_gpu:
+                    toks = toks.to(device="cuda", non_blocking=True)
 
-                    result = model(toks, repr_layers=[repr_layers], return_contacts=use_esm2_contact_map)
-                    representation = result["representations"][repr_layers]
+                result = model(toks, repr_layers=[repr_layers], return_contacts=use_esm2_contact_map)
+                representation = result["representations"][repr_layers]
 
-                    for i, label in enumerate(labels):
-                        layer_for_i = representation[i, 1:len(strs[i]) + 1]
+                for i, label in enumerate(labels):
+                    layer_for_i = representation[i, 1:len(strs[i]) + 1]
 
-                        reduced_features = np.array(reduced_features)
-                        if len(reduced_features) > 0:
-                            layer_for_i = layer_for_i[:, reduced_features]
+                    reduced_features = np.array(reduced_features)
+                    if len(reduced_features) > 0:
+                        layer_for_i = layer_for_i[:, reduced_features]
 
-                        embedding = layer_for_i.cpu().numpy()
-                        amino_acid_number = len(embedding)
+                    embedding = layer_for_i.cpu().numpy()
+                    embeddings.append(embedding)
 
-                        if validation_mode == 'embedding_scrambling':
-                            amino_acid_number_to_shuffle = max(int(amino_acid_number * scrambling_percentage), 2)
-                            indexes = np.random.choice(amino_acid_number, size=amino_acid_number_to_shuffle,
-                                                       replace=False)
-                            embedding_percent = embedding[indexes].copy()
-                            np.random.shuffle(embedding_percent)
-                            embedding[indexes] = embedding_percent
-
-                        embeddings.append(embedding)
-
-                        if use_esm2_contact_map:
-                            contact_map = result["contacts"][0]
-                            contact_map = contact_map.cpu().numpy()
-                            contact_maps.append(contact_map)
+                    if use_esm2_contact_map:
+                        contact_map = result["contacts"][0]
+                        contact_map = contact_map.cpu().numpy()
+                        contact_maps.append(contact_map)
         return embeddings, contact_maps
 
     except Exception as e:
