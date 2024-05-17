@@ -23,6 +23,11 @@ from .logging_handler import LoggingHandler
 from .path_creator import PathCreatorContext
 
 
+def construct_graph(workflow_settings: ParameterSetter, data: pd.DataFrame) -> List:
+    graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
+    return graphs, data
+
+
 class GDLWorkflow(ABC):
     def run_workflow(self, context: ApplicationContext, parameters: Dict) -> None:
 
@@ -38,7 +43,7 @@ class GDLWorkflow(ABC):
 
         data = self.filter_data(data=data)
 
-        graphs, data = self.construct_graph(workflow_settings=workflow_settings, data=data)
+        graphs, data = construct_graph(workflow_settings=workflow_settings, data=data)
 
         if self.is_mode_training(workflow_settings.mode):
             train_graphs, val_graph = self.split_data(graphs=graphs, data=data)
@@ -78,16 +83,13 @@ class GDLWorkflow(ABC):
         LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
                                          log_output_path=log_output_path)
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
+    @staticmethod
+    def load_data(workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = data_loader.read_file(filepath=workflow_settings.dataset)
         data = dataset_validator.processing_dataset(dataset=data,
                                                     output_setting=workflow_settings.output_setting)
         return data
-
-    def construct_graph(self, workflow_settings: ParameterSetter, data: pd.DataFrame) -> List:
-        graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
-        return graphs, data
 
     def split_data(self, graphs: List, data: pd.DataFrame) -> Tuple[List, List]:
         pass
@@ -101,7 +103,8 @@ class GDLWorkflow(ABC):
     def filter_data(self, data):
         return data
 
-    def is_mode_training(self, mode: str):
+    @staticmethod
+    def is_mode_training(mode: str):
         return True if mode == 'training' else False
 
 
