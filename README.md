@@ -167,7 +167,7 @@ usage: train.py [-h] --dataset DATASET [--tertiary_structure_method {esmfold}]
                 [--add_self_loops] [--use_edge_attr]
                 [--learning_rate LEARNING_RATE] [--dropout_rate DROPOUT_RATE]
                 [--number_of_epochs NUMBER_OF_EPOCHS] [--save_ckpt_per_epoch]
-                [--validation_mode {coordinates_scrambling,embedding_scrambling}]
+                [--validation_mode {coordinate_scrambling,embedding_scrambling}]
                 [--scrambling_percentage SCRAMBLING_PERCENTAGE]
 
 optional arguments:
@@ -213,7 +213,7 @@ optional arguments:
   --save_ckpt_per_epoch
                         True if specified, otherwise, False. True indicates to
                         save the models per epoch.
-  --validation_mode {coordinates_scrambling,embedding_scrambling}
+  --validation_mode {coordinate_scrambling,embedding_scrambling}
                         Graph construction method for validation of the
                         approach
   --scrambling_percentage SCRAMBLING_PERCENTAGE

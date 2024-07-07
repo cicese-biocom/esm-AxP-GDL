@@ -17,7 +17,7 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
     else:
         atom_coordinates_matrices, data = load_tertiary_structures(workflow_settings, data)
 
-    if workflow_settings.validation_mode == 'coordinates_scrambling':
+    if workflow_settings.validation_mode == 'coordinate_scrambling':
         scrambling_percentage = workflow_settings.scrambling_percentage
         with tqdm(range(len(atom_coordinates_matrices)), total=len(atom_coordinates_matrices),
                   desc="Scrambling atom coordinates ", disable=False) as progress:
