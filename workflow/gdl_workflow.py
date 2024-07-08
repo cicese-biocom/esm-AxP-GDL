@@ -23,11 +23,6 @@ from .logging_handler import LoggingHandler
 from .path_creator import PathCreatorContext
 
 
-def construct_graph(workflow_settings: ParameterSetter, data: pd.DataFrame) -> List:
-    graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
-    return graphs, data
-
-
 class GDLWorkflow(ABC):
     def run_workflow(self, context: ApplicationContext, parameters: Dict) -> None:
 
@@ -41,9 +36,7 @@ class GDLWorkflow(ABC):
         # Workflow execution
         data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
 
-        data = self.filter_data(data=data)
-
-        graphs, data = construct_graph(workflow_settings=workflow_settings, data=data)
+        graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
 
         if self.is_mode_training(workflow_settings.mode):
             train_graphs, val_graph = self.split_data(graphs=graphs, data=data)
@@ -83,8 +76,7 @@ class GDLWorkflow(ABC):
         LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
                                          log_output_path=log_output_path)
 
-    @staticmethod
-    def load_data(workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
+    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = data_loader.read_file(filepath=workflow_settings.dataset)
         data = dataset_validator.processing_dataset(dataset=data,
@@ -100,23 +92,49 @@ class GDLWorkflow(ABC):
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
 
-    def filter_data(self, data):
-        return data
-
     @staticmethod
     def is_mode_training(mode: str):
         return True if mode == 'training' else False
 
 
 class TrainingWorkflow(GDLWorkflow):
+    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
+                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super(GDLWorkflow, self).load_data(workflow_settings, data_loader, dataset_validator)
+
+        # keeping only the instances belonging to the training and validation sets
+        data = data[data['partition'].isin([1, 2])]
+        data.reset_index(drop=True)
+        if data.size == 0:
+            raise Exception("The input set does not contain training instances nor validation instances.")
+
+        # there are no training or validation instances
+        # therefore, the 'partition' column is removed
+        if data.query('partition == 1').size == 0 or data.query('partition == 2').size == 0:
+            data.drop(['partition'], axis=1, inplace=True)
+
+        # the 'partition' column was removed above
+        # thus, the data are randomly split (80% training, 20%validation),
+        #       and the 'partition' column is added with the values 1 or 2 as appropriate
+        if 'partition' not in data.columns:
+            # split training dataset: 80% train y 20% test, with seed and shuffle
+            train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2, shuffle=True, random_state=41)
+
+            training = data.drop(val_indexes)
+            training.assign(partition=lambda x: 1)
+            validation = data.drop(train_indexes)
+            validation.assign(partition=lambda x: 2)
+
+            data = pd.concat([training, validation])
+            data.reset_index(drop=True)
+
+        return data
+
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
 
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['gdl_model_path'])
-
-    def filter_data(self, data):
-        return data[data['partition'].isin([1, 2])].reset_index(drop=True)
 
     def split_data(self, graphs: List, data: pd.DataFrame) -> Tuple[List, List]:
         partitions = data['partition']
@@ -324,15 +342,17 @@ class TrainingWorkflow(GDLWorkflow):
 
 
 class TestWorkflow(GDLWorkflow):
+    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
+                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super(GDLWorkflow, self).load_data(workflow_settings, data_loader, dataset_validator)
+        return data[data['partition'].isin([3])].reset_index(drop=True)
+
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
         return workflow_settings
-
-    def filter_data(self, data):
-        return data[data['partition'].isin([3])].reset_index(drop=True)
 
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:

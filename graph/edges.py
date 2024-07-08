@@ -1,13 +1,12 @@
 from typing import List
-
 from workflow.parameters_setter import ParameterSetter
 import numpy as np
 from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
-from .tertiary_structure_handler import predict_tertiary_structures, load_tertiary_structures
-from .edge_construction_functions import EdgeConstructionContext
+from graph.tertiary_structure_handler import predict_tertiary_structures, load_tertiary_structures
+from graph.edge_construction_functions import EdgeConstructionContext
 from utils.scrambling import scrambling_matrix_rows
 
 
@@ -19,10 +18,14 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
 
     if workflow_settings.validation_mode == 'coordinate_scrambling':
         scrambling_percentage = workflow_settings.scrambling_percentage
+        partitions = data['partition']
         with tqdm(range(len(atom_coordinates_matrices)), total=len(atom_coordinates_matrices),
-                  desc="Scrambling atom coordinates ", disable=False) as progress:
+                  desc="Scrambling the coordinates ", disable=False) as progress:
             for i, atom_coordinates_matrix in enumerate(atom_coordinates_matrices):
-                atom_coordinates_matrices[i] = scrambling_matrix_rows(atom_coordinates_matrix, scrambling_percentage)
+                # only the coordinates belonging to the training set will be scrambled
+                # https://dl.acm.org/doi/10.1145/3446776
+                if partitions[i] == 1:
+                    atom_coordinates_matrices[i] = scrambling_matrix_rows(atom_coordinates_matrix, scrambling_percentage)
             progress.update(1)
 
     adjacency_matrices, weights_matrices = _construct_edges(atom_coordinates_matrices,
