@@ -35,9 +35,10 @@ def load_tertiary_structures(workflow_settings: ParameterSetter, data: pd.DataFr
             csv_file = workflow_settings.output_setting['non_pdb_bound_sequences_file']
             sequences_to_exclude.to_csv(csv_file, index=False)
             data = data.drop(sequences_to_exclude.index)
+
             logging.getLogger('workflow_logger'). \
-                warning(f"Sequences not linked to PDB or with error when analyzing the PDB structure were excluded. "
-                        f"See: {csv_file}")
+                critical(f"Sequences not linked to PDB or with error when analyzing the PDB structure. See: {csv_file}")
+            quit()
 
         if data.empty:
             logging.getLogger('workflow_logger').critical('Dataset with erroneous sequences')
