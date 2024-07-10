@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from workflow.classification_metrics import ClassificationMetricsContext, BinaryClassificationMetrics
@@ -38,9 +39,7 @@ class GDLWorkflow(ABC):
 
         graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
 
-        if self.is_mode_training(workflow_settings.mode):
-            train_graphs, val_graph = self.split_data(graphs=graphs, data=data)
-            graphs = (train_graphs, val_graph)
+        graphs = self.getting_graphs(graphs=graphs, data=data)
 
         model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
 
@@ -83,8 +82,8 @@ class GDLWorkflow(ABC):
                                                     output_setting=workflow_settings.output_setting)
         return data
 
-    def split_data(self, graphs: List, data: pd.DataFrame) -> Tuple[List, List]:
-        pass
+    def getting_graphs(self, graphs: List, data: pd.DataFrame) -> List:
+        return graphs
 
     def save_parameters(self, workflow_settings: ParameterSetter):
         json_file = workflow_settings.output_setting['parameter_file']
@@ -92,43 +91,47 @@ class GDLWorkflow(ABC):
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
 
-    @staticmethod
-    def is_mode_training(mode: str):
-        return True if mode == 'training' else False
-
 
 class TrainingWorkflow(GDLWorkflow):
     def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = super(GDLWorkflow, self).load_data(workflow_settings, data_loader, dataset_validator)
+        try:
+            data = super().load_data(workflow_settings, data_loader, dataset_validator)
 
-        # keeping only the instances belonging to the training and validation sets
-        data = data[data['partition'].isin([1, 2])]
-        data.reset_index(drop=True)
-        if data.size == 0:
-            raise Exception("The input set does not contain training instances nor validation instances.")
+            # keeping only the instances belonging to the training and validation sets
+            data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
+            if data.size == 0:
+                raise Exception("The input set does not contain training instances nor validation instances.")
 
-        # there are no training or validation instances
-        # therefore, the 'partition' column is removed
-        if data.query('partition == 1').size == 0 or data.query('partition == 2').size == 0:
-            data.drop(['partition'], axis=1, inplace=True)
+            # there are no training or validation instances
+            # therefore, the 'partition' column is removed
+            if data.query('partition == 1').size == 0 or data.query('partition == 2').size == 0:
+                data.drop(['partition'], axis=1, inplace=True)
 
-        # the 'partition' column was removed above
-        # thus, the data are randomly split (80% training, 20%validation),
-        #       and the 'partition' column is added with the values 1 or 2 as appropriate
-        if 'partition' not in data.columns:
-            # split training dataset: 80% train y 20% test, with seed and shuffle
-            train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2, shuffle=True, random_state=41)
+            # the 'partition' column was removed above
+            # thus, the data are randomly split (80% training, 20%validation),
+            #       and the 'partition' column is added with the values 1 or 2 as appropriate
+            if 'partition' not in data.columns:
+                # split training dataset: 80% train y 20% test, with seed and shuffle
+                train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2, shuffle=True, random_state=41)
 
-            training = data.drop(val_indexes)
-            training.assign(partition=lambda x: 1)
-            validation = data.drop(train_indexes)
-            validation.assign(partition=lambda x: 2)
+                training = data.drop(val_indexes).assign(partition=lambda x: 1)
+                validation = data.drop(train_indexes).assign(partition=lambda x: 2)
 
-            data = pd.concat([training, validation])
-            data.reset_index(drop=True)
+                data = pd.concat([training, validation])
 
-        return data
+                data.reset_index(drop=True)
+
+                csv_file = workflow_settings.output_setting['partitioned_data']
+                data.to_csv(csv_file, index=False)
+
+                logging.getLogger('workflow_logger'). \
+                    warning(f"Split training dataset: 80% train y 20% test, with seed and shuffle. See: {csv_file}")
+
+            return data
+        except Exception as e:
+            logging.getLogger('workflow_logger').exception(e)
+            quit()
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
@@ -136,28 +139,17 @@ class TrainingWorkflow(GDLWorkflow):
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['gdl_model_path'])
 
-    def split_data(self, graphs: List, data: pd.DataFrame) -> Tuple[List, List]:
+    def getting_graphs(self, graphs: List, data: pd.DataFrame) -> List:
         partitions = data['partition']
-        activities = data['activity']
+        train_graphs = []
+        val_graphs = []
 
-        train_partition = any(x == 1 for x in partitions)
-        val_partition = any(x == 2 for x in partitions)
+        for graph, partition in zip(graphs, partitions):
+            if partition == 1:
+                train_graphs.append(graph)
+            elif partition == 2:
+                val_graphs.append(graph)
 
-        if train_partition and val_partition:
-            train_graphs = []
-            val_graphs = []
-
-            for graph, partition in zip(graphs, partitions):
-                if partition == 1:
-                    train_graphs.append(graph)
-                elif partition == 2:
-                    val_graphs.append(graph)
-
-        # If only training or validation old_data were provided
-        else:
-            # split training dataset: 80% train y 20% test, with seed and shuffle
-            train_graphs, val_graphs, _, _ = train_test_split(graphs, activities, test_size=0.2, shuffle=True,
-                                                              random_state=41)
         return train_graphs, val_graphs
 
     def save_parameters(self, workflow_settings: ParameterSetter):
@@ -263,7 +255,12 @@ class TrainingWorkflow(GDLWorkflow):
 
                 mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
                 acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
-                auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
+
+                if len(set(y_true)) > 1:
+                    auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
+                else:
+                    auc = None
+
                 recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
                 recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
 
@@ -274,7 +271,7 @@ class TrainingWorkflow(GDLWorkflow):
                     Validation_Loss=f"{val_loss:.4f}",
                     Validation_MCC=f"{mcc:.4f}",
                     Validation_ACC=f"{acc:.4f}",
-                    Validation_AUC=f"{auc:.4f}",
+                    Validation_AUC=f"{auc:.4f}" if auc else auc,
                     Validation_Recall_Pos=f"{recall_pos:.4f}" if recall_pos else recall_pos,
                     Validation_Recall_Neg=f"{recall_neg:.4f}" if recall_neg else recall_neg
                 )
@@ -283,7 +280,7 @@ class TrainingWorkflow(GDLWorkflow):
                 writer.add_scalar('Loss/validation', val_loss, global_step=epoch)
                 writer.add_scalar('MCC/validation', mcc, global_step=epoch)
                 writer.add_scalar('ACC/validation', acc, global_step=epoch)
-                writer.add_scalar('AUC/validation', auc, global_step=epoch)
+                if auc: writer.add_scalar('AUC/validation', auc, global_step=epoch)
                 writer.add_scalar('Recall_Pos/validation', recall_pos, global_step=epoch)
                 writer.add_scalar('Recall_Neg/validation', recall_neg, global_step=epoch)
 
@@ -334,9 +331,9 @@ class TrainingWorkflow(GDLWorkflow):
             Validation_Loss=f"{val_loss_of_the_best_mcc:.4f}",
             Validation_MCC=f"{best_mcc:.4f}",
             Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
-            Validation_AUC=f"{auc_of_the_best_mcc:.4f}",
-            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}",
-            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}"
+            Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else auc_of_the_best_mcc,
+            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else recall_pos_of_the_best_mcc,
+            Validation_Recall_Neg=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else recall_pos_of_the_best_mcc
         )
         bar.close()
 
@@ -344,7 +341,7 @@ class TrainingWorkflow(GDLWorkflow):
 class TestWorkflow(GDLWorkflow):
     def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = super(GDLWorkflow, self).load_data(workflow_settings, data_loader, dataset_validator)
+        data = super().load_data(workflow_settings, data_loader, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
@@ -405,7 +402,12 @@ class TestWorkflow(GDLWorkflow):
 
                 mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
                 acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
-                auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
+
+                if len(set(y_true)) > 1:
+                    auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
+                else:
+                    auc = None
+
                 recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
                 recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
 
@@ -472,13 +474,12 @@ class InferenceWorkflow(GDLWorkflow):
             torch.backends.cudnn.benchmark = False
             torch.use_deterministic_algorithms(True)
 
-        y_true = []
         y_pred = []
         y_score = []
 
         model.eval()
 
-        with tqdm(total=len(graphs), desc="Testing") as progress:
+        with tqdm(total=len(graphs), desc="Inferring") as progress:
             with torch.no_grad():
                 for data_loader in dataloader:
                     data_loader = data_loader.to(workflow_settings.device)
@@ -494,17 +495,10 @@ class InferenceWorkflow(GDLWorkflow):
                     score = F.softmax(out, dim=1)[:, 1]
 
                     y_score.extend(score.cpu().detach().data.numpy().tolist())
-                    y_true.extend(data_loader.y.cpu().detach().data.numpy().tolist())
                     y_pred.extend(pred.cpu().detach().data.numpy().tolist())
 
                     progress.update(data_loader.num_graphs)
-                    progress.set_postfix(
-                        Recall_Pos=f"{'.'}",
-                        Recall_Neg=f"{'.'}",
-                        Test_MCC=f"{'.'}",
-                        Test_ACC=f"{'.'}",
-                        Test_AUC=f"{'.'}"
-                    )
+                    progress.set_postfix()
 
         res_data = {
             'id': data.id,

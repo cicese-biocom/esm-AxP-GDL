@@ -32,7 +32,7 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                                                                          workflow_settings.scrambling_percentage,
                                                                          workflow_settings.use_esm2_contact_map)
 
-            if workflow_settings.validation_mode == 'embedding_scrambling':
+            if workflow_settings.validation_mode == 'embedding_scrambling' and workflow_settings.mode == 'training':
                 scrambling_percentage = workflow_settings.scrambling_percentage
                 partitions = data['partition']
                 with tqdm(range(len(embeddings)), total=len(embeddings),
