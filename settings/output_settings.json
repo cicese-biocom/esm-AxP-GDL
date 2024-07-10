@@ -41,6 +41,11 @@
           "modes": ["training", "test", "inference"]
         },
         {
+          "key": "partitioned_data",
+          "name": "partitioned_data.csv",
+          "modes": ["training"]
+        },
+        {
           "key": "sequences_with_non_natural_amino_acids_file",
           "name": "Sequences_with_non_natural_amino_acids.csv",
           "modes": ["training", "test", "inference"]
