@@ -28,7 +28,7 @@ class ArgsParserHandler:
         self.parser.add_argument('--batch_size', type=int, default=512, help='Batch size')
 
         self.parser.add_argument('--gdl_model_path', type=Path, required=True,
-                                 help=' The path to save the trained models')
+                                 help=' The path to save/load the models')
 
     def get_training_arguments(self) -> Dict:
         self._add_common_arguments()
@@ -37,7 +37,9 @@ class ArgsParserHandler:
                                  help='ESM-2 model to be used')
 
         self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
-                                 help="Functions to build edges. the options available are: 'distance_based_threshold', "
+                                 help="Criteria (e.g., distance) to define a relationship (graph edges) between amino "
+                                      "acids. Only one ESM-2 contact map can be specified. "
+                                      "The options available are: 'distance_based_threshold', "
                                       "'sequence_based', 'esm2_contact_map_50', 'esm2_contact_map_60', "
                                       "'esm2_contact_map_70', 'esm2_contact_map_80', 'esm2_contact_map_90'")
                                  
@@ -52,7 +54,8 @@ class ArgsParserHandler:
 
         self.parser.add_argument('--amino_acid_representation', type=str, default='CA',
                                  choices=['CA'],
-                                 help='Amino acid representations')
+                                 help='Reference atom into an amino acid to define a relationship (e.g., distance) '
+                                      'regarding another amino acid') 
 
         self.parser.add_argument('--number_of_heads', type=int, default=8, help='Number of heads')
 
@@ -74,12 +77,13 @@ class ArgsParserHandler:
         self.parser.add_argument('--number_of_epochs', type=int, default=200, help='Maximum number of epochs')
 
         self.parser.add_argument('--save_ckpt_per_epoch', action="store_true",
-                                 help="True if specified, otherwise, False. True indicates to save the models per "
-                                      "epoch.")
+                                 help="True if specified, otherwise, False. True indicates that the models of every "
+                                      "epoch will be saved. False indicates that the latest model and the best model "
+                                      "regarding the MCC metric will be saved.") 
 
         self.parser.add_argument('--validation_mode', type=str, default=None,
                                  choices=['coordinate_scrambling', 'embedding_scrambling'],
-                                 help='Graph construction method for validation of the approach')
+                                 help='Criteria to corroborate that the predictions of the models are not by chance')
 
         self.parser.add_argument('--scrambling_percentage', type=float, default=None,
                                  help='Percentage of rows to be scrambling')
@@ -92,7 +96,7 @@ class ArgsParserHandler:
         self.parser.add_argument('--dropout_rate', type=float, default=0.5, help='Dropout rate')
 
         self.parser.add_argument('--output_path', type=Path, required=True,
-                                 help=' The path to load the trained models')
+                                 help='The path where the output data will be saved.')   
 
         self.parser.add_argument('--seed', type=int, default=None,
                                  help=' Seed to run the Test/Inference mode')
