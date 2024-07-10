@@ -155,8 +155,8 @@ The next command lines can be used to run the training and inference steps, resp
 #### Train
 ```
 usage: train.py [-h] --dataset DATASET [--tertiary_structure_method {esmfold}]
-                --pdb_path PDB_PATH [--batch_size BATCH_SIZE] --gdl_model_path
-                GDL_MODEL_PATH
+                [--pdb_path PDB_PATH] [--batch_size BATCH_SIZE]
+                --gdl_model_path GDL_MODEL_PATH
                 [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}]
                 [--edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS]
                 [--distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}]
@@ -183,27 +183,33 @@ optional arguments:
   --batch_size BATCH_SIZE
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
-                        The path where the trained models are saved
+                        The path to save/load the models
   --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}
                         ESM-2 model to be used
   --edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS
-                        Functions to build edges. The options available are:
-                        'distance_based_threshold', 'esm2_contact_map',
-                        'sequence_based'
+                        Criteria (e.g., distance) to define a relationship
+                        (graph edges) between amino acids. Only one ESM-2
+                        contact map can be specified. The options available
+                        are: 'distance_based_threshold', 'sequence_based',
+                        'esm2_contact_map_50', 'esm2_contact_map_60',
+                        'esm2_contact_map_70', 'esm2_contact_map_80',
+                        'esm2_contact_map_90'
   --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
-                        Distance function to build graph edges
+                        Distance function to construct graph edges
   --distance_threshold DISTANCE_THRESHOLD
-                        Distance threshold to build graph edges
+                        Distance threshold to construct graph edges
   --amino_acid_representation {CA}
-                        Amino acid representations
+                        Reference atom into an amino acid to define a
+                        relationship (e.g., distance) regarding another amino
+                        acid
   --number_of_heads NUMBER_OF_HEADS
                         Number of heads
   --hidden_layer_dimension HIDDEN_LAYER_DIMENSION
                         Hidden layer dimension
   --add_self_loops      True if specified, otherwise, False. True indicates to
-                        use auto loops in attention layers.
+                        use auto loops in attention layer.
   --use_edge_attr       True if specified, otherwise, False. True indicates to
-                        use edge attributes during the learning.
+                        use edge attributes in graph learning.
   --learning_rate LEARNING_RATE
                         Learning rate
   --dropout_rate DROPOUT_RATE
@@ -211,21 +217,23 @@ optional arguments:
   --number_of_epochs NUMBER_OF_EPOCHS
                         Maximum number of epochs
   --save_ckpt_per_epoch
-                        True if specified, otherwise, False. True indicates to
-                        save the models per epoch.
+                        True if specified, otherwise, False. True indicates
+                        that the models of every epoch will be saved. False
+                        indicates that the latest model and the best model
+                        regarding the MCC metric will be saved.
   --validation_mode {coordinate_scrambling,embedding_scrambling}
-                        Graph construction method for validation of the
-                        approach
+                        Criteria to corroborate that the predictions of the
+                        models are not by chance
   --scrambling_percentage SCRAMBLING_PERCENTAGE
-                        Percentage of rows to be scrambling        
+                        Percentage of rows to be scrambling     
 ```
 
 #### Test
 ```
 usage: test.py [-h] --dataset DATASET [--tertiary_structure_method {esmfold}]
-               --pdb_path PDB_PATH [--batch_size BATCH_SIZE] --gdl_model_path
-               GDL_MODEL_PATH [--dropout_rate DROPOUT_RATE] --output_path
-               OUTPUT_PATH [--seed SEED]
+               [--pdb_path PDB_PATH] [--batch_size BATCH_SIZE]
+               --gdl_model_path GDL_MODEL_PATH [--dropout_rate DROPOUT_RATE]
+               --output_path OUTPUT_PATH [--seed SEED]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -240,21 +248,21 @@ optional arguments:
   --batch_size BATCH_SIZE
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
-                        The path where the trained models are saved
+                        The path to load the model
   --dropout_rate DROPOUT_RATE
                         Dropout rate
   --output_path OUTPUT_PATH
-                        The path to load the trained models
-  --seed SEED           Seed to run the Test mode                                            
+                        The path where the output data will be saved.
+  --seed SEED           Seed to run the test                                          
 ```
 #### Inference
 ```
-
 usage: inference.py [-h] --dataset DATASET
-                    [--tertiary_structure_method {esmfold}] --pdb_path
-                    PDB_PATH [--batch_size BATCH_SIZE] --gdl_model_path
-                    GDL_MODEL_PATH [--dropout_rate DROPOUT_RATE] --output_path
-                    OUTPUT_PATH [--seed SEED]
+                    [--tertiary_structure_method {esmfold}]
+                    [--pdb_path PDB_PATH] [--batch_size BATCH_SIZE]
+                    --gdl_model_path GDL_MODEL_PATH
+                    [--dropout_rate DROPOUT_RATE] --output_path OUTPUT_PATH
+                    [--seed SEED]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -269,12 +277,12 @@ optional arguments:
   --batch_size BATCH_SIZE
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
-                        The path to save the trained models
+                        The path to load the model
   --dropout_rate DROPOUT_RATE
                         Dropout rate
   --output_path OUTPUT_PATH
-                        The path to load the trained models
-  --seed SEED           Seed to run the Inference mode
+                        The path where the output data will be saved.
+  --seed SEED           Seed to run the Inference
                                                 
 ```
 
