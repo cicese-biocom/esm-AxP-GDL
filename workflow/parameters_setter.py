@@ -9,7 +9,7 @@ import re
 
 
 class ParameterSetter(BaseModel):
-    mode: Annotated[Optional[str], Field(description='Execution mode')] = None
+    mode: Annotated[Optional[Literal['training', 'test', 'inference']], Field(description='Execution mode')] = None
     checkpoint: Annotated[Optional[str], Field(description='Checkpoint_name', exclude=False)] = None
 
     is_binary_class: Annotated[Optional[bool],
