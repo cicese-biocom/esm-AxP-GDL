@@ -53,20 +53,8 @@ class GDLWorkflow(ABC):
         return path_creator_context.create_path(parameters['output_path'])
 
     @abstractmethod
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
-                classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
-        pass
-
-    @abstractmethod
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         pass
-
-    def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
-        checkpoint = torch.load(workflow_settings.gdl_model_path)
-        model = checkpoint['model']
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(workflow_settings.device)
-        return model
 
     def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
@@ -77,6 +65,18 @@ class GDLWorkflow(ABC):
 
     def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         return graphs
+
+    def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
+        checkpoint = torch.load(workflow_settings.gdl_model_path)
+        model = checkpoint['model']
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.to(workflow_settings.device)
+        return model
+
+    @abstractmethod
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
+                classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
+        pass
 
     def save_parameters(self, workflow_settings: ParameterSetter):
         json_file = workflow_settings.output_setting['parameter_file']
