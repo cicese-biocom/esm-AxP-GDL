@@ -30,7 +30,8 @@ class GDLWorkflow(ABC):
         # Initialization of workflow parameters
         output_setting = self.create_path(path_creator_context=context.path_creator, parameters=parameters)
 
-        self.initialize_logger(log_output_path=output_setting['log_file'])
+        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
+                                         log_output_path=output_setting['log_file'])
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
@@ -39,7 +40,7 @@ class GDLWorkflow(ABC):
 
         graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
 
-        graphs = self.getting_graphs(graphs=graphs, data=data)
+        graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
 
         model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
 
@@ -70,11 +71,6 @@ class GDLWorkflow(ABC):
         model.to(workflow_settings.device)
         return model
 
-    @staticmethod
-    def initialize_logger(log_output_path: Path):
-        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
-                                         log_output_path=log_output_path)
-
     def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = data_loader.read_file(filepath=workflow_settings.dataset)
@@ -82,7 +78,7 @@ class GDLWorkflow(ABC):
                                                     output_setting=workflow_settings.output_setting)
         return data
 
-    def getting_graphs(self, graphs: List, data: pd.DataFrame) -> List:
+    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         return graphs
 
     def save_parameters(self, workflow_settings: ParameterSetter):
@@ -139,7 +135,7 @@ class TrainingWorkflow(GDLWorkflow):
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['gdl_model_path'])
 
-    def getting_graphs(self, graphs: List, data: pd.DataFrame) -> List:
+    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         partitions = data['partition']
         train_graphs = []
         val_graphs = []
