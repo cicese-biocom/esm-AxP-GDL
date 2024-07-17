@@ -61,9 +61,6 @@ class GDLWorkflow(ABC):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         pass
 
-    def initialize_dataset_validator(self):
-        return DatasetValidatorContext(LabeledDatasetValidator())
-
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
         checkpoint = torch.load(workflow_settings.gdl_model_path)
         model = checkpoint['model']
@@ -89,6 +86,12 @@ class GDLWorkflow(ABC):
 
 
 class TrainingWorkflow(GDLWorkflow):
+    def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
+        return path_creator_context.create_path(parameters['gdl_model_path'])
+
+    def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
+
     def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
                   dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         try:
@@ -128,12 +131,6 @@ class TrainingWorkflow(GDLWorkflow):
         except Exception as e:
             logging.getLogger('workflow_logger').exception(e)
             quit()
-
-    def parameters_setter(self, output_setting: Dict, parameters: Dict):
-        return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
-
-    def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
-        return path_creator_context.create_path(parameters['gdl_model_path'])
 
     def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         partitions = data['partition']
@@ -335,17 +332,17 @@ class TrainingWorkflow(GDLWorkflow):
 
 
 class TestWorkflow(GDLWorkflow):
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = super().load_data(workflow_settings, data_loader, dataset_validator)
-        return data[data['partition'].isin([3])].reset_index(drop=True)
-
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
         return workflow_settings
+
+    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
+                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super().load_data(workflow_settings, data_loader, dataset_validator)
+        return data[data['partition'].isin([3])].reset_index(drop=True)
 
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
@@ -446,9 +443,6 @@ class TestWorkflow(GDLWorkflow):
 
 
 class InferenceWorkflow(GDLWorkflow):
-    def initialize_dataset_validator(self):
-        return DatasetValidatorContext(DatasetValidator())
-
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
