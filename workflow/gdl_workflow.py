@@ -264,16 +264,17 @@ class TrainingWorkflow(GDLWorkflow):
                     Validation_Loss=f"{val_loss:.4f}",
                     Validation_MCC=f"{mcc:.4f}",
                     Validation_ACC=f"{acc:.4f}",
-                    Validation_AUC=f"{auc:.4f}" if auc else auc,
-                    Validation_Recall_Pos=f"{recall_pos:.4f}" if recall_pos else recall_pos,
-                    Validation_Recall_Neg=f"{recall_neg:.4f}" if recall_neg else recall_neg
+                    Validation_AUC=f"{auc:.4f}" if auc else None,
+                    Validation_Recall_Pos=f"{recall_pos:.4f}" if recall_pos else None,
+                    Validation_Recall_Neg=f"{recall_neg:.4f}" if recall_neg else None
                 )
 
                 writer.add_scalar('Loss/train', train_loss, global_step=epoch)
                 writer.add_scalar('Loss/validation', val_loss, global_step=epoch)
                 writer.add_scalar('MCC/validation', mcc, global_step=epoch)
                 writer.add_scalar('ACC/validation', acc, global_step=epoch)
-                if auc: writer.add_scalar('AUC/validation', auc, global_step=epoch)
+                if auc:
+                    writer.add_scalar('AUC/validation', auc, global_step=epoch)
                 writer.add_scalar('Recall_Pos/validation', recall_pos, global_step=epoch)
                 writer.add_scalar('Recall_Neg/validation', recall_neg, global_step=epoch)
 
@@ -314,7 +315,7 @@ class TrainingWorkflow(GDLWorkflow):
 
             model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
                 f"epoch={epoch_of_the_best_mcc}_train-loss={train_loss_of_the_best_mcc:.2f}_val-loss"
-                f"={val_loss_of_the_best_mcc:.2f} (best-mcc).pt"
+                f"={val_loss_of_the_best_mcc:.2f}_(best-mcc).pt"
             )
             torch.save(model_with_best_mcc, model_path)
 
@@ -324,9 +325,9 @@ class TrainingWorkflow(GDLWorkflow):
             Validation_Loss=f"{val_loss_of_the_best_mcc:.4f}",
             Validation_MCC=f"{best_mcc:.4f}",
             Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
-            Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else auc_of_the_best_mcc,
-            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else recall_pos_of_the_best_mcc,
-            Validation_Recall_Neg=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else recall_pos_of_the_best_mcc
+            Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else None,
+            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else None,
+            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc else None
         )
         bar.close()
 
