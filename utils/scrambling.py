@@ -11,3 +11,11 @@ def scrambling_matrix_rows(matrix, scrambling_percentage):
     scrambled_matrix[index] = matrix[index_to_scramble]
 
     return scrambled_matrix
+
+
+def random_coordinate_matrix(matrix, min, max):
+    atom_coordinates = np.zeros(matrix.shape)
+    atom_coordinates[:, 0] = np.random.uniform(min[0], max[0], size=matrix.shape[0])
+    atom_coordinates[:, 1] = np.random.uniform(min[1], max[1], size=matrix.shape[0])
+    atom_coordinates[:, 2] = np.random.uniform(min[2], max[2], size=matrix.shape[0])
+    return atom_coordinates

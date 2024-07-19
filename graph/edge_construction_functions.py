@@ -1,7 +1,5 @@
 from typing import Tuple
 import numpy as np
-import pandas as pd
-
 from utils.distances import distance
 from functools import partial
 
@@ -170,7 +168,7 @@ class DistanceBasedThreshold(EdgeConstructionFunction):
         for i in range(number_of_amino_acid):
             for j in range(i + 1, number_of_amino_acid):
                 dist = distance(self.atom_coordinates[i], self.atom_coordinates[j], self.distance_function)
-                if dist <= self.threshold:
+                if 0 < dist <= self.threshold:
                     adjacency_matrix[i][j] = 1
                     adjacency_matrix[j][i] = 1
                     
@@ -193,7 +191,6 @@ class EdgeConstructionContext:
     def compute_edges(args):
         edge_construction_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
         esm2_contact_map, use_edge_attr = args
-
 
         construction_functions = [
             ('distance_based_threshold',
