@@ -16,7 +16,7 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
     else:
         atom_coordinates_matrices, data = load_tertiary_structures(workflow_settings, data)
 
-    if workflow_settings.validation_mode == 'coordinate_scrambling' and workflow_settings.mode == 'training':
+    if workflow_settings.validation_mode == 'random_coordinates' and workflow_settings.mode == 'training':
         min_values, max_values = _get_intervals_for_coordinate_axes(atom_coordinates_matrices)
 
         partitions = data['partition']

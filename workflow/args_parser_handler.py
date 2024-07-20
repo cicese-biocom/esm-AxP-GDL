@@ -82,7 +82,7 @@ class ArgsParserHandler:
                                       "regarding the MCC metric will be saved.") 
 
         self.parser.add_argument('--validation_mode', type=str, default=None,
-                                 choices=['coordinate_scrambling', 'embedding_scrambling'],
+                                 choices=['random_coordinates', 'embedding_scrambling'],
                                  help='Criteria to corroborate that the predictions of the models are not by chance')
 
         self.parser.add_argument('--scrambling_percentage', type=float, default=None,

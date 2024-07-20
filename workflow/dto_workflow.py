@@ -42,11 +42,11 @@ class ModelParameters(BaseModel):
                                                    description='True if specified, otherwise, False. True indicates to '
                                                                'use edge attributes in graph learning.')] = True
 
-    validation_mode: Annotated[Optional[Literal['coordinate_scrambling', 'embedding_scrambling']],
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'embedding_scrambling']],
                                Field(description='Graph construction method for validation of the approach')] = None
 
     scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambling')] = None
+                                     Field(description='Percentage of rows to be scrambled')] = None
 
 
 class TrainingOutputParameter(BaseModel):
@@ -118,11 +118,11 @@ class TrainingOutputParameter(BaseModel):
                                          description='True if specified, otherwise, False. '
                                                      'True indicates to save the models per epoch.')] = True
 
-    validation_mode: Annotated[Optional[Literal['coordinate_scrambling', 'embedding_scrambling']],
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'embedding_scrambling']],
                                Field(description='Graph construction method for validation of the approach')] = None
 
     scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambling')] = None
+                                     Field(description='Percentage of rows to be scrambled')] = None
 
 
 class EvalOutputParameter(BaseModel):
@@ -178,11 +178,11 @@ class EvalOutputParameter(BaseModel):
 
     dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 1e-4
 
-    validation_mode: Annotated[Optional[Literal['coordinate_scrambling', 'embedding_scrambling']],
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'embedding_scrambling']],
                                Field(description='Graph construction method for validation of the approach')] = None
 
     scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambling')] = None
+                                     Field(description='Percentage of rows to be scrambled')] = None
 
     seed: Annotated[Optional[PositiveInt],
                     Field(description='Percentage of rows to be scrambling')] = None

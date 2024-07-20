@@ -42,7 +42,7 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                         # https://dl.acm.org/doi/10.1145/3446776
                         if partitions[i] == 1:
                             embeddings[i] = scrambling_matrix_rows(embedding, scrambling_percentage)
-                    progress.update(1)
+                        progress.update(1)
 
             if len(residual_level_features) == 0:
                 node_features = np.array(embeddings, dtype=object).copy()

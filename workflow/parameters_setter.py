@@ -94,11 +94,11 @@ class ParameterSetter(BaseModel):
                                          description='True if specified, otherwise, False. '
                                                      'True indicates to save the models per epoch.')] = True
 
-    validation_mode: Annotated[Optional[Literal['coordinate_scrambling', 'embedding_scrambling']],
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'embedding_scrambling']],
                                Field(description='Graph construction method for validation of the approach')] = None
 
     scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambling', ge=0, le=100)] = None
+                                     Field(description='Percentage of rows to be scrambled', ge=0, le=100)] = None
 
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
@@ -178,10 +178,10 @@ class ParameterSetter(BaseModel):
                         f"do not generate weight matrices. Parameter use_edge_attr has been set to False")
 
             # validation_mode
-            if self.validation_mode and not self.scrambling_percentage:
-                raise ValueError('Parameter scrambling_percentage is required')
-
-            if not self.validation_mode:
+            if self.validation_mode:
+                if self.validation_mode in ["embedding_scrambling"] and not self.scrambling_percentage:
+                    raise ValueError('Parameter scrambling_percentage is required')
+            else:
                 self.scrambling_percentage = None
 
             # use_esm2_contact_map

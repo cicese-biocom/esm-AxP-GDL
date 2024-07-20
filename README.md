@@ -167,7 +167,7 @@ usage: train.py [-h] --dataset DATASET [--tertiary_structure_method {esmfold}]
                 [--add_self_loops] [--use_edge_attr]
                 [--learning_rate LEARNING_RATE] [--dropout_rate DROPOUT_RATE]
                 [--number_of_epochs NUMBER_OF_EPOCHS] [--save_ckpt_per_epoch]
-                [--validation_mode {coordinate_scrambling,embedding_scrambling}]
+                [--validation_mode {random_coordinates,embedding_scrambling}]
                 [--scrambling_percentage SCRAMBLING_PERCENTAGE]
 
 optional arguments:
@@ -221,7 +221,7 @@ optional arguments:
                         that the models of every epoch will be saved. False
                         indicates that the latest model and the best model
                         regarding the MCC metric will be saved.
-  --validation_mode {coordinate_scrambling,embedding_scrambling}
+  --validation_mode {random_coordinates,embedding_scrambling}
                         Criteria to corroborate that the predictions of the
                         models are not by chance
   --scrambling_percentage SCRAMBLING_PERCENTAGE
