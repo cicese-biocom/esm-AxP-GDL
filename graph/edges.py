@@ -21,12 +21,12 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
 
         partitions = data['partition']
         with tqdm(range(len(atom_coordinates_matrices)), total=len(atom_coordinates_matrices),
-                  desc="Scrambling the coordinates ", disable=False) as progress:
+                  desc="Random coordinates ", disable=False) as progress:
             for i, atom_coordinates_matrix in enumerate(atom_coordinates_matrices):
-                # only the coordinates belonging to the training set will be scrambled
+                # only the coordinates belonging to the training set will be randomly created
                 # https://dl.acm.org/doi/10.1145/3446776
                 if partitions[i] == 1:
-                    atom_coordinates_matrices[i] = random_coordinate_matrix(atom_coordinates_matrix, min_values, max_values)
+                    atom_coordinates_matrices[i] = random_coordinate_matrix(atom_coordinates_matrix, workflow_settings.randomness_percentage, min_values, max_values)
                 progress.update(1)
 
     adjacency_matrices, weights_matrices = _construct_edges(atom_coordinates_matrices,

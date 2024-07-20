@@ -94,11 +94,11 @@ class ParameterSetter(BaseModel):
                                          description='True if specified, otherwise, False. '
                                                      'True indicates to save the models per epoch.')] = True
 
-    validation_mode: Annotated[Optional[Literal['random_coordinates', 'embedding_scrambling']],
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method for validation of the approach')] = None
 
-    scrambling_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be scrambled', ge=0, le=100)] = None
+    randomness_percentage: Annotated[Optional[PositiveInt],
+                                     Field(description='Percentage of rows to be randomly created', ge=0, le=100)] = None
 
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
@@ -178,11 +178,11 @@ class ParameterSetter(BaseModel):
                         f"do not generate weight matrices. Parameter use_edge_attr has been set to False")
 
             # validation_mode
-            if self.validation_mode:
-                if self.validation_mode in ["embedding_scrambling"] and not self.scrambling_percentage:
-                    raise ValueError('Parameter scrambling_percentage is required')
-            else:
-                self.scrambling_percentage = None
+            if self.validation_mode and not self.randomness_percentage:
+                raise ValueError('Parameter randomness_percentage is required')
+
+            if not self.validation_mode:
+                self.randomness_percentage = None
 
             # use_esm2_contact_map
             self.use_esm2_contact_map = True if esm2_contact_map_function in self.edge_construction_functions else False

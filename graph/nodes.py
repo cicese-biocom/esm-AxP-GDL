@@ -29,19 +29,18 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                                                                          model_name,
                                                                          reduced_features,
                                                                          workflow_settings.validation_mode,
-                                                                         workflow_settings.scrambling_percentage,
+                                                                         workflow_settings.randomness_percentage,
                                                                          workflow_settings.use_esm2_contact_map)
 
-            if workflow_settings.validation_mode == 'embedding_scrambling' and workflow_settings.mode == 'training':
-                scrambling_percentage = workflow_settings.scrambling_percentage
+            if workflow_settings.validation_mode == 'random_embeddings' and workflow_settings.mode == 'training':
                 partitions = data['partition']
                 with tqdm(range(len(embeddings)), total=len(embeddings),
-                          desc="Scrambling embeddings ", disable=False) as progress:
+                          desc="Random embeddings ", disable=False) as progress:
                     for i, embedding in enumerate(embeddings):
-                        # only the embeddings belonging to the training set will be scrambled
+                        # only the embeddings belonging to the training set will be randomly created
                         # https://dl.acm.org/doi/10.1145/3446776
                         if partitions[i] == 1:
-                            embeddings[i] = scrambling_matrix_rows(embedding, scrambling_percentage)
+                            embeddings[i] = scrambling_matrix_rows(embedding, workflow_settings.randomness_percentage)
                         progress.update(1)
 
             if len(residual_level_features) == 0:

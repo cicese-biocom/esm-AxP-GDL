@@ -36,11 +36,11 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features, validation_mode, scrambling_percentage, use_esm2_contact_map):
+def get_embeddings(data, model_name, reduced_features, validation_mode, randomness_percentage, use_esm2_contact_map):
     """
     get_embeddings
     :param use_esm2_contact_map:
-    :param scrambling_percentage:
+    :param randomness_percentage:
     :param validation_mode:
     :param ids: sequences identifiers. Containing multiple sequences.
     :param sequences: sequences itself
