@@ -28,3 +28,23 @@ def random_coordinate_matrix(matrix, randomness_percentage, min, max):
         atom_coordinates[matrix_idx][2] = coord_2[coord_idx]
 
     return atom_coordinates
+
+
+def edge_ablation(matrix, randomness_percentage):
+    num_nodes = matrix.shape[0]
+
+    upper_triangle_indices = np.triu_indices(num_nodes, k=1)
+    edge_indices = [(i, j) for i, j in zip(*upper_triangle_indices) if matrix[i, j] == 1]
+    num_edges = len(edge_indices)
+    num_edges_to_remove = int(num_edges * (randomness_percentage / 100))
+    selected_indices = np.random.choice(num_edges, num_edges_to_remove, replace=False)
+    selected_edge_indices = [edge_indices[i] for i in selected_indices]
+
+    new_matrix = matrix
+    for row, col in selected_edge_indices:
+        new_matrix[row, col] = 0
+        new_matrix[col, row] = 0
+
+    return new_matrix
+
+

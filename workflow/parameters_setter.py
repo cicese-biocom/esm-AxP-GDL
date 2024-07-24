@@ -94,8 +94,8 @@ class ParameterSetter(BaseModel):
                                          description='True if specified, otherwise, False. '
                                                      'True indicates to save the models per epoch.')] = True
 
-    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
-                               Field(description='Graph construction method for validation of the approach')] = None
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings', 'edge_ablation']],
+                               Field(description='Graph construction method to validate the performance of the models')] = None
 
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created', ge=0, le=100)] = None

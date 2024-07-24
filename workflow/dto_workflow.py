@@ -36,14 +36,14 @@ class ModelParameters(BaseModel):
     add_self_loops: Annotated[Optional[bool],
                               Field(strict=True,
                                     description='True if specified, otherwise, False. True indicates to use auto loops '
-                                                'in attention layer')] = True
+                                                'in attention layer')] = False
 
     use_edge_attr: Annotated[Optional[bool], Field(strict=True,
                                                    description='True if specified, otherwise, False. True indicates to '
-                                                               'use edge attributes in graph learning.')] = True
+                                                               'use edge attributes in graph learning.')] = False
 
-    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
-                               Field(description='Graph construction method for validation of the approach')] = None
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings', 'edge_ablation']],
+                               Field(description='Graph construction method to validate the performance of the models')] = None
 
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created')] = None
@@ -118,8 +118,8 @@ class TrainingOutputParameter(BaseModel):
                                          description='True if specified, otherwise, False. '
                                                      'True indicates to save the models per epoch.')] = True
 
-    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
-                               Field(description='Graph construction method for validation of the approach')] = None
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings', 'edge_ablation']],
+                               Field(description='Graph construction method to validate the performance of the models')] = None
 
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created')] = None
@@ -178,8 +178,8 @@ class EvalOutputParameter(BaseModel):
 
     dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 1e-4
 
-    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
-                               Field(description='Graph construction method for validation of the approach')] = None
+    validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings', 'edge_ablation']],
+                               Field(description='Graph construction method to validate the performance of the models')] = None
 
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created')] = None

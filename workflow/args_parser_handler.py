@@ -82,11 +82,11 @@ class ArgsParserHandler:
                                       "regarding the MCC metric will be saved.") 
 
         self.parser.add_argument('--validation_mode', type=str, default=None,
-                                 choices=['random_coordinates', 'random_embeddings'],
-                                 help='Criteria to corroborate that the predictions of the models are not by chance')
+                                 choices=['random_coordinates', 'random_embeddings', 'edge_ablation'],
+                                 help='Criteria to validate that the predictions of the models are not by chance')
 
         self.parser.add_argument('--randomness_percentage', type=float, default=None,
-                                 help='Percentage of rows to be randomly generated')
+                                 help='Percentage of rows to be randomly generated. This parameter and the --validation_mode parameter are used together.')
 
         args = self.parser.parse_args()
         return vars(args)

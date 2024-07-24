@@ -1,13 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from workflow.classification_metrics import ClassificationMetricsContext, BinaryClassificationMetrics
-from workflow.data_loader import DataLoaderContext, CSVLoader, FASTALoader
-from workflow.dataset_validator import DatasetValidatorContext, LabeledDatasetValidator, DatasetValidator
+from workflow.classification_metrics import ClassificationMetricsContext
+from workflow.data_loader import DataLoaderContext
+from workflow.dataset_validator import DatasetValidatorContext
 from workflow.parameters_setter import ParameterSetter
 from graph.construct_graphs import construct_graphs
 import pandas as pd
-from typing import List, Tuple, Dict
+from typing import List, Dict
 from sklearn.model_selection import train_test_split
 from models.GAT.GAT import GATModel
 import torch
@@ -30,8 +30,7 @@ class GDLWorkflow(ABC):
         # Initialization of workflow parameters
         output_setting = self.create_path(path_creator_context=context.path_creator, parameters=parameters)
 
-        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
-                                         log_output_path=output_setting['log_file'])
+        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'), log_output_path=output_setting['log_file'])
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
@@ -44,8 +43,7 @@ class GDLWorkflow(ABC):
 
         model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
 
-        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
-                     classification_metrics=context.classification_metrics, data=data)
+        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model, classification_metrics=context.classification_metrics, data=data)
 
         self.save_parameters(workflow_settings=workflow_settings)
 
@@ -67,11 +65,8 @@ class GDLWorkflow(ABC):
         return graphs
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
-        checkpoint = torch.load(workflow_settings.gdl_model_path)
-        model = checkpoint['model']
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(workflow_settings.device)
-        return model
+        logging.getLogger('workflow_logger').info(f"The parameter add_self_loops has been set to {workflow_settings.add_self_loops}")
+        return None
 
     @abstractmethod
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
@@ -152,6 +147,8 @@ class TrainingWorkflow(GDLWorkflow):
         json_parser.save_json(json_file, json_data)
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
+        super().initialize_model(workflow_settings, graphs)
+
         train_graphs, val_graphs = graphs
         node_feature_dimension = train_graphs[0].x.shape[1]
 
@@ -332,7 +329,18 @@ class TrainingWorkflow(GDLWorkflow):
         bar.close()
 
 
-class TestWorkflow(GDLWorkflow):
+class PredictionWorkflow(GDLWorkflow, ABC):
+    def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
+        super().initialize_model(workflow_settings, graphs)
+
+        checkpoint = torch.load(workflow_settings.gdl_model_path)
+        model = checkpoint['model']
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.to(workflow_settings.device)
+        return model
+
+
+class TestWorkflow(PredictionWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
@@ -443,7 +451,7 @@ class TestWorkflow(GDLWorkflow):
         df.to_csv(csv_file, index=False)
 
 
-class InferenceWorkflow(GDLWorkflow):
+class InferenceWorkflow(PredictionWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
