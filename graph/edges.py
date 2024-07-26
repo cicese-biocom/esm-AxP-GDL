@@ -29,7 +29,7 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
     return adjacency_matrices, weights_matrices, data
 
 
-def _get_intervals_for_coordinate_axes(atom_coordinates_matrices):
+def _get_range_for_every_coordinate(atom_coordinates_matrices):
     atom_coordinates = np.concatenate(atom_coordinates_matrices, axis=0)
     coordinate_min = np.min(atom_coordinates, axis=0)
     coordinate_max = np.max(atom_coordinates, axis=0)
@@ -48,7 +48,7 @@ def _apply_random_coordinates(workflow_settings, atom_coordinates_matrices, data
         _write_logging_info(workflow_settings)
 
         partitions = data['partition']
-        min_values, max_values = _get_intervals_for_coordinate_axes(atom_coordinates_matrices)
+        min_values, max_values = _get_range_for_every_coordinate(atom_coordinates_matrices)
 
         with tqdm(range(len(atom_coordinates_matrices)), total=len(atom_coordinates_matrices),
                   desc="Random coordinates ", disable=False) as progress:

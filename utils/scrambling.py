@@ -1,16 +1,16 @@
 import numpy as np
 
 
-def scrambling_matrix_rows(matrix, randomness_percentage):
-    num_rows = matrix.shape[0]
+def random_node_features(feature_matrix, randomness_percentage, min, max):
+    total_coefficients = feature_matrix.shape[1]
+    total_coefficients_to_build = int(total_coefficients * (randomness_percentage / 100))
 
-    num_to_scramble = int(num_rows * (randomness_percentage / 100))
-    index = np.random.choice(num_rows, num_to_scramble, replace=False)
-    index_to_scramble = np.random.permutation(index)
-    rand_matrix = matrix.copy()
-    rand_matrix[index] = matrix[index_to_scramble]
+    idxs_to_replace = np.random.choice(total_coefficients, total_coefficients_to_build, replace=False)
+    for feature_vector in feature_matrix:
+        vals_to_replace = np.random.uniform(min, max, size=total_coefficients_to_build)
+        feature_vector[idxs_to_replace] = vals_to_replace[range(total_coefficients_to_build)]
 
-    return rand_matrix
+    return feature_matrix
 
 
 def random_coordinate_matrix(matrix, randomness_percentage, min, max):
@@ -46,5 +46,3 @@ def edge_ablation(matrix, randomness_percentage):
         new_matrix[col, row] = 0
 
     return new_matrix
-
-
