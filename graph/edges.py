@@ -8,7 +8,7 @@ from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
 from graph.tertiary_structure_handler import predict_tertiary_structures, load_tertiary_structures
 from graph.edge_construction_functions import EdgeConstructionContext
-from utils.scrambling import random_coordinate_matrix, edge_ablation
+from utils.scrambling import random_coordinate_matrix
 
 
 def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_contact_maps):
@@ -24,8 +24,6 @@ def get_edges(workflow_settings: ParameterSetter, data: pd.DataFrame, esm2_conta
                                                             esm2_contact_maps,
                                                             workflow_settings)
 
-    adjacency_matrices = _apply_edge_ablation(workflow_settings, adjacency_matrices, data)
-
     return adjacency_matrices, weights_matrices, data
 
 
@@ -36,16 +34,13 @@ def _get_range_for_every_coordinate(atom_coordinates_matrices):
     return coordinate_min, coordinate_max
 
 
-def _write_logging_info(workflow_settings):
-    logging.getLogger('workflow_logger'). \
-        warning(f"The framework is running in validation mode with workflow_settings.validation_mode: "
-                f"{workflow_settings.validation_mode} and "
-                f"workflow_settings.randomness_percentage: {workflow_settings.randomness_percentage}")
-
-
 def _apply_random_coordinates(workflow_settings, atom_coordinates_matrices, data):
     if workflow_settings.validation_mode == 'random_coordinates' and workflow_settings.mode == 'training':
-        _write_logging_info(workflow_settings)
+
+        logging.getLogger('workflow_logger'). \
+            warning(f"The framework is running in validation mode with workflow_settings.validation_mode: "
+                    f"{workflow_settings.validation_mode} and "
+                    f"workflow_settings.randomness_percentage: {workflow_settings.randomness_percentage}")
 
         partitions = data['partition']
         min_values, max_values = _get_range_for_every_coordinate(atom_coordinates_matrices)
@@ -62,20 +57,6 @@ def _apply_random_coordinates(workflow_settings, atom_coordinates_matrices, data
                 progress.update(1)
 
     return atom_coordinates_matrices
-
-
-def _apply_edge_ablation(workflow_settings, adjacency_matrices, data):
-    if workflow_settings.mode == 'training' and workflow_settings.validation_mode == 'edge_ablation':
-        _write_logging_info(workflow_settings)
-
-        partitions = data['partition']
-        with tqdm(range(len(adjacency_matrices)), total=len(adjacency_matrices),
-                  desc="Edge ablation ", disable=False) as progress:
-            for i, adjacency_matrix in enumerate(adjacency_matrices):
-                if partitions[i] == 1:
-                    adjacency_matrices[i] = edge_ablation(adjacency_matrix, workflow_settings.randomness_percentage)
-                progress.update(1)
-    return adjacency_matrices
 
 
 def _construct_edges(atom_coordinates_matrices: np.array, sequences: List[str], esm2_contact_maps, workflow_settings: ParameterSetter):
