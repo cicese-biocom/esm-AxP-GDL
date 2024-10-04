@@ -78,9 +78,9 @@ class ParameterSetter(BaseModel):
 
     pooling_ratio: Annotated[Optional[PositiveInt], Field(description='Pooling ratio')] = 10
 
-    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = 0.25
+    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = 1e-4
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 1e-4
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
 
     batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = 512
 

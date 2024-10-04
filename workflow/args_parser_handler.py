@@ -93,7 +93,6 @@ class ArgsParserHandler:
 
     def get_eval_arguments(self) -> Dict:
         self._add_common_arguments()
-        self.parser.add_argument('--dropout_rate', type=float, default=0.5, help='Dropout rate')
 
         self.parser.add_argument('--output_path', type=Path, required=True,
                                  help='The path where the output data will be saved.')   

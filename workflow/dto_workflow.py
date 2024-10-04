@@ -42,6 +42,8 @@ class ModelParameters(BaseModel):
                                                    description='True if specified, otherwise, False. True indicates to '
                                                                'use edge attributes in graph learning.')] = False
 
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
+
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method to validate the performance of the models')] = None
 
@@ -105,9 +107,9 @@ class TrainingOutputParameter(BaseModel):
 
     pooling_ratio: Annotated[Optional[PositiveInt], Field(description='Pooling ratio')] = 10
 
-    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = 0.25
+    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = 1e-4
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 1e-4
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
 
     batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = 512
 
@@ -176,7 +178,7 @@ class EvalOutputParameter(BaseModel):
                                                    description='True if specified, otherwise, False. True indicates to '
                                                                'use edge attributes in graph learning.')] = True
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 1e-4
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
 
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method to validate the performance of the models')] = None
