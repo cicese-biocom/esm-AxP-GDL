@@ -249,8 +249,6 @@ optional arguments:
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
                         The path to load the model
-  --dropout_rate DROPOUT_RATE
-                        Dropout rate
   --output_path OUTPUT_PATH
                         The path where the output data will be saved.
   --seed SEED           Seed to run the test                                          
@@ -278,8 +276,6 @@ optional arguments:
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
                         The path to load the model
-  --dropout_rate DROPOUT_RATE
-                        Dropout rate
   --output_path OUTPUT_PATH
                         The path where the output data will be saved.
   --seed SEED           Seed to run the Inference
