@@ -428,11 +428,11 @@ class TestWorkflow(PredictionWorkflow):
 
                 progress.set_description("Test result")
                 progress.set_postfix(
-                    Recall_Pos=f"{recall_pos:.4f}",
-                    Recall_Neg=f"{recall_neg:.4f}",
+                    Recall_Pos=f"{recall_pos:.4f}" if recall_pos else None,
+                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg else None,
                     Test_MCC=f"{mcc:.4f}",
                     Test_ACC=f"{acc:.4f}",
-                    Test_AUC=f"{auc:.4f}"
+                    Test_AUC=f"{auc:.4f}" if auc else None
                 )
 
         res_data = {
