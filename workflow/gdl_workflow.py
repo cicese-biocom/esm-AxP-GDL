@@ -262,8 +262,8 @@ class TrainingWorkflow(GDLWorkflow):
                     Validation_MCC=f"{mcc:.4f}",
                     Validation_ACC=f"{acc:.4f}",
                     Validation_AUC=f"{auc:.4f}" if auc else None,
-                    Validation_Recall_Pos=f"{recall_pos:.4f}" if recall_pos else None,
-                    Validation_Recall_Neg=f"{recall_neg:.4f}" if recall_neg else None
+                    Validation_Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
+                    Validation_Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg) else None
                 )
 
                 writer.add_scalar('Loss/train', train_loss, global_step=epoch)
@@ -323,8 +323,8 @@ class TrainingWorkflow(GDLWorkflow):
             Validation_MCC=f"{best_mcc:.4f}",
             Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
             Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else None,
-            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc else None,
-            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc else None
+            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc and not np.isnan(recall_pos_of_the_best_mcc) else None,
+            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc and not np.isnan(recall_neg_of_the_best_mcc) else None
         )
         bar.close()
 
@@ -428,8 +428,8 @@ class TestWorkflow(PredictionWorkflow):
 
                 progress.set_description("Test result")
                 progress.set_postfix(
-                    Recall_Pos=f"{recall_pos:.4f}" if recall_pos else None,
-                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg else None,
+                    Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
+                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg)else None,
                     Test_MCC=f"{mcc:.4f}",
                     Test_ACC=f"{acc:.4f}",
                     Test_AUC=f"{auc:.4f}" if auc else None
