@@ -28,7 +28,7 @@ def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
         graphs = []
         for i in range(n_samples):
             graphs.append(to_parse_matrix(adjacency_matrix=adjacency_matrices[i],
-                                          nodes_features=nodes_features[i],
+                                          nodes_features=np.array(nodes_features[i], dtype=np.float32),
                                           weights_matrix=weights_matrices[i],
                                           label=data.iloc[i]['activity'] if 'activity' in data.columns else None))
             progress.update(1)
