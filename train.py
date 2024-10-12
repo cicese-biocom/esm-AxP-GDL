@@ -10,7 +10,7 @@ def train(args):
         TrainingWorkflow().run_workflow(context=context, parameters=args)
 
     except Exception as e:
-        raise
+        raise e
 
 
 if __name__ == '__main__':
@@ -23,4 +23,3 @@ if __name__ == '__main__':
     print(
         f"Training execution time in: {str(final_time - start_time)} seconds"
     )
-
