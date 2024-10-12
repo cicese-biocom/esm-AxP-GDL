@@ -15,9 +15,7 @@ class ModelParameters(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
-                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
-                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
-                                                        'esm2_contact_map_90']],
+                                                        'esm2_contact_map']],
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
@@ -26,6 +24,15 @@ class ModelParameters(BaseModel):
 
     distance_threshold: Annotated[Optional[PositiveFloat],
                                   Field(description='Distance threshold to construct graph edges')] = None
+
+    esm2_model_for_contact_map: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
+                                                           'esm2_t48']],
+                                          Field(description='ESM-2 model to be used')] = None
+
+    probability_threshold: Annotated[Optional[PositiveFloat],
+                                     Field(
+                                         description='Probability threshold for constructing a graph based on ESM-2 contact maps',
+                                         ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
                                          Field(description='Amino acid representations')] = 'CA'
@@ -71,14 +78,8 @@ class TrainingOutputParameter(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
-                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
-                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
-                                                        'esm2_contact_map_90']],
+                                                        'esm2_contact_map']],
                                            Field(description='Functions to build edges')]
-
-    use_esm2_contact_map: Annotated[Optional[bool],
-                                    Field(strict=True,
-                                          description='Use esm2 contact map')] = False
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                                   'bhattacharyya', 'angular_separation']],
@@ -86,6 +87,15 @@ class TrainingOutputParameter(BaseModel):
 
     distance_threshold: Annotated[Optional[PositiveFloat],
                                   Field(description='Distance threshold to construct graph edges')] = None
+
+    esm2_model_for_contact_map: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
+                                                           'esm2_t48']],
+                                          Field(description='ESM-2 model to be used')] = None
+
+    probability_threshold: Annotated[Optional[PositiveFloat],
+                                     Field(
+                                         description='Probability threshold for constructing a graph based on ESM-2 contact maps',
+                                         ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
                                          Field(description='Amino acid representations')] = 'CA'
@@ -150,14 +160,8 @@ class EvalOutputParameter(BaseModel):
                                                            'specified method')] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
-                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
-                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
-                                                        'esm2_contact_map_90']],
+                                                        'esm2_contact_map']],
                                            Field(description='Functions to build edges')]
-
-    use_esm2_contact_map: Annotated[Optional[bool],
-                                    Field(strict=True,
-                                          description='Use esm2 contact map')] = False
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                                   'bhattacharyya', 'angular_separation']],
@@ -165,6 +169,15 @@ class EvalOutputParameter(BaseModel):
 
     distance_threshold: Annotated[Optional[PositiveFloat],
                                   Field(description='Distance threshold to construct graph edges')] = None
+
+    esm2_model_for_contact_map: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
+                                                           'esm2_t48']],
+                                          Field(description='ESM-2 model to be used')] = None
+
+    probability_threshold: Annotated[Optional[PositiveFloat],
+                                     Field(
+                                         description='Probability threshold for constructing a graph based on ESM-2 contact maps',
+                                         ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
                                          Field(description='Amino acid representations')] = 'CA'

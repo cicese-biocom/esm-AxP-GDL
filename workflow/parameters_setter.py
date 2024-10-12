@@ -42,21 +42,26 @@ class ParameterSetter(BaseModel):
                               exclude=True)] = None
 
     edge_construction_functions: Annotated[List[Literal['distance_based_threshold', 'sequence_based',
-                                                        'esm2_contact_map_50', 'esm2_contact_map_60',
-                                                        'esm2_contact_map_70', 'esm2_contact_map_80',
-                                                        'esm2_contact_map_90']],
+                                                        'esm2_contact_map']],
                                            Field(description='Functions to build edges')]
-
-    use_esm2_contact_map: Annotated[Optional[bool],
-                                    Field(strict=True,
-                                          description='Use esm2 contact map')] = False
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                                   'bhattacharyya', 'angular_separation']],
-                                 Field(description='Distance function to construct graph edges')] = None
+                                 Field(
+                                     description='Distance function to construct the edges of the distance-based graph')] = None
 
     distance_threshold: Annotated[Optional[PositiveFloat],
-                                  Field(description='Distance threshold to construct graph edges')] = None
+                                  Field(
+                                      description='Distance threshold to construct the edges of the distance-based graph')] = None
+
+    esm2_model_for_contact_map: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
+                                                           'esm2_t48']],
+                                          Field(description='ESM-2 model to be used')] = None
+
+    probability_threshold: Annotated[Optional[PositiveFloat],
+                                     Field(
+                                         description='Probability threshold for constructing a graph based on ESM-2 contact maps',
+                                         ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
                                          Field(description='Amino acid representations')] = 'CA'
@@ -95,10 +100,12 @@ class ParameterSetter(BaseModel):
                                                      'True indicates to save the models per epoch.')] = True
 
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
-                               Field(description='Graph construction method to validate the performance of the models')] = None
+                               Field(
+                                   description='Graph construction method to validate the performance of the models')] = None
 
     randomness_percentage: Annotated[Optional[PositiveInt],
-                                     Field(description='Percentage of rows to be randomly created', ge=0, le=100)] = None
+                                     Field(description='Percentage of rows to be randomly created', ge=0,
+                                           le=100)] = None
 
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
@@ -119,18 +126,6 @@ class ParameterSetter(BaseModel):
             self.dataset_name = self.dataset.name
             self.dataset_extension = file_system_handler.check_file_format(self.dataset)
 
-            # edge_construction_functions
-            esm2_contact_map_functions = []
-            for function_name in self.edge_construction_functions:
-                if re.search(r'esm2_contact_map', function_name):
-                    esm2_contact_map_functions.append(function_name)
-                if len(esm2_contact_map_functions) > 1:
-                    raise ValueError('You must specify only one type of esm2_contact_map function')
-
-            esm2_contact_map_function = None
-            if len(esm2_contact_map_functions) > 0:
-                esm2_contact_map_function = esm2_contact_map_functions.pop()
-
             # pdb_path
             if self.pdb_path:
                 if 'distance_based_threshold' in self.edge_construction_functions \
@@ -141,9 +136,8 @@ class ParameterSetter(BaseModel):
                     self.pdb_path = None
                     self.tertiary_structure_method = None
                     logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"with distance_function={self.distance_function} do not require "
-                        f"tertiary structures. Parameters pdb_path and tertiary_structure_method are set to None")
+                        f"The specified edge construction function does not require tertiary structures. "
+                        f"The parameters pdb_path and tertiary_structure_method were set to None.")
 
             # distance_function
             if self.distance_function is None:
@@ -167,9 +161,31 @@ class ParameterSetter(BaseModel):
                         f"Edge construction methods {self.edge_construction_functions} "
                         f"do not require the parameter distance_threshold. It has been set to None")
 
+            # esm2_model_for_contact_map
+            if self.esm2_model_for_contact_map is None:
+                if 'esm2_contact_map' in self.edge_construction_functions:
+                    raise ValueError('Parameter esm2_model_for_contact_map is required')
+            else:
+                if not {'esm2_contact_map'}.intersection(self.edge_construction_functions):
+                    self.esm2_model_for_contact_map = None
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"do not require the parameter esm2_model_for_contact_map. It has been set to None")
+
+            # probability_threshold
+            if self.probability_threshold is None:
+                if 'esm2_contact_map' in self.edge_construction_functions:
+                    raise ValueError('Parameter probability_threshold is required')
+            else:
+                if not {'esm2_contact_map'}.intersection(self.edge_construction_functions):
+                    self.probability_threshold = None
+                    logging.getLogger('workflow_logger').warning(
+                        f"Edge construction methods {self.edge_construction_functions} "
+                        f"do not require the parameter probability_threshold. It has been set to None")
+
             # use_edge_attr
             if self.use_edge_attr:
-                if not {'distance_based_threshold', esm2_contact_map_function}.intersection(
+                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(
                         self.edge_construction_functions) \
                         and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
@@ -184,10 +200,10 @@ class ParameterSetter(BaseModel):
             if not self.validation_mode:
                 self.randomness_percentage = None
 
-            # use_esm2_contact_map
-            self.use_esm2_contact_map = True if esm2_contact_map_function in self.edge_construction_functions else False
-            logging.getLogger('workflow_logger').warning(
-                f"The parameter use_esm2_contact_map has been set to {self.use_esm2_contact_map}")
+            if self.mode in ('test', 'inference'):
+                self.number_of_epochs = None
+                self.learning_rate = None
+                self.pooling_ratio = None
 
             return self
         except Exception as e:

@@ -89,12 +89,12 @@ class SequenceBased(EdgeConstructionFunction):
 
 
 class ESM2ContactMap(EdgeConstructionFunction):
-    def __init__(self, edges: Edges, esm2_contact_map: Tuple[np.ndarray, np.ndarray], use_edge_attr: bool,
-                 probability_threshold: float):
+    def __init__(self, edges: Edges, esm2_contact_map: Tuple[np.ndarray, np.ndarray],
+                 probability_threshold: float, use_edge_attr: bool):
         super().__init__(edges)
         self._esm2_contact_map = esm2_contact_map
-        self._use_edge_attr = use_edge_attr
         self._probability_threshold = probability_threshold
+        self._use_edge_attr = use_edge_attr
 
     @property
     def esm2_contact_map(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -190,7 +190,7 @@ class EdgeConstructionContext:
     @staticmethod
     def compute_edges(args):
         edge_construction_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
-        esm2_contact_map, use_edge_attr = args
+        esm2_contact_map, probability_threshold, use_edge_attr = args
 
         construction_functions = [
             ('distance_based_threshold',
@@ -201,40 +201,12 @@ class EdgeConstructionContext:
                      atom_coordinates=atom_coordinates,
                      use_edge_attr=use_edge_attr
                      )),
-            ('esm2_contact_map_50',
+            ('esm2_contact_map',
              partial(ESM2ContactMap,
                      edges=None,
                      esm2_contact_map=esm2_contact_map,
-                     use_edge_attr=use_edge_attr,
-                     probability_threshold=0.50
-                     )),
-            ('esm2_contact_map_60',
-             partial(ESM2ContactMap,
-                     edges=None,
-                     esm2_contact_map=esm2_contact_map,
-                     use_edge_attr=use_edge_attr,
-                     probability_threshold=0.60
-                     )),
-            ('esm2_contact_map_70',
-             partial(ESM2ContactMap,
-                     edges=None,
-                     esm2_contact_map=esm2_contact_map,
-                     use_edge_attr=use_edge_attr,
-                     probability_threshold=0.70
-                     )),
-            ('esm2_contact_map_80',
-             partial(ESM2ContactMap,
-                     edges=None,
-                     esm2_contact_map=esm2_contact_map,
-                     use_edge_attr=use_edge_attr,
-                     probability_threshold=0.80
-                     )),
-            ('esm2_contact_map_90',
-             partial(ESM2ContactMap,
-                     edges=None,
-                     esm2_contact_map=esm2_contact_map,
-                     use_edge_attr=use_edge_attr,
-                     probability_threshold=0.90
+                     probability_threshold=probability_threshold,
+                     use_edge_attr=use_edge_attr
                      )),
             ('sequence_based',
              partial(SequenceBased,
@@ -278,13 +250,14 @@ if __name__ == "__main__":
     sequence = 'GLF'
     distance_function = 'euclidean'
     distance_threshold = 5
+    probability_threshold = 0.9
 
     # function_names = ['distance_based_threshold', 'esm2_contact_map', 'sequence_based']
-    edge_construction_functions = ['sequence_based', 'esm2_contact_map_50', 'distance_based_threshold']
+    edge_construction_functions = ['sequence_based', 'esm2_contact_map', 'distance_based_threshold']
 
     use_edge_attr = True
     args = (edge_construction_functions, distance_function, distance_threshold, atom_coordinates,
-            sequence, esm2_contact_map, use_edge_attr)
+            sequence, esm2_contact_map, probability_threshold, use_edge_attr)
 
     edges = EdgeConstructionContext()
 

@@ -1,4 +1,5 @@
-import numpy as np
+from pathlib import Path
+
 import pandas as pd
 import torch
 from torch import hub
@@ -11,12 +12,13 @@ from utils import json_parser
 
 def get_models(esm2_representation):
     """
+    get_models
     :param esm2_representation: residual-level features representation name
     :return:
         models: models corresponding to the specified esm 2 representation
     """
 
-    esm2_representations_json = os.getcwd() + os.sep + "settings/esm2_representations.json"
+    esm2_representations_json = Path.cwd().joinpath("settings", "esm2_representations.json")
     data = json_parser.load_json(esm2_representations_json)
 
     # Create a DataFrame
@@ -36,18 +38,14 @@ def get_models(esm2_representation):
     return models
 
 
-def get_embeddings(data, model_name, reduced_features, validation_mode, randomness_percentage, use_esm2_contact_map):
+def get_representations(data, model_name):
     """
-    get_embeddings
-    :param use_esm2_contact_map:
-    :param randomness_percentage:
-    :param validation_mode:
-    :param ids: sequences identifiers. Containing multiple sequences.
-    :param sequences: sequences itself
+    get_representations
+    :param data:
     :param model_name: esm2 model name
-    :param reduced_features: vector of positions of the features to be used
     :return:
-        embeddings: reduced embedding of each sequence of the fasta file according to reduced_features
+        embeddings:
+        contact_map:
     """
     try:
         # esm2 checkpoints
@@ -59,14 +57,11 @@ def get_embeddings(data, model_name, reduced_features, validation_mode, randomne
 
         if torch.cuda.is_available() and not no_gpu:
             model = model.cuda()
-            # print("Transferred model to GPU")
 
         dataset = FastaBatchedDataset(data.id, data.sequence)
-        batches = dataset.get_batch_indices(toks_per_batch=1, extra_toks_per_seq=1)
         data_loader = torch.utils.data.DataLoader(dataset, collate_fn=alphabet.get_batch_converter(),
                                                   batch_sampler=None)
 
-        # scaler = MinMaxScaler()
         repr_layers = model.num_layers
         embeddings = []
         contact_maps = []
@@ -74,27 +69,22 @@ def get_embeddings(data, model_name, reduced_features, validation_mode, randomne
         with torch.no_grad():
             for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader),
                                                         total=len(data_loader),
-                                                        desc="Generating esm2 embeddings"):
+                                                        desc=f"Generating embedding and contact maps using the ESM-2 {model_name} model "):
                 if torch.cuda.is_available() and not no_gpu:
                     toks = toks.to(device="cuda", non_blocking=True)
 
-                result = model(toks, repr_layers=[repr_layers], return_contacts=use_esm2_contact_map)
+                result = model(toks, repr_layers=[repr_layers], return_contacts=True)
                 representation = result["representations"][repr_layers]
 
                 for i, label in enumerate(labels):
                     layer_for_i = representation[i, 1:len(strs[i]) + 1]
 
-                    reduced_features = np.array(reduced_features)
-                    if len(reduced_features) > 0:
-                        layer_for_i = layer_for_i[:, reduced_features]
-
                     embedding = layer_for_i.cpu().numpy()
                     embeddings.append(embedding)
 
-                    if use_esm2_contact_map:
-                        contact_map = result["contacts"][0]
-                        contact_map = contact_map.cpu().numpy()
-                        contact_maps.append(contact_map)
+                    contact_map = result["contacts"][0]
+                    contact_map = contact_map.cpu().numpy()
+                    contact_maps.append(contact_map)
         return embeddings, contact_maps
 
     except Exception as e:

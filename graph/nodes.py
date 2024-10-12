@@ -22,14 +22,11 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
         for model_info in models:
             model_name = model_info["model"]
             reduced_features = model_info["reduced_features"]
-            reduced_features = [x - 1 for x in reduced_features]
+            reduced_features = np.array([x - 1 for x in reduced_features])
 
-            embeddings, contact_maps = esm2_model_handler.get_embeddings(data,
-                                                                         model_name,
-                                                                         reduced_features,
-                                                                         workflow_settings.validation_mode,
-                                                                         workflow_settings.randomness_percentage,
-                                                                         workflow_settings.use_esm2_contact_map)
+            embeddings, contact_maps = esm2_model_handler.get_representations(data, model_name)
+
+            embeddings = _apply_feature_reduction(embeddings, reduced_features)
 
             embeddings = _apply_random_embeddings(workflow_settings, embeddings, data)
 
@@ -42,6 +39,14 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                 raise Exception("The use of more than one ESM-2 model is not supported yet!")
 
     return node_features, contact_maps
+
+
+def _apply_feature_reduction(embeddings, reduced_features):
+    if len(reduced_features) > 0:
+        for i, embedding in enumerate(embeddings):
+            embeddings[i] = embedding[:, reduced_features]
+
+    return embeddings
 
 
 def _get_range_for_embeddings(data_tuples):

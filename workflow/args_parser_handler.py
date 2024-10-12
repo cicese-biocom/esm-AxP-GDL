@@ -38,19 +38,24 @@ class ArgsParserHandler:
 
         self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
                                  help="Criteria (e.g., distance) to define a relationship (graph edges) between amino "
-                                      "acids. Only one ESM-2 contact map can be specified. "
-                                      "The options available are: 'distance_based_threshold', "
-                                      "'sequence_based', 'esm2_contact_map_50', 'esm2_contact_map_60', "
-                                      "'esm2_contact_map_70', 'esm2_contact_map_80', 'esm2_contact_map_90'")
+                                      "acids. The options available are: 'distance_based_threshold', "
+                                      "'sequence_based', 'esm2_contact_map'")
                                  
         self.parser.add_argument('--distance_function', type=str, default=None,
                                  choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                           'bhattacharyya',
                                           'angular_separation'],
-                                 help='Distance function to construct graph edges')
+                                 help='Distance function to construct the edges of the distance-based graph')
 
         self.parser.add_argument('--distance_threshold', type=float, default=None,
-                                 help='Distance threshold to construct graph edges')
+                                 help='Distance threshold to construct the edges of the distance-based graph')
+
+        self.parser.add_argument('--esm2_model_for_contact_map', type=str, default=None,
+                                 choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48'],
+                                 help='ESM-2 model to be used to obtain ESM-2 contact map')
+
+        self.parser.add_argument('--probability_threshold', type=float, default=None,
+                                 help='Probability threshold for constructing a graph based on ESM-2 contact maps')
 
         self.parser.add_argument('--amino_acid_representation', type=str, default='CA',
                                  choices=['CA'],

@@ -9,7 +9,7 @@ from utils import pdb_parser, distances
 
 def load_tertiary_structures(workflow_settings: ParameterSetter, data: pd.DataFrame):
     if workflow_settings.pdb_path is None:
-        return [None] * len(data), data
+        return [None] * len(data)
 
     sequences_to_exclude = pd.DataFrame()
     atom_coordinates_matrices = []
@@ -41,10 +41,10 @@ def load_tertiary_structures(workflow_settings: ParameterSetter, data: pd.DataFr
             quit()
 
         if data.empty:
-            logging.getLogger('workflow_logger').critical('Dataset with erroneous sequences')
+            logging.getLogger('workflow_logger').critical('Empty Dataset')
             quit()
 
-        return atom_coordinates_matrices, data
+        return atom_coordinates_matrices
 
 
 def predict_tertiary_structures(workflow_settings: ParameterSetter, data: pd.DataFrame):

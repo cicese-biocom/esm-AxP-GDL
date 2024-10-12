@@ -37,7 +37,7 @@ class GDLWorkflow(ABC):
         # Workflow execution
         data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
 
-        graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
+        graphs = construct_graphs(workflow_settings=workflow_settings, data=data)
 
         graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
 
