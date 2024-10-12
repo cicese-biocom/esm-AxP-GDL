@@ -10,7 +10,7 @@ def test(args):
         TestWorkflow().run_workflow(context=context, parameters=args)
 
     except Exception as e:
-        raise
+        raise e
 
 
 if __name__ == '__main__':
