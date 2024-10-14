@@ -131,7 +131,7 @@ the framework directory.
 
 ## **Install on computer clusters**
 The installation on computer clusters depends on the applications available to users through modular environment commands. 
-A installation example could be:
+An installation example could be:
 ```
 1. module load python/ondemand-jupyter-python3.8
 2. module load gcc/9.2.0
@@ -184,8 +184,9 @@ optional arguments:
                         Batch size
   --gdl_model_path GDL_MODEL_PATH
                         The path to save/load the models
-  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}
-                        ESM-2 model to be used
+  --esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48, 'reduced_esm2_t6', 'reduced_esm2_t12',
+                        'reduced_esm2_t30', 'reduced_esm2_t33', 'reduced_esm2_t36', 'combined_esm2'}
+                        ESM-2 representation to be used
   --edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS
                         Criteria (e.g., distance) to define a relationship
                         (graph edges) between amino acids. Only one ESM-2
@@ -302,10 +303,10 @@ docker-compose run --rm esm-axp-gdl-env sh inference.sh
 ### **Best models**
 Best models created. So far, the only models are to predict general-AMP.  
 
-| Name                                                                                                                      | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                        |
-|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [amp_esmt33_d10_hd128_(Model2).pt](https://drive.google.com/file/d/1mskGXsYz5yjNxQUoJwRWDHi_it1bORoG/view?usp=sharing)    | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9389 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t33_650M_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
-| [amp_esmt36_d10_hd128_(Model3).pt](https://drive.google.com/file/d/1pBkNn6-_6w5YO2TljMkOVo5xVivnAQAf/view?usp=sharing)    | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`.   |
+| Name                                                                                                                   | Dataset                                                          | Endpoint     | MCC    | Description                                                                                                                                                                                                                                                        |
+|------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|--------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [amp_esmt33_d10_hd128_(Model2).pt](https://drive.google.com/file/d/1mskGXsYz5yjNxQUoJwRWDHi_it1bORoG/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9389 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t33_650M_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
+| [amp_esmt36_d10_hd128_(Model3).pt](https://drive.google.com/file/d/1pBkNn6-_6w5YO2TljMkOVo5xVivnAQAf/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9505 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t36_3B_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 10 angstroms` to build the graph edges, and a `hidden layer size equal to 128`.   |
 | [amp_esmt30_d15_hd128_(Model5).pt](https://drive.google.com/file/d/1gvGDVTCQ0QmTP6rU9tSBC9rc1e4BV-M-/view?usp=sharing) | [AMPDiscover](https://pubs.acs.org/doi/10.1021/acs.jcim.1c00251) | general-AMPs | 0.9379 | This model was created using the AMPDiscover dataset as input data, the model `esm2_t30_150M_UR50D` to evolutionarily characterize the graph nodes, a `distance threshold equal to 15 angstroms` to build the graph edges, and a `hidden layer size equal to 128`. |
 
 NOTE:  The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.

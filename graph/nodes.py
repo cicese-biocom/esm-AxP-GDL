@@ -18,6 +18,7 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
     models = esm2_model_handler.get_models(workflow_settings.esm2_representation)
 
     node_features = []
+    edge_features = []
     if not models.empty:
         for model_info in models:
             model_name = model_info["model"]
@@ -26,27 +27,30 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
 
             embeddings, contact_maps = esm2_model_handler.get_representations(data, model_name)
 
+            # Apply feature reduction (optional)
             embeddings = _apply_feature_reduction(embeddings, reduced_features)
 
+            # Apply embeddings perturbation (optional)
             embeddings = _apply_random_embeddings(workflow_settings, embeddings, data)
 
-            if len(node_features) == 0:
-                node_features = np.array(embeddings, dtype=object).copy()
+            if not node_features:
+                # Initialize node and edge features with the first model's output
+                node_features = embeddings.copy()
+                edge_features = contact_maps.copy()
             else:
-                # when using more than one ESM-2 model:
+                # When using more than one ESM-2 model:
                 #   1) Concatenate the embedding vectors
-                #   2) Averaging the contact maps to get am average contact map
-                raise Exception("The use of more than one ESM-2 model is not supported yet!")
-
-    return node_features, contact_maps
+                node_features = _cat(node_features, embeddings)
+                #   2) Averaging the contact maps to get an average contact map
+                edge_features = _avg(edge_features, contact_maps)
+    return node_features, edge_features
 
 
 def _apply_feature_reduction(embeddings, reduced_features):
     if len(reduced_features) > 0:
-        for i, embedding in enumerate(embeddings):
-            embeddings[i] = embedding[:, reduced_features]
+        reduced_embeddings = [embedding[:, reduced_features] for embedding in embeddings]
 
-    return embeddings
+    return reduced_embeddings
 
 
 def _get_range_for_embeddings(data_tuples):
@@ -75,10 +79,17 @@ def _apply_random_embeddings(workflow_settings, embeddings, data):
 
 def _cat(*args):
     """
-    :param args: feature matrices
+    :param args: embeddings
     """
     res = args[0]
     for matrix in args[1:]:
         for i in range(len(matrix)):
             res[i] = np.hstack((res[i], matrix[i]))
     return res
+
+
+def _avg(*args):
+    """
+    :param args: contact maps
+    """
+    return np.mean(np.array(args, dtype=object), axis=0)

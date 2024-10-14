@@ -32,9 +32,13 @@ class ArgsParserHandler:
 
     def get_training_arguments(self) -> Dict:
         self._add_common_arguments()
+
+        # See 10.1002/pro.4928 for reduced and combined representations
         self.parser.add_argument('--esm2_representation', type=str, default='esm2_t33',
-                                 choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48'],
-                                 help='ESM-2 model to be used')
+                                 choices=['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36', 'esm2_t48',
+                                          'reduced_esm2_t6', 'reduced_esm2_t12', 'reduced_esm2_t30', 'reduced_esm2_t33',
+                                          'reduced_esm2_t36', 'combined_esm2'],
+                                 help='ESM-2 representation to be used')
 
         self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
                                  help="Criteria (e.g., distance) to define a relationship (graph edges) between amino "

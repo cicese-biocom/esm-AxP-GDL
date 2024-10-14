@@ -1,12 +1,14 @@
 from pydantic import BaseModel, Field, PositiveInt, PositiveFloat
-from typing import Optional, Set, List
+from typing import Optional, List
 from typing_extensions import Annotated, Literal
 
 
 class ModelParameters(BaseModel):
     esm2_representation: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
-                                                    'esm2_t48']],
-                                   Field(description='ESM-2 model to be used')] = 'esm2_t33'
+                                                    'esm2_t48', 'reduced_esm2_t6', 'reduced_esm2_t12',
+                                                    'reduced_esm2_t30', 'reduced_esm2_t33', 'reduced_esm2_t36',
+                                                    'combined_esm2']],
+                                   Field(description='ESM-2 representation to be used')] = None
 
     tertiary_structure_method: Annotated[Optional[Literal['esmfold']],
                                          Field(description='3D structure prediction method. None indicates to load '
@@ -35,21 +37,21 @@ class ModelParameters(BaseModel):
                                          ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
-                                         Field(description='Amino acid representations')] = 'CA'
+                                         Field(description='Amino acid representations')] = None
 
     hidden_layer_dimension: Annotated[Optional[PositiveInt],
-                                      Field(description='Hidden layer dimension')] = 128
+                                      Field(description='Hidden layer dimension')] = None
 
     add_self_loops: Annotated[Optional[bool],
                               Field(strict=True,
                                     description='True if specified, otherwise, False. True indicates to use auto loops '
-                                                'in attention layer')] = False
+                                                'in attention layer')] = None
 
     use_edge_attr: Annotated[Optional[bool], Field(strict=True,
                                                    description='True if specified, otherwise, False. True indicates to '
-                                                               'use edge attributes in graph learning.')] = False
+                                                               'use edge attributes in graph learning.')] = None
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = None
 
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method to validate the performance of the models')] = None
@@ -68,8 +70,10 @@ class TrainingOutputParameter(BaseModel):
     dataset_name: Annotated[Optional[str], Field(description='Name dataset')] = None
 
     esm2_representation: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
-                                                    'esm2_t48']],
-                                   Field(description='ESM-2 model to be used')] = 'esm2_t33'
+                                                    'esm2_t48', 'reduced_esm2_t6', 'reduced_esm2_t12',
+                                                    'reduced_esm2_t30', 'reduced_esm2_t33', 'reduced_esm2_t36',
+                                                    'combined_esm2']],
+                                   Field(description='ESM-2 representation to be used')] = None
 
     tertiary_structure_method: Annotated[Optional[Literal['esmfold']],
                                          Field(description='3D structure prediction method. None indicates to load '
@@ -98,37 +102,37 @@ class TrainingOutputParameter(BaseModel):
                                          ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
-                                         Field(description='Amino acid representations')] = 'CA'
+                                         Field(description='Amino acid representations')] = None
 
     number_of_heads: Annotated[Optional[PositiveInt],
-                               Field(description='Number of heads')] = 8
+                               Field(description='Number of heads')] = None
 
     hidden_layer_dimension: Annotated[Optional[PositiveInt],
-                                      Field(description='Hidden layer dimension')] = 128
+                                      Field(description='Hidden layer dimension')] = None
 
     add_self_loops: Annotated[Optional[bool],
                               Field(strict=True,
                                     description='True if specified, otherwise, False. True indicates to use auto loops '
-                                                'in attention layer')] = True
+                                                'in attention layer')] = None
 
     use_edge_attr: Annotated[Optional[bool], Field(strict=True,
                                                    description='True if specified, otherwise, False. True indicates to '
-                                                               'use edge attributes in graph learning.')] = True
+                                                               'use edge attributes in graph learning.')] = None
 
-    pooling_ratio: Annotated[Optional[PositiveInt], Field(description='Pooling ratio')] = 10
+    pooling_ratio: Annotated[Optional[PositiveInt], Field(description='Pooling ratio')] = None
 
-    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = 1e-4
+    learning_rate: Annotated[Optional[PositiveFloat], Field(description='Learning rate')] = None
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = None
 
-    batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = 512
+    batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = None
 
-    number_of_epochs: Annotated[Optional[PositiveInt], Field(description='Maximum number of epochs')] = 200
+    number_of_epochs: Annotated[Optional[PositiveInt], Field(description='Maximum number of epochs')] = None
 
     save_ckpt_per_epoch: Annotated[Optional[bool],
                                    Field(strict=True,
                                          description='True if specified, otherwise, False. '
-                                                     'True indicates to save the models per epoch.')] = True
+                                                     'True indicates to save the models per epoch.')] = None
 
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method to validate the performance of the models')] = None
@@ -143,15 +147,17 @@ class EvalOutputParameter(BaseModel):
 
     is_binary_class: Annotated[Optional[bool],
                                Field(strict=True,
-                                     description='Indicates whether the task is binary classification')] = True
+                                     description='Indicates whether the task is binary classification')] = None
 
     numbers_of_class: Annotated[Optional[PositiveInt], Field(description='Numbers of class')] = 2
 
     dataset_name: Annotated[Optional[str], Field(description='Name dataset')] = None
 
     esm2_representation: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
-                                                    'esm2_t48']],
-                                   Field(description='ESM-2 model to be used')] = 'esm2_t33'
+                                                    'esm2_t48', 'reduced_esm2_t6', 'reduced_esm2_t12',
+                                                    'reduced_esm2_t30', 'reduced_esm2_t33', 'reduced_esm2_t36',
+                                                    'combined_esm2']],
+                                   Field(description='ESM-2 representation to be used')] = None
 
     tertiary_structure_method: Annotated[Optional[Literal['esmfold']],
                                          Field(description='3D structure prediction method. None indicates to load '
@@ -180,18 +186,18 @@ class EvalOutputParameter(BaseModel):
                                          ge=0, le=1)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
-                                         Field(description='Amino acid representations')] = 'CA'
+                                         Field(description='Amino acid representations')] = None
 
     add_self_loops: Annotated[Optional[bool],
                               Field(strict=True,
                                     description='True if specified, otherwise, False. True indicates to use auto loops '
-                                                'in attention layer')] = True
+                                                'in attention layer')] = None
 
     use_edge_attr: Annotated[Optional[bool], Field(strict=True,
                                                    description='True if specified, otherwise, False. True indicates to '
-                                                               'use edge attributes in graph learning.')] = True
+                                                               'use edge attributes in graph learning.')] = None
 
-    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = 0.25
+    dropout_rate: Annotated[Optional[PositiveFloat], Field(default=0.25, description='Dropout rate')] = None
 
     validation_mode: Annotated[Optional[Literal['random_coordinates', 'random_embeddings']],
                                Field(description='Graph construction method to validate the performance of the models')] = None

@@ -28,8 +28,10 @@ class ParameterSetter(BaseModel):
     dataset_extension: Annotated[Optional[str], Field(description='Name extension')] = None
 
     esm2_representation: Annotated[Optional[Literal['esm2_t6', 'esm2_t12', 'esm2_t30', 'esm2_t33', 'esm2_t36',
-                                                    'esm2_t48']],
-                                   Field(description='ESM-2 model to be used')] = None
+                                                    'esm2_t48', 'reduced_esm2_t6', 'reduced_esm2_t12',
+                                                    'reduced_esm2_t30', 'reduced_esm2_t33', 'reduced_esm2_t36',
+                                                    'combined_esm2']],
+                                   Field(description='ESM-2 representation to be used')] = None
 
     tertiary_structure_method: Annotated[Optional[Literal['esmfold']],
                                          Field(description='3D structure prediction method. None indicates to load '
