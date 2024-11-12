@@ -88,6 +88,18 @@
           "modes": ["training", "test", "inference"]
         }
       ]
+    },
+    {
+      "key": "features_path",
+      "name": "Features",
+      "modes": ["training", "test", "inference"],
+      "files": [
+        {
+          "key": "features_file",
+          "name": "Physicochemical_and_Structural_Features.csv",
+          "modes": ["training", "test", "inference"]
+        }
+      ]
     }
   ]
 }
