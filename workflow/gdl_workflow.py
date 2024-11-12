@@ -1,23 +1,27 @@
 import logging
+import random
 from abc import ABC, abstractmethod
 from pathlib import Path
-from workflow.classification_metrics import ClassificationMetricsContext
-from workflow.data_loader import DataLoaderContext
-from workflow.dataset_validator import DatasetValidatorContext
-from workflow.parameters_setter import ParameterSetter
-from graph.construct_graphs import construct_graphs
-import pandas as pd
 from typing import List, Dict
-from sklearn.model_selection import train_test_split
-from models.GAT.GAT import GATModel
-import torch
-from torch_geometric.loader import DataLoader
-import torch.nn.functional as F
-from tensorboardX import SummaryWriter
-from tqdm import tqdm
 import numpy as np
-import random
+import pandas as pd
+import torch
+import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
+from tensorboardX import SummaryWriter
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+from torch_geometric.utils import to_networkx
+from tqdm import tqdm
+from workflow.ad_methods import getting_ad
+from workflow.features import compute_features, filter_features
+from graph.construct_graphs import construct_graphs
+from models.GAT.GAT import GATModel
 from utils import json_parser as json_parser
+from .classification_metrics import ClassificationMetricsContext
+from .data_loader import DataLoaderContext
+from .dataset_validator import DatasetValidatorContext
+from .parameters_setter import ParameterSetter
 from .application_context import ApplicationContext
 from .dto_workflow import ModelParameters, TrainingOutputParameter, EvalOutputParameter
 from .logging_handler import LoggingHandler
@@ -26,11 +30,11 @@ from .path_creator import PathCreatorContext
 
 class GDLWorkflow(ABC):
     def run_workflow(self, context: ApplicationContext, parameters: Dict) -> None:
-
         # Initialization of workflow parameters
         output_setting = self.create_path(path_creator_context=context.path_creator, parameters=parameters)
 
-        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'), log_output_path=output_setting['log_file'])
+        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
+                                         log_output_path=output_setting['log_file'])
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
@@ -39,11 +43,23 @@ class GDLWorkflow(ABC):
 
         graphs = construct_graphs(workflow_settings=workflow_settings, data=data)
 
+        graphs_nx = []
+        for graph in graphs:
+            graphs_nx.append(to_networkx(graph, to_undirected=True))
+
+        features = self.computing_features(
+            workflow_settings=workflow_settings,
+            sequences=data['sequence'],
+            graphs=graphs_nx)
+
         graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
 
         model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
 
-        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model, classification_metrics=context.classification_metrics, data=data)
+        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
+                     classification_metrics=context.classification_metrics, data=data)
+
+        self.getting_applicability_domain(workflow_settings, features)
 
         self.save_parameters(workflow_settings=workflow_settings)
 
@@ -61,16 +77,29 @@ class GDLWorkflow(ABC):
                                                     output_setting=workflow_settings.output_setting)
         return data
 
+    # computing physicochemical and structural features
+    def computing_features(self, workflow_settings: ParameterSetter,
+                           sequences: List[str], graphs: List[Data]) -> pd.DataFrame:
+        csv_path = workflow_settings.output_setting['features_file']
+        return compute_features(features_to_calculate=workflow_settings.feature_types_for_ad,
+                                csv_path=csv_path, sequences=sequences, graphs=graphs)
+
     def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         return graphs
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
-        logging.getLogger('workflow_logger').info(f"The parameter add_self_loops has been set to {workflow_settings.add_self_loops}")
+        logging.getLogger('workflow_logger').info(
+            f"The parameter add_self_loops has been set to {workflow_settings.add_self_loops}")
         return None
 
     @abstractmethod
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
+        pass
+
+    @abstractmethod
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
+                                     features: pd.DataFrame):
         pass
 
     def save_parameters(self, workflow_settings: ParameterSetter):
@@ -107,7 +136,8 @@ class TrainingWorkflow(GDLWorkflow):
             #       and the 'partition' column is added with the values 1 or 2 as appropriate
             if 'partition' not in data.columns:
                 # split training dataset: 80% train y 20% test, with seed and shuffle
-                train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2, shuffle=True, random_state=41)
+                train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2,
+                                                                    shuffle=True, random_state=41)
 
                 training = data.drop(val_indexes).assign(partition=lambda x: 1)
                 validation = data.drop(train_indexes).assign(partition=lambda x: 2)
@@ -158,7 +188,7 @@ class TrainingWorkflow(GDLWorkflow):
                          workflow_settings.add_self_loops).to(workflow_settings.device)
         return model
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         train_graphs, val_graphs = graphs
 
@@ -300,7 +330,8 @@ class TrainingWorkflow(GDLWorkflow):
             scheduler.step()
 
         csv_file = workflow_settings.output_setting['metrics_file']
-        columns = ['Epoch', 'Loss/Train', 'Loss/Val', 'MCC/Val', 'ACC/Val', 'AUC/Val', 'Recall_Pos/Val', 'Recall_Neg/Val']
+        columns = ['Epoch', 'Loss/Train', 'Loss/Val', 'MCC/Val', 'ACC/Val', 'AUC/Val', 'Recall_Pos/Val',
+                   'Recall_Neg/Val']
         metrics_df = pd.DataFrame(metrics_data, columns=columns)
         metrics_df.to_csv(csv_file, index=False)
 
@@ -323,10 +354,16 @@ class TrainingWorkflow(GDLWorkflow):
             Validation_MCC=f"{best_mcc:.4f}",
             Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
             Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else None,
-            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc and not np.isnan(recall_pos_of_the_best_mcc) else None,
-            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc and not np.isnan(recall_neg_of_the_best_mcc) else None
+            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc and not np.isnan(
+                recall_pos_of_the_best_mcc) else None,
+            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc and not np.isnan(
+                recall_neg_of_the_best_mcc) else None
         )
         bar.close()
+
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
+                                     features: pd.DataFrame):
+        pass
 
 
 class PredictionWorkflow(GDLWorkflow, ABC):
@@ -338,6 +375,43 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(workflow_settings.device)
         return model
+
+    def computing_features(self, workflow_settings: ParameterSetter,
+                           sequences: List[str],
+                           graphs: List[Data]) -> pd.DataFrame:
+        if workflow_settings.get_ad:
+            return super().computing_features(workflow_settings, sequences, graphs)
+
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
+                                     features: pd.DataFrame):
+        if workflow_settings.get_ad:
+            features_to_build_domain = pd.read_csv(workflow_settings.feature_file_for_ad)
+
+            instance_id = features.iloc[:, 0]
+            features_to_eval = features.iloc[:, 1:]
+
+            domain = pd.DataFrame()
+            with tqdm(range(len(workflow_settings.methods_for_ad)), total=len(workflow_settings.methods_for_ad),
+                      desc="Getting applicability domain", disable=False) as progress:
+                for method_for_ad in workflow_settings.methods_for_ad:
+                    features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
+                    method = getting_ad(method_for_ad['method_name'], features_selected)
+                    features_to_eval_selected = filter_features(features_to_eval, method_for_ad['features'])
+                    outlier, outlier_score = method.getting_ad(features_to_eval_selected)
+
+                    temp_domain = pd.DataFrame({
+                        f"{method_for_ad['column_name']}": ['out' if x == -1 else 'in' for x in outlier],
+                        f"{method_for_ad['column_name']}_score": outlier_score
+                    })
+
+                    domain = pd.concat([domain, temp_domain], axis=1)
+                    progress.update(1)
+            domain['sequence'] = instance_id
+
+            csv_path = workflow_settings.output_setting['prediction_file']
+            prediction = pd.read_csv(csv_path)
+            merged_df = pd.merge(prediction, domain, on='sequence', how='inner')
+            merged_df.to_csv(csv_path, index=False)
 
 
 class TestWorkflow(PredictionWorkflow):
@@ -353,7 +427,7 @@ class TestWorkflow(PredictionWorkflow):
         data = super().load_data(workflow_settings, data_loader, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
 
@@ -429,7 +503,7 @@ class TestWorkflow(PredictionWorkflow):
                 progress.set_description("Test result")
                 progress.set_postfix(
                     Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
-                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg)else None,
+                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg) else None,
                     Test_MCC=f"{mcc:.4f}",
                     Test_ACC=f"{acc:.4f}",
                     Test_AUC=f"{auc:.4f}" if auc else None
@@ -458,7 +532,7 @@ class InferenceWorkflow(PredictionWorkflow):
         merged_parameters = {**trained_model_parameters, **parameters}
         return ParameterSetter(mode='inference', output_setting=output_setting, **merged_parameters)
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
 
