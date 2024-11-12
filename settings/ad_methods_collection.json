@@ -1,0 +1,19 @@
+{
+  "ad_methods_collection": [
+    {
+      "method_name": "percentile_based",
+      "features": ["graph_centralities", "perplexity"],
+      "apply_per_feature": "True"
+    },
+    {
+      "method_name": "isolation_forest",
+      "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"],
+      "apply_per_feature": "False"
+    },
+    {
+      "method_name": "clustering_and_isolation_forest",
+      "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"],
+      "apply_per_feature": "False"
+    }
+  ]
+}
