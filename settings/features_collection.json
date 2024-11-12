@@ -1,0 +1,18 @@
+{
+  "features_collection": [
+    {
+      "feature_name": "graph_centralities",
+      "feature_id": "gc",
+      "type": "group"
+    },
+    {
+      "feature_name": "perplexity",
+      "type": "feature"
+    },
+    {
+      "feature_name": "amino_acid_descriptors",
+      "feature_id": "aad",
+      "type": "group"
+    }
+  ]
+}
