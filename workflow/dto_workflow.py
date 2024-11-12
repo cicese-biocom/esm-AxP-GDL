@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, PositiveInt, PositiveFloat
-from typing import Optional, List
+from typing import Optional, List, Dict
 from typing_extensions import Annotated, Literal
 
 
@@ -207,3 +207,15 @@ class EvalOutputParameter(BaseModel):
 
     seed: Annotated[Optional[PositiveInt],
                     Field(description='Percentage of rows to be scrambling')] = None
+
+    feature_types_for_ad: Annotated[
+        Optional[List[Dict]],
+        Field(
+            description='Feature groups used to build the applicability domain (AD) model. Accepts a list of feature names (literals) or a list of feature dictionaries with additional details.')
+    ] = None
+
+    methods_for_ad: Annotated[
+        Optional[List[Dict]],
+        Field(
+            description='Methods available for calculating the applicability domain (AD). Accepts a list of method names (literals) or a list of method dictionaries with additional details.')
+    ] = None
