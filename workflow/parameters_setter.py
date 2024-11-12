@@ -1,11 +1,12 @@
 import logging
 from pathlib import Path
 from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 from typing_extensions import Annotated, Literal, Type
 import torch
+from workflow.ad_methods_collection_loader import ADMethodCollectionLoader
+from workflow.features_collection_loader import FeaturesCollectionLoader
 from utils import file_system_handler as file_system_handler
-import re
 
 
 class ParameterSetter(BaseModel):
@@ -109,13 +110,38 @@ class ParameterSetter(BaseModel):
                                      Field(description='Percentage of rows to be randomly created', ge=0,
                                            le=100)] = None
 
+    feature_types_for_ad: Annotated[
+        Optional[Union[
+            List[Literal['graph_centralities', 'perplexity', 'amino_acid_descriptors']],
+            List[Dict]
+        ]],
+        Field(
+            description='Feature groups used to build the applicability domain (AD) model. Accepts a list of feature names (literals) or a list of feature dictionaries with additional details.')
+    ] = None
+
+    methods_for_ad: Annotated[
+        Optional[Union[
+            List[Literal['percentile_based', 'isolation_forest', 'clustering_and_isolation_forest']],
+            List[Dict]
+        ]],
+        Field(
+            description='Methods available for calculating the applicability domain (AD). Accepts a list of method names (literals) or a list of method dictionaries with additional details.')
+    ] = None
+
+    feature_file_for_ad: Annotated[
+        Optional[FilePath],
+        Field(description='Path to the file containing features for calculating the applicability domain (AD).')
+    ] = None
+
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
     seed: Annotated[Optional[PositiveInt],
                     Field(description='Percentage of rows to be scrambling')] = None
 
+    get_ad: Annotated[Optional[bool], Field(description='Get Applicability Domain')] = False
+
     @model_validator(mode='after')
-    def check_distance_function(self) -> 'ParameterSetter':
+    def validator(self) -> 'ParameterSetter':
         try:
             # device
             logging.getLogger('workflow_logger').info(f"Device: {self.device}")
@@ -187,9 +213,7 @@ class ParameterSetter(BaseModel):
 
             # use_edge_attr
             if self.use_edge_attr:
-                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(
-                        self.edge_construction_functions) \
-                        and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
+                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(self.edge_construction_functions) and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
                     self.use_edge_attr = False
                     logging.getLogger('workflow_logger').warning(
                         f"Edge construction methods {self.edge_construction_functions} "
@@ -202,6 +226,36 @@ class ParameterSetter(BaseModel):
             if not self.validation_mode:
                 self.randomness_percentage = None
 
+            # applicability domain
+            none_params = [
+                param for param in [
+                    'feature_types_for_ad',
+                    'methods_for_ad',
+                    'feature_file_for_ad'
+                ] if getattr(self, param) is None
+            ]
+
+            if len(none_params) == 0:
+                self.get_ad = True
+            elif len(none_params) == 3:
+                self.get_ad = False
+            else:
+                logging.getLogger('workflow_logger').critical(
+                    f"The following parameters must be specified: {', '.join(none_params)}"
+                )
+                quit()
+
+            features_collection = FeaturesCollectionLoader()
+            ad_methods_collection = ADMethodCollectionLoader()
+
+            if self.mode in 'training':
+                self.feature_types_for_ad = features_collection.get_all_features()
+            elif self.mode in ('test', 'inference') and self.get_ad:
+                self.feature_types_for_ad = features_collection.get_features_by_name(feature_names=self.feature_types_for_ad)
+                self.methods_for_ad = ad_methods_collection.get_methods_with_features(method_for_ad=self.methods_for_ad,
+                                                                                      features_for_ad=self.feature_types_for_ad)
+
+            # parameters that are only used in training mode
             if self.mode in ('test', 'inference'):
                 self.number_of_epochs = None
                 self.learning_rate = None
