@@ -2,8 +2,10 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict
 
+from utils import json_parser
 
-def set_of_edge_functions(value):
+
+def set_of_functions(value):
     functions = value.replace(" ", "").split(',')
     functions = set(functions)
     return functions
@@ -40,7 +42,7 @@ class ArgsParserHandler:
                                           'reduced_esm2_t36', 'combined_esm2'],
                                  help='ESM-2 representation to be used')
 
-        self.parser.add_argument('--edge_construction_functions', type=set_of_edge_functions, default=None,
+        self.parser.add_argument('--edge_construction_functions', type=set_of_functions, default=None,
                                  help="Criteria (e.g., distance) to define a relationship (graph edges) between amino "
                                       "acids. The options available are: 'distance_based_threshold', "
                                       "'sequence_based', 'esm2_contact_map'")
@@ -108,6 +110,17 @@ class ArgsParserHandler:
 
         self.parser.add_argument('--seed', type=int, default=None,
                                  help=' Seed to run the Test/Inference mode')
+
+        self.parser.add_argument('--feature_types_for_ad', type=set_of_functions, default=None,
+                                 help="Feature types to build applicability domain model. The options available are: "
+                                      "'graph_centralities', 'perplexity', 'amino_acid_descriptors'")
+
+        self.parser.add_argument('--methods_for_ad', type=set_of_functions, default=None,
+                                 help="Methods to build applicability domain model. The options available are: "
+                                      "'percentile_based', 'isolation_forest', 'clustering_and_isolation_forest'")
+
+        self.parser.add_argument('--feature_file_for_ad', type=Path, default=None,
+                                 help='Path of the CSV file of features to build the applicability domain.')
 
         args = self.parser.parse_args()
         return vars(args)
