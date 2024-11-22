@@ -20,7 +20,7 @@ def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
     """
 
     # nodes
-    nodes_features, esm2_contact_maps = nodes.esm2_derived_features(workflow_settings, data)
+    nodes_features, esm2_contact_maps, perplexities_1 = nodes.esm2_derived_features(workflow_settings, data)
 
     # edges
     # If you do not use the edge construction function esm2_contact_map
@@ -29,7 +29,13 @@ def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
     # If the ESM-2 model specified for constructing the graphs and for constructing the edges is different, the following is true
     elif workflow_settings.esm2_model_for_contact_map != workflow_settings.esm2_representation:
         model = esm2_model_handler.get_models(workflow_settings.esm2_model_for_contact_map)
-        _, contact_maps = esm2_model_handler.get_representations(data, model[0]['model'])
+        _, esm2_contact_maps, perplexities_2 = esm2_model_handler.get_representations(data, model[0]['model'])
+
+    perplexities_output = None
+    if workflow_settings.esm2_representation == 'esm2_t36':
+        perplexities_output = perplexities_1
+    elif workflow_settings.esm2_model_for_contact_map == 'esm2_t36':
+        perplexities_output = perplexities_2
 
     # If the ESM-2 model specified to build the graphs and to build the edges is the contact maps returned by the
     # function esm2_derived_features are used.
@@ -45,7 +51,7 @@ def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
                                           label=data.iloc[i]['activity'] if 'activity' in data.columns else None))
             progress.update(1)
 
-    return graphs
+    return graphs, perplexities_output
 
 
 def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps=1e-6):

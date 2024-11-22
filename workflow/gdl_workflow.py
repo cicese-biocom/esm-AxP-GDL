@@ -14,7 +14,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_networkx
 from tqdm import tqdm
 from workflow.ad_methods import getting_ad
-from workflow.features import compute_features, filter_features
+from workflow.features import filter_features, FeaturesContext
 from graph.construct_graphs import construct_graphs
 from models.GAT.GAT import GATModel
 from utils import json_parser as json_parser
@@ -41,16 +41,10 @@ class GDLWorkflow(ABC):
         # Workflow execution
         data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
 
-        graphs = construct_graphs(workflow_settings=workflow_settings, data=data)
+        graphs, perplexities = construct_graphs(workflow_settings, data)
 
-        graphs_nx = []
-        for graph in graphs:
-            graphs_nx.append(to_networkx(graph, to_undirected=True))
-
-        features = self.computing_features(
-            workflow_settings=workflow_settings,
-            sequences=data['sequence'],
-            graphs=graphs_nx)
+        features = self.computing_features(workflow_settings=workflow_settings, data=data, graphs=graphs,
+                                           perplexities=perplexities)
 
         graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
 
@@ -77,12 +71,21 @@ class GDLWorkflow(ABC):
                                                     output_setting=workflow_settings.output_setting)
         return data
 
-    # computing physicochemical and structural features
+    # computing features
     def computing_features(self, workflow_settings: ParameterSetter,
-                           sequences: List[str], graphs: List[Data]) -> pd.DataFrame:
+                           data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
         csv_path = workflow_settings.output_setting['features_file']
-        return compute_features(features_to_calculate=workflow_settings.feature_types_for_ad,
-                                csv_path=csv_path, sequences=sequences, graphs=graphs)
+        kwargs = {
+            'features_to_calculate': workflow_settings.feature_types_for_ad,
+            'data': data,
+            'graphs': graphs,
+            'perplexities': perplexities}
+
+        feature_context = FeaturesContext()
+        features = feature_context.compute_features(**kwargs)
+
+        features.to_csv(csv_path, index=False)
+        return features
 
     def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
         return graphs
@@ -377,10 +380,9 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         return model
 
     def computing_features(self, workflow_settings: ParameterSetter,
-                           sequences: List[str],
-                           graphs: List[Data]) -> pd.DataFrame:
+                           data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
         if workflow_settings.get_ad:
-            return super().computing_features(workflow_settings, sequences, graphs)
+            return super().computing_features(workflow_settings, data, graphs, perplexities)
 
     def getting_applicability_domain(self, workflow_settings: ParameterSetter,
                                      features: pd.DataFrame):

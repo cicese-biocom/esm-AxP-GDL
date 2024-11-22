@@ -25,7 +25,7 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
             reduced_features = model_info["reduced_features"]
             reduced_features = np.array([x - 1 for x in reduced_features])
 
-            embeddings, contact_maps = esm2_model_handler.get_representations(data, model_name)
+            embeddings, contact_maps, perplexities = esm2_model_handler.get_representations(data, model_name)
 
             # Apply feature reduction (optional)
             embeddings = _apply_feature_reduction(embeddings, reduced_features)
@@ -43,14 +43,15 @@ def esm2_derived_features(workflow_settings: ParameterSetter, data: pd.DataFrame
                 node_features = _cat(node_features, embeddings)
                 #   2) Averaging the contact maps to get an average contact map
                 edge_features = _avg(edge_features, contact_maps)
-    return node_features, edge_features
+    return node_features, edge_features, perplexities
 
 
 def _apply_feature_reduction(embeddings, reduced_features):
-    if len(reduced_features) > 0:
-        reduced_embeddings = [embedding[:, reduced_features] for embedding in embeddings]
 
-    return reduced_embeddings
+    if len(reduced_features) > 0:
+        embeddings = [embedding[:, reduced_features] for embedding in embeddings]
+
+    return embeddings
 
 
 def _get_range_for_embeddings(data_tuples):

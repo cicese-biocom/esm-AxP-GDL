@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from torcheval import metrics
 import pandas as pd
 import torch
 from torch import hub
@@ -38,11 +38,12 @@ def get_models(esm2_representation):
     return models
 
 
-def get_representations(data, model_name):
+def get_representations(data, model_name, show_pbar=False):
     """
     get_representations
     :param data:
     :param model_name: esm2 model name
+    :param pbar: esm2 model name
     :return:
         embeddings:
         contact_map:
@@ -65,27 +66,46 @@ def get_representations(data, model_name):
         repr_layers = model.num_layers
         embeddings = []
         contact_maps = []
+        perplexities = []
 
         with torch.no_grad():
             for batch_idx, (labels, strs, toks) in tqdm(enumerate(data_loader),
                                                         total=len(data_loader),
-                                                        desc=f"Generating embedding and contact maps using the ESM-2 {model_name} model "):
+                                                        desc=f"Running ESM-2 {model_name} model",
+                                                        disable=show_pbar):
                 if torch.cuda.is_available() and not no_gpu:
                     toks = toks.to(device="cuda", non_blocking=True)
 
                 result = model(toks, repr_layers=[repr_layers], return_contacts=True)
                 representation = result["representations"][repr_layers]
 
-                for i, label in enumerate(labels):
-                    layer_for_i = representation[i, 1:len(strs[i]) + 1]
+                # embedding
+                layer_for_i = representation[0, 1:len(strs[0]) + 1]
+                embedding = layer_for_i.cpu().numpy()
+                embeddings.append(embedding)
 
-                    embedding = layer_for_i.cpu().numpy()
-                    embeddings.append(embedding)
+                # contact map
+                contact_map = result["contacts"][0]
+                contact_map = contact_map.cpu().numpy()
+                contact_maps.append(contact_map)
 
-                    contact_map = result["contacts"][0]
-                    contact_map = contact_map.cpu().numpy()
-                    contact_maps.append(contact_map)
-        return embeddings, contact_maps
+                # perplexity
+                input = result["logits"][:, 1:-1, :]
+                target = toks[:, 1:-1]
+
+                device = "cuda:0" if torch.cuda.is_available() else "cpu"
+                perplexity_metric = metrics.Perplexity(device=device)
+                perplexity_metric.update(input, target)
+
+                perplexities.append(
+                    {
+                        'sequence': strs[0],
+                        'perplexity': perplexity_metric.compute().item()
+                    })
+
+                perplexity_metric.reset()
+
+        return embeddings, contact_maps, pd.DataFrame(perplexities)
 
     except Exception as e:
         print(f"Error in get_embeddings function: {e}")

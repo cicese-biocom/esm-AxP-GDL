@@ -96,7 +96,7 @@
       "files": [
         {
           "key": "features_file",
-          "name": "Physicochemical_and_Structural_Features.csv",
+          "name": "Features.csv",
           "modes": ["training", "test", "inference"]
         }
       ]
