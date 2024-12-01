@@ -20,8 +20,9 @@ class ADMethodCollectionLoader:
 
     def get_methods_with_features(self, method_for_ad: List[str], features_for_ad: List[Dict]) -> List[Dict]:
         result = []
+        unique_column_names = set()
         for method in self.methods_for_ad:
-            if method["method_name"] in method_for_ad:
+            if method["method_id"] in method_for_ad:
                 features_names_for_ad = {feature['feature_name'] for feature in features_for_ad}
                 intersected_features = features_names_for_ad.intersection(set(method["features"]))
 
@@ -39,11 +40,14 @@ class ADMethodCollectionLoader:
                 if method.get("apply_per_feature") == "True":
                     # cross join: method x features
                     for feature in intersected_feature_details:
-                        result.append({
-                            "method_name": method["method_name"],
-                            "features": [feature],
-                            "column_name": f'{method["method_name"]}_ad({feature["feature_name"]})'
-                        })
+                        column_name = f'{method["method_name"]}_ad({feature["feature_id"]})'
+                        if column_name not in unique_column_names:
+                            unique_column_names.add(column_name)
+                            result.append({
+                                "method_name": method["method_name"],
+                                "features": [feature],
+                                "column_name": column_name
+                            })
                 else:
                     # add the method with all filtered features
 
@@ -54,11 +58,16 @@ class ADMethodCollectionLoader:
                                 f"The method '{method['method_name']}' cannot be applied with only the "
                                 f"'{feature['feature_name']}' feature.")
 
-                    result.append({
-                        "method_name": method["method_name"],
-                        "features": intersected_feature_details,
-                        "column_name": f'{method["method_name"]}_ad'
-                    })
+                    features = '_'.join(feature["feature_id"] for feature in intersected_feature_details)
+                    column_name = f'{method["method_name"]}_ad({features})'
+
+                    if column_name not in unique_column_names:
+                        unique_column_names.add(column_name)
+                        result.append({
+                            "method_name": method["method_name"],
+                            "features": intersected_feature_details,
+                            "column_name": column_name
+                        })
 
         return result
 
