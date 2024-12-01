@@ -1,19 +1,28 @@
 {
   "ad_methods_collection": [
     {
+      "method_id": "percentile_based",
       "method_name": "percentile_based",
       "features": ["graph_centralities", "perplexity"],
       "apply_per_feature": "True"
     },
     {
+      "method_id": "isolation_forest_1",
       "method_name": "isolation_forest",
       "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"],
       "apply_per_feature": "False"
     },
     {
-      "method_name": "clustering_and_isolation_forest",
-      "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"],
+      "method_id": "isolation_forest_2",
+      "method_name": "isolation_forest",
+      "features": ["perplexity", "amino_acid_descriptors"],
       "apply_per_feature": "False"
+    },
+    {
+      "method_id": "isolation_forest_3",
+      "method_name": "isolation_forest",
+      "features": ["graph_centralities", "amino_acid_descriptors"],
+      "apply_per_feature": "True"
     }
   ]
 }
