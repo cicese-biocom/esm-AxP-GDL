@@ -32,6 +32,26 @@ class ArgsParserHandler:
         self.parser.add_argument('--gdl_model_path', type=Path, required=True,
                                  help=' The path to save/load the models')
 
+    def _add_eval_arguments(self) -> Dict:
+        self._add_common_arguments()
+
+        self.parser.add_argument('--output_path', type=Path, required=True,
+                                 help='The path where the output data will be saved.')
+
+        self.parser.add_argument('--seed', type=int, default=None,
+                                 help=' Seed to run the Test/Inference mode')
+
+        self.parser.add_argument('--feature_types_for_ad', type=set_of_functions, default=None,
+                                 help="Feature types to build applicability domain model. The options available are: "
+                                      "'graph_centralities', 'perplexity', 'amino_acid_descriptors'")
+
+        self.parser.add_argument('--methods_for_ad', type=set_of_functions, default=None,
+                                 help="Methods to build applicability domain model. The options available are: "
+                                      "'percentile_based', 'isolation_forest', 'clustering_and_isolation_forest'")
+
+        self.parser.add_argument('--feature_file_for_ad', type=Path, default=None,
+                                 help='Path of the CSV file of features to build the applicability domain.')
+
     def get_training_arguments(self) -> Dict:
         self._add_common_arguments()
 
@@ -103,24 +123,16 @@ class ArgsParserHandler:
         return vars(args)
 
     def get_eval_arguments(self) -> Dict:
-        self._add_common_arguments()
+        self._add_eval_arguments()
 
-        self.parser.add_argument('--output_path', type=Path, required=True,
-                                 help='The path where the output data will be saved.')   
+        args = self.parser.parse_args()
+        return vars(args)
 
-        self.parser.add_argument('--seed', type=int, default=None,
-                                 help=' Seed to run the Test/Inference mode')
+    def get_inference_arguments(self) -> Dict:
+        self._add_eval_arguments()
 
-        self.parser.add_argument('--feature_types_for_ad', type=set_of_functions, default=None,
-                                 help="Feature types to build applicability domain model. The options available are: "
-                                      "'graph_centralities', 'perplexity', 'amino_acid_descriptors'")
-
-        self.parser.add_argument('--methods_for_ad', type=set_of_functions, default=None,
-                                 help="Methods to build applicability domain model. The options available are: "
-                                      "'percentile_based', 'isolation_forest', 'clustering_and_isolation_forest'")
-
-        self.parser.add_argument('--feature_file_for_ad', type=Path, default=None,
-                                 help='Path of the CSV file of features to build the applicability domain.')
+        self.parser.add_argument('--dataset_batch_size', type=Path, default=20000,
+                                 help='Batch size for processing the dataset.')
 
         args = self.parser.parse_args()
         return vars(args)

@@ -15,7 +15,7 @@ def inference(args):
 
 if __name__ == '__main__':
     args_handler = ArgsParserHandler()
-    args = args_handler.get_eval_arguments()
+    args = args_handler.get_inference_arguments()
 
     start_time = time.time()
     inference(args)

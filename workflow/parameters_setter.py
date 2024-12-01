@@ -92,6 +92,8 @@ class ParameterSetter(BaseModel):
 
     batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = 512
 
+    dataset_batch_size: Annotated[Optional[PositiveInt], Field(description='Dataset batch size')] = 20000
+
     number_of_epochs: Annotated[Optional[PositiveInt], Field(description='Maximum number of epochs')] = 200
 
     gdl_model_path: Annotated[Path, Field(description='Path where trained models are saved, or from where a trained '
@@ -121,7 +123,7 @@ class ParameterSetter(BaseModel):
 
     methods_for_ad: Annotated[
         Optional[Union[
-            List[Literal['percentile_based', 'isolation_forest', 'clustering_and_isolation_forest']],
+            List[Literal['percentile_based', 'isolation_forest_1', 'isolation_forest_2', 'isolation_forest_3']],
             List[Dict]
         ]],
         Field(
@@ -260,6 +262,8 @@ class ParameterSetter(BaseModel):
                 self.number_of_epochs = None
                 self.learning_rate = None
                 self.pooling_ratio = None
+            if self.mode in ('test', 'training'):
+                self.dataset_batch_size = None
 
             return self
         except Exception as e:

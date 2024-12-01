@@ -11,15 +11,13 @@ from sklearn.model_selection import train_test_split
 from tensorboardX import SummaryWriter
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from torch_geometric.utils import to_networkx
 from tqdm import tqdm
-from workflow.ad_methods import getting_ad
+from workflow.ad_methods import build_model
 from workflow.features import filter_features, FeaturesContext
 from graph.construct_graphs import construct_graphs
 from models.GAT.GAT import GATModel
 from utils import json_parser as json_parser
 from .classification_metrics import ClassificationMetricsContext
-from .data_loader import DataLoaderContext
 from .dataset_validator import DatasetValidatorContext
 from .parameters_setter import ParameterSetter
 from .application_context import ApplicationContext
@@ -38,24 +36,35 @@ class GDLWorkflow(ABC):
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
+        ad_models = self.building_applicability_domain_model(workflow_settings)
+
         # Workflow execution
-        data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
+        data_loaded = context.data_loader.read_file(workflow_settings=workflow_settings)
 
-        graphs, perplexities = construct_graphs(workflow_settings, data)
+        for i, data_chunck in enumerate(data_loaded):
+            self.generate_filenames(workflow_settings=workflow_settings, substr=str(i + 1))
 
-        features = self.computing_features(workflow_settings=workflow_settings, data=data, graphs=graphs,
-                                           perplexities=perplexities)
+            data_chunck = self.validate_dataset(workflow_settings, data_chunck, context.dataset_validator)
 
-        graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
+            graphs, perplexities = construct_graphs(workflow_settings, data_chunck)
 
-        model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
+            features = self.computing_features(workflow_settings=workflow_settings, data=data_chunck, graphs=graphs,
+                                               perplexities=perplexities)
 
-        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
-                     classification_metrics=context.classification_metrics, data=data)
+            graphs = self.getting_graphs_by_partition(graphs=graphs, data=data_chunck)
 
-        self.getting_applicability_domain(workflow_settings, features)
+            model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
+
+            self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
+                         classification_metrics=context.classification_metrics, data=data_chunck)
+
+            self.getting_applicability_domain(workflow_settings, ad_models, features)
 
         self.save_parameters(workflow_settings=workflow_settings)
+
+    @abstractmethod
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
 
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['output_path'])
@@ -64,9 +73,8 @@ class GDLWorkflow(ABC):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         pass
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = data_loader.read_file(filepath=workflow_settings.dataset)
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = dataset_validator.processing_dataset(dataset=data,
                                                     output_setting=workflow_settings.output_setting)
         return data
@@ -101,8 +109,12 @@ class GDLWorkflow(ABC):
         pass
 
     @abstractmethod
-    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict],
                                      features: pd.DataFrame):
+        pass
+
+    @abstractmethod
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
         pass
 
     def save_parameters(self, workflow_settings: ParameterSetter):
@@ -119,10 +131,10 @@ class TrainingWorkflow(GDLWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         try:
-            data = super().load_data(workflow_settings, data_loader, dataset_validator)
+            data = super().validate_dataset(workflow_settings, data, dataset_validator)
 
             # keeping only the instances belonging to the training and validation sets
             data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
@@ -364,8 +376,14 @@ class TrainingWorkflow(GDLWorkflow):
         )
         bar.close()
 
-    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict],
                                      features: pd.DataFrame):
+        pass
+
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
+        pass
+
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
         pass
 
 
@@ -384,22 +402,41 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         if workflow_settings.get_ad:
             return super().computing_features(workflow_settings, data, graphs, perplexities)
 
-    def getting_applicability_domain(self, workflow_settings: ParameterSetter,
-                                     features: pd.DataFrame):
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
         if workflow_settings.get_ad:
             features_to_build_domain = pd.read_csv(workflow_settings.feature_file_for_ad)
 
+            ad_models = []
+            with tqdm(total=len(workflow_settings.methods_for_ad),
+                      desc="Building applicability domain models",
+                      disable=False) as progress:
+                for method_for_ad in workflow_settings.methods_for_ad:
+                    features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
+                    model_for_ad = build_model(method_for_ad['method_name'], features_selected)
+
+                    ad_models_dict = {
+                        'method': method_for_ad,
+                        'model': model_for_ad,
+                    }
+                    ad_models.append(ad_models_dict)
+
+                    progress.update()
+        return ad_models
+
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict], features: pd.DataFrame):
+        if workflow_settings.get_ad:
             instance_id = features.iloc[:, 0]
             features_to_eval = features.iloc[:, 1:]
 
             domain = pd.DataFrame()
-            with tqdm(range(len(workflow_settings.methods_for_ad)), total=len(workflow_settings.methods_for_ad),
+            with tqdm(total=len(ad_models),
                       desc="Getting applicability domain", disable=False) as progress:
-                for method_for_ad in workflow_settings.methods_for_ad:
-                    features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
-                    method = getting_ad(method_for_ad['method_name'], features_selected)
+                for ad_model in ad_models:
+                    method_for_ad = ad_model['method']
+                    model_for_ad = ad_model['model']
+
                     features_to_eval_selected = filter_features(features_to_eval, method_for_ad['features'])
-                    outlier, outlier_score = method.getting_ad(features_to_eval_selected)
+                    outlier, outlier_score = model_for_ad.eval_model(features_to_eval_selected)
 
                     temp_domain = pd.DataFrame({
                         f"{method_for_ad['column_name']}": ['out' if x == -1 else 'in' for x in outlier],
@@ -415,6 +452,9 @@ class PredictionWorkflow(GDLWorkflow, ABC):
             merged_df = pd.merge(prediction, domain, on='sequence', how='inner')
             merged_df.to_csv(csv_path, index=False)
 
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
+
 
 class TestWorkflow(PredictionWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
@@ -424,9 +464,9 @@ class TestWorkflow(PredictionWorkflow):
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
         return workflow_settings
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = super().load_data(workflow_settings, data_loader, dataset_validator)
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super().validate_dataset(workflow_settings, data, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
@@ -526,8 +566,18 @@ class TestWorkflow(PredictionWorkflow):
         df = pd.DataFrame(res_data, columns=column_order)
         df.to_csv(csv_file, index=False)
 
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
+
 
 class InferenceWorkflow(PredictionWorkflow):
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        path = Path(workflow_settings.output_setting['prediction_path'])
+        workflow_settings.output_setting['prediction_file'] = path.joinpath(f"Prediction-batch_{substr}.csv")
+
+        path = Path(workflow_settings.output_setting['features_path'])
+        workflow_settings.output_setting['features_file'] = path.joinpath(f"Features-batch_{substr}.csv")
+
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
