@@ -18,6 +18,7 @@ from graph.construct_graphs import construct_graphs
 from models.GAT.GAT import GATModel
 from utils import json_parser as json_parser
 from .classification_metrics import ClassificationMetricsContext
+from .data_partitioner import to_partition
 from .dataset_validator import DatasetValidatorContext
 from .parameters_setter import ParameterSetter
 from .application_context import ApplicationContext
@@ -51,7 +52,8 @@ class GDLWorkflow(ABC):
             features = self.computing_features(workflow_settings=workflow_settings, data=data_chunck, graphs=graphs,
                                                perplexities=perplexities)
 
-            graphs = self.getting_graphs_by_partition(graphs=graphs, data=data_chunck)
+            graphs = self.getting_graphs_by_partition(workflow_settings=workflow_settings, graphs=graphs,
+                                                      data=data_chunck, features=features)
 
             model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
 
@@ -95,7 +97,7 @@ class GDLWorkflow(ABC):
         features.to_csv(csv_path, index=False)
         return features
 
-    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
+    def getting_graphs_by_partition(self, workflow_settings: ParameterSetter, graphs: List, data: pd.DataFrame, features: pd.DataFrame) -> List:
         return graphs
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
@@ -133,46 +135,64 @@ class TrainingWorkflow(GDLWorkflow):
 
     def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
                          dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        try:
-            data = super().validate_dataset(workflow_settings, data, dataset_validator)
+        data = super().validate_dataset(workflow_settings, data, dataset_validator)
 
-            # keeping only the instances belonging to the training and validation sets
-            data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
-            if data.size == 0:
-                raise Exception("The input set does not contain training instances nor validation instances.")
+        # keeping only the instances belonging to the training and validation sets
+        data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
 
-            # there are no training or validation instances
-            # therefore, the 'partition' column is removed
-            if data.query('partition == 1').size == 0 or data.query('partition == 2').size == 0:
-                data.drop(['partition'], axis=1, inplace=True)
-
-            # the 'partition' column was removed above
-            # thus, the data are randomly split (80% training, 20%validation),
-            #       and the 'partition' column is added with the values 1 or 2 as appropriate
-            if 'partition' not in data.columns:
-                # split training dataset: 80% train y 20% test, with seed and shuffle
-                train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2,
-                                                                    shuffle=True, random_state=41)
-
-                training = data.drop(val_indexes).assign(partition=lambda x: 1)
-                validation = data.drop(train_indexes).assign(partition=lambda x: 2)
-
-                data = pd.concat([training, validation])
-
-                data.reset_index(drop=True)
-
-                csv_file = workflow_settings.output_setting['partitioned_data']
-                data.to_csv(csv_file, index=False)
-
-                logging.getLogger('workflow_logger'). \
-                    warning(f"Split training dataset: 80% train y 20% test, with seed and shuffle. See: {csv_file}")
-
-            return data
-        except Exception as e:
-            logging.getLogger('workflow_logger').exception(e)
+        if data.query('partition == 1').empty:
+            logging.getLogger('workflow_logger').critical(
+                "The dataset does not contain training set."
+            )
             quit()
 
-    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
+        if data.query('partition == 2').empty:
+            if workflow_settings.split_method and workflow_settings.split_training_fraction:
+                data.drop(['partition'], axis=1, inplace=True)
+            elif not workflow_settings.split_method:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset does not contain validation set; the parameter 'split_method' must be specified."
+                )
+                quit()
+            elif not workflow_settings.split_training_fraction:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset does not contain validation set; the parameter 'split_training_fraction' must be specified."
+                )
+                quit()
+        # if not (data.query('partition == 1').empty and data.query('partition == 2').empty)
+        elif workflow_settings.split_method or workflow_settings.split_training_fraction:
+            if workflow_settings.split_method:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset contains training and validation sets; the parameter split_method must not be specified."
+                )
+                quit()
+            elif workflow_settings.split_training_fraction:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset contains training and validation sets; the parameter split_training_fraction must not be specified."
+                )
+                quit()
+
+        return data
+
+    def getting_graphs_by_partition(self, workflow_settings: ParameterSetter, graphs: List, data: pd.DataFrame, features: pd.DataFrame) -> List:
+        if 'partition' not in data.columns:
+            # partitioning data in training and validation
+            data = to_partition(
+                method=workflow_settings.split_method,
+                data=data,
+                features=features,
+                split_training_fraction=workflow_settings.split_training_fraction
+            )
+
+            csv_path = workflow_settings.output_setting['partitioned_data']
+            data.to_csv(csv_path, index=False)
+
+            logging.getLogger('workflow_logger').warning(
+                f"Dataset split completed: {int(workflow_settings.split_training_fraction * 100)}% for training "
+                f"and {int((1 - workflow_settings.split_training_fraction) * 100)}% for validation. "
+                f"Shuffle applied. See CSV in: {csv_path}"
+            )
+
         partitions = data['partition']
         train_graphs = []
         val_graphs = []
@@ -464,7 +484,7 @@ class TestWorkflow(PredictionWorkflow):
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
         return workflow_settings
 
-    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame, features: pd.DataFrame,
                          dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = super().validate_dataset(workflow_settings, data, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)

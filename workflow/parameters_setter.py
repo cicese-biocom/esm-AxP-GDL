@@ -142,6 +142,11 @@ class ParameterSetter(BaseModel):
 
     get_ad: Annotated[Optional[bool], Field(description='Get Applicability Domain')] = False
 
+    split_method: Annotated[Optional[Literal['random', 'expectation_maximization']],
+                            Field(description='Method for data partition')] = None
+
+    split_training_fraction: Annotated[Optional[PositiveFloat], Field(default=0.80, description='Train size')] = 0.8
+
     @model_validator(mode='after')
     def validator(self) -> 'ParameterSetter':
         try:
@@ -236,6 +241,10 @@ class ParameterSetter(BaseModel):
                     'feature_file_for_ad'
                 ] if getattr(self, param) is None
             ]
+
+            # data partition
+            if not self.split_method:
+                self.split_training_fraction = None
 
             if len(none_params) == 0:
                 self.get_ad = True

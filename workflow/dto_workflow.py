@@ -140,6 +140,11 @@ class TrainingOutputParameter(BaseModel):
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created')] = None
 
+    split_method: Annotated[Optional[Literal['random', 'expectation_maximization']],
+                                         Field(description='Method for data partition')] = None
+
+    split_training_fraction: Annotated[Optional[PositiveFloat], Field(default=0.80, description='Train size')] = None
+
 
 class EvalOutputParameter(BaseModel):
     mode: Annotated[Optional[str], Field(description='Execution mode')] = None

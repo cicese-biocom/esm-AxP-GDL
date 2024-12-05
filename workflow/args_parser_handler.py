@@ -2,8 +2,6 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict
 
-from utils import json_parser
-
 
 def set_of_functions(value):
     functions = value.replace(" ", "").split(',')
@@ -118,6 +116,13 @@ class ArgsParserHandler:
 
         self.parser.add_argument('--randomness_percentage', type=float, default=None,
                                  help='Percentage of rows to be randomly generated. This parameter and the --validation_mode parameter are used together.')
+
+        self.parser.add_argument('--split_method', type=str, default=None,
+                                 choices=['random', 'expectation_maximization'],
+                                 help='Method to split an input dataset in training and validation sets. This parameter is used when an used-defined validation set is not given. To use this parameter, all no-test instances must be marked as training, i.e., value 1 in the input CSV file.')
+
+        self.parser.add_argument('--split_training_fraction', type=float, default=None,
+                                 help='If the --split_method is specified, this parameter represents the percentage of instances to be considered as training. The other ones will be allocated in the validation set. It takes a value between 0.6 and 1.0.')
 
         args = self.parser.parse_args()
         return vars(args)
