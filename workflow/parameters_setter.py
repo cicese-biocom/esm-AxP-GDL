@@ -92,7 +92,7 @@ class ParameterSetter(BaseModel):
 
     batch_size: Annotated[Optional[PositiveInt], Field(description='Batch size')] = 512
 
-    dataset_batch_size: Annotated[Optional[PositiveInt], Field(description='Dataset batch size')] = 20000
+    inference_batch_size: Annotated[Optional[PositiveInt], Field(description='Dataset batch size')] = 20000
 
     number_of_epochs: Annotated[Optional[PositiveInt], Field(description='Maximum number of epochs')] = 200
 
@@ -272,7 +272,7 @@ class ParameterSetter(BaseModel):
                 self.learning_rate = None
                 self.pooling_ratio = None
             if self.mode in ('test', 'training'):
-                self.dataset_batch_size = None
+                self.inference_batch_size = None
 
             return self
         except Exception as e:

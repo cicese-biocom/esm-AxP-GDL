@@ -18,7 +18,7 @@ class CSVLoader(DataLoader):
 class CSVByChunkLoader(DataLoader):
     def read_file(self, workflow_settings: ParameterSetter) -> pd.DataFrame:
         for data_chunk in pd.read_csv(workflow_settings.dataset,
-                                      chunksize=workflow_settings.dataset_batch_size):
+                                      chunksize=workflow_settings.inference_batch_size):
             yield data_chunk
 
 
