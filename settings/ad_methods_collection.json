@@ -1,28 +1,34 @@
 {
   "ad_methods_collection": [
     {
-      "method_id": "percentile_based",
+      "method_id": "percentile_based(gc)",
       "method_name": "percentile_based",
-      "features": ["graph_centralities", "perplexity"],
-      "apply_per_feature": "True"
+      "features": ["graph_centralities"]
     },
     {
-      "method_id": "isolation_forest_1",
-      "method_name": "isolation_forest",
-      "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"],
-      "apply_per_feature": "False"
+      "method_id": "percentile_based(perp)",
+      "method_name": "percentile_based",
+      "features": ["perplexity"]
     },
     {
-      "method_id": "isolation_forest_2",
+      "method_id": "IF(gc_perp_aad)",
       "method_name": "isolation_forest",
-      "features": ["perplexity", "amino_acid_descriptors"],
-      "apply_per_feature": "False"
+      "features": ["graph_centralities", "perplexity", "amino_acid_descriptors"]
     },
     {
-      "method_id": "isolation_forest_3",
+      "method_id": "IF(perp_aad)",
       "method_name": "isolation_forest",
-      "features": ["graph_centralities", "amino_acid_descriptors"],
-      "apply_per_feature": "True"
+      "features": ["perplexity", "amino_acid_descriptors"]
+    },
+    {
+      "method_id": "IF(gc)",
+      "method_name": "isolation_forest",
+      "features": ["graph_centralities"]
+    },
+    {
+      "method_id": "IF(aad)",
+      "method_name": "isolation_forest",
+      "features": ["amino_acid_descriptors"]
     }
   ]
 }
