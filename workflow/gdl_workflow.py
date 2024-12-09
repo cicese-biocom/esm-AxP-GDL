@@ -441,7 +441,7 @@ class PredictionWorkflow(GDLWorkflow, ABC):
                     ad_models.append(ad_models_dict)
 
                     progress.update()
-        return ad_models
+            return ad_models
 
     def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict], features: pd.DataFrame):
         if workflow_settings.get_ad:
@@ -459,8 +459,8 @@ class PredictionWorkflow(GDLWorkflow, ABC):
                     outlier, outlier_score = model_for_ad.eval_model(features_to_eval_selected)
 
                     temp_domain = pd.DataFrame({
-                        f"{method_for_ad['column_name']}": ['out' if x == -1 else 'in' for x in outlier],
-                        f"{method_for_ad['column_name']}_score": outlier_score
+                        f"{method_for_ad['method_id']}": ['out' if x == -1 else 'in' for x in outlier],
+                        f"{method_for_ad['method_id']}_score": outlier_score
                     })
 
                     domain = pd.concat([domain, temp_domain], axis=1)
@@ -484,7 +484,7 @@ class TestWorkflow(PredictionWorkflow):
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
         return workflow_settings
 
-    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame, features: pd.DataFrame,
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
                          dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = super().validate_dataset(workflow_settings, data, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)

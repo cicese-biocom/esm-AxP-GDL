@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator
-from typing import Optional, List, Dict, Union
+from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator, validator
+from typing import Optional, List, Dict, Union, Set
 from typing_extensions import Annotated, Literal, Type
 import torch
 from workflow.ad_methods_collection_loader import ADMethodCollectionLoader
@@ -114,16 +114,15 @@ class ParameterSetter(BaseModel):
 
     feature_types_for_ad: Annotated[
         Optional[Union[
-            List[Literal['graph_centralities', 'perplexity', 'amino_acid_descriptors']],
             List[Dict]
         ]],
         Field(
-            description='Feature groups used to build the applicability domain (AD) model. Accepts a list of feature names (literals) or a list of feature dictionaries with additional details.')
+            description='Feature groups used to build the applicability domain (AD) model.')
     ] = None
 
     methods_for_ad: Annotated[
         Optional[Union[
-            List[Literal['percentile_based', 'isolation_forest_1', 'isolation_forest_2', 'isolation_forest_3']],
+            Set[str],
             List[Dict]
         ]],
         Field(
@@ -234,21 +233,25 @@ class ParameterSetter(BaseModel):
                 self.randomness_percentage = None
 
             # applicability domain
+            features_collection = FeaturesCollectionLoader()
+            ad_methods_collection = ADMethodCollectionLoader()
+
             none_params = [
                 param for param in [
-                    'feature_types_for_ad',
                     'methods_for_ad',
                     'feature_file_for_ad'
                 ] if getattr(self, param) is None
             ]
 
-            # data partition
-            if not self.split_method:
-                self.split_training_fraction = None
-
             if len(none_params) == 0:
                 self.get_ad = True
-            elif len(none_params) == 3:
+
+                valid_methods = ad_methods_collection.get_method_names()
+                for method in self.methods_for_ad:
+                    if method not in valid_methods:
+                        raise ValueError(f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}")
+
+            elif len(none_params) == 2:
                 self.get_ad = False
             else:
                 logging.getLogger('workflow_logger').critical(
@@ -256,15 +259,12 @@ class ParameterSetter(BaseModel):
                 )
                 quit()
 
-            features_collection = FeaturesCollectionLoader()
-            ad_methods_collection = ADMethodCollectionLoader()
-
             if self.mode in 'training':
                 self.feature_types_for_ad = features_collection.get_all_features()
             elif self.mode in ('test', 'inference') and self.get_ad:
-                self.feature_types_for_ad = features_collection.get_features_by_name(feature_names=self.feature_types_for_ad)
-                self.methods_for_ad = ad_methods_collection.get_methods_with_features(method_for_ad=self.methods_for_ad,
-                                                                                      features_for_ad=self.feature_types_for_ad)
+                self.methods_for_ad, feature_types_for_ad = ad_methods_collection.get_methods_with_features(methods_for_ad=self.methods_for_ad,
+                                                                                                            features_for_ad=features_collection.get_all_features())
+                self.feature_types_for_ad = features_collection.get_features_by_name(feature_types_for_ad)
 
             # parameters that are only used in training mode
             if self.mode in ('test', 'inference'):
