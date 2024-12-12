@@ -101,8 +101,6 @@ class GDLWorkflow(ABC):
         return graphs
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
-        logging.getLogger('workflow_logger').info(
-            f"The parameter add_self_loops has been set to {workflow_settings.add_self_loops}")
         return None
 
     @abstractmethod
