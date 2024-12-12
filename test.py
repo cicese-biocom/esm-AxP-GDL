@@ -18,9 +18,8 @@ if __name__ == '__main__':
         start_time = time.time()
         test(args)
         final_time = time.time()
-        print(
-            f"Test execution time in: {str(final_time - start_time)} seconds"
-        )
+        logging.getLogger('workflow_logger').info(
+            f"Inference execution time in: {str(final_time - start_time)} seconds")
 
     except Exception as e:
         logging.getLogger('workflow_logger').critical(e)
