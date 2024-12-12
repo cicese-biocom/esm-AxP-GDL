@@ -83,7 +83,7 @@ class ArgsParserHandler:
         self.parser.add_argument('--probability_threshold', type=float, default=None,
                                  help='Probability threshold for constructing a graph based on ESM-2 contact maps')
 
-        self.parser.add_argument('--amino_acid_representation', type=str, default='CA',
+        self.parser.add_argument('--amino_acid_representation', type=str, default=None,
                                  choices=['CA'],
                                  help='Reference atom into an amino acid to define a relationship (e.g., distance) '
                                       'regarding another amino acid')
