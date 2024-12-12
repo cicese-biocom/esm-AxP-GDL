@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator, validator
+from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator
 from typing import Optional, List, Dict, Union, Set
 from typing_extensions import Annotated, Literal, Type
 import torch
@@ -144,7 +144,7 @@ class ParameterSetter(BaseModel):
     split_method: Annotated[Optional[Literal['random', 'expectation_maximization']],
                             Field(description='Method for data partition')] = None
 
-    split_training_fraction: Annotated[Optional[PositiveFloat], Field(default=0.80, description='Train size')] = 0.8
+    split_training_fraction: Annotated[Optional[PositiveFloat], Field(default=0.80, description='Train size', ge=0.6, le=1)] = None
 
     @model_validator(mode='after')
     def validator(self) -> 'ParameterSetter':
@@ -160,77 +160,124 @@ class ParameterSetter(BaseModel):
             self.dataset_name = self.dataset.name
             self.dataset_extension = file_system_handler.check_file_format(self.dataset)
 
-            # pdb_path
-            if self.pdb_path:
-                if 'distance_based_threshold' in self.edge_construction_functions \
-                        or 'sequence_based' in self.edge_construction_functions \
-                        and self.distance_function is not None:
+            #
+            if 'distance_based_threshold' in self.edge_construction_functions \
+                    or ('sequence_based' in self.edge_construction_functions and self.distance_function):
+                if not self.amino_acid_representation:
+                    self.amino_acid_representation = 'CA'
+
+                if self.pdb_path:
                     self.pdb_path = file_system_handler.check_file_exists(self.pdb_path)
                 else:
-                    self.pdb_path = None
-                    self.tertiary_structure_method = None
-                    logging.getLogger('workflow_logger').warning(
-                        f"The specified edge construction function does not require tertiary structures. "
-                        f"The parameters pdb_path and tertiary_structure_method were set to None.")
+                    raise ValueError(
+                        f"The parameter 'pdb_path is require."
+                    )
+            else:
+                if self.pdb_path:
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'pdb_path'."
+                    )
+                elif self.tertiary_structure_method:
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'tertiary_structure_method'."
+                    )
+                elif self.amino_acid_representation:
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'amino_acid_representation'."
+                    )
+                if self.validation_mode == 'random_coordinates':
+                    raise ValueError(
+                        f"The parameter 'validation_mode' cannot be 'random_coordinates'. "
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not use 3D coordinates."
+                    )
 
             # distance_function
             if self.distance_function is None:
                 if 'distance_based_threshold' in self.edge_construction_functions:
-                    raise ValueError('Parameter distance_function is required')
+                    raise ValueError(
+                        f"The parameter 'distance_function' is required."
+                    )
             else:
                 if not {'distance_based_threshold', 'sequence_based'}.intersection(self.edge_construction_functions):
-                    self.distance_function = None
-                    logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"do not require the parameter distance_function. It has been set to None")
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'distance_function'."
+                    )
 
             # distance_threshold
             if self.distance_threshold is None:
                 if 'distance_based_threshold' in self.edge_construction_functions:
-                    raise ValueError('Parameter distance_threshold is required')
+                    raise ValueError(
+                        "The parameter distance_threshold is required'."
+                    )
             else:
                 if not {'distance_based_threshold'}.intersection(self.edge_construction_functions):
-                    self.distance_threshold = None
-                    logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"do not require the parameter distance_threshold. It has been set to None")
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'distance_threshold'."
+                    )
 
             # esm2_model_for_contact_map
-            if self.esm2_model_for_contact_map is None:
+            if not self.esm2_model_for_contact_map:
                 if 'esm2_contact_map' in self.edge_construction_functions:
-                    raise ValueError('Parameter esm2_model_for_contact_map is required')
+                    raise ValueError(
+                        f"The parameter esm2_model_for_contact_map is required."
+                    )
             else:
                 if not {'esm2_contact_map'}.intersection(self.edge_construction_functions):
-                    self.esm2_model_for_contact_map = None
-                    logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"do not require the parameter esm2_model_for_contact_map. It has been set to None")
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'esm2_model_for_contact_map'."
+                    )
 
             # probability_threshold
-            if self.probability_threshold is None:
+            if not self.probability_threshold:
                 if 'esm2_contact_map' in self.edge_construction_functions:
-                    raise ValueError('Parameter probability_threshold is required')
+                    raise ValueError(
+                        f"The parameter 'probability_threshold' is required'."
+                    )
             else:
                 if not {'esm2_contact_map'}.intersection(self.edge_construction_functions):
-                    self.probability_threshold = None
-                    logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"do not require the parameter probability_threshold. It has been set to None")
+                    raise ValueError(
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not require the parameter 'probability_threshold'."
+                    )
 
             # use_edge_attr
             if self.use_edge_attr:
-                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(self.edge_construction_functions) and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
-                    self.use_edge_attr = False
-                    logging.getLogger('workflow_logger').warning(
-                        f"Edge construction methods {self.edge_construction_functions} "
-                        f"do not generate weight matrices. Parameter use_edge_attr has been set to False")
+                if not {'distance_based_threshold', 'esm2_contact_map'}.intersection(
+                        self.edge_construction_functions) and 'sequence_based' in self.edge_construction_functions and self.distance_function is None:
+                    raise ValueError(
+                        f"The parameter 'use_edge_attr' is not require. "
+                        f"The edge construction methods '{','.join(self.edge_construction_functions)}' "
+                        f"do not generate weight matrices."
+                    )
 
             # validation_mode
             if self.validation_mode and not self.randomness_percentage:
-                raise ValueError('Parameter randomness_percentage is required')
+                raise ValueError(
+                    f"The parameter 'randomness_percentage' is required."
+                )
 
-            if not self.validation_mode:
-                self.randomness_percentage = None
+            if not self.validation_mode and self.randomness_percentage:
+                raise ValueError(
+                    f"The parameter 'randomness_percentage' is not required."
+                )
+
+            # split dataset
+            if self.split_method and not self.split_training_fraction:
+                raise ValueError(
+                    f"The parameter 'split_training_fraction' is required."
+                )
+
+            if not self.split_method and self.split_training_fraction:
+                raise ValueError(
+                    f"The parameter 'split_training_fraction' is not required."
+                )
 
             # applicability domain
             features_collection = FeaturesCollectionLoader()
@@ -249,21 +296,23 @@ class ParameterSetter(BaseModel):
                 valid_methods = ad_methods_collection.get_method_names()
                 for method in self.methods_for_ad:
                     if method not in valid_methods:
-                        raise ValueError(f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}")
+                        raise ValueError(
+                            f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
+                        )
 
             elif len(none_params) == 2:
                 self.get_ad = False
             else:
-                logging.getLogger('workflow_logger').critical(
+                raise ValueError(
                     f"The following parameters must be specified: {', '.join(none_params)}"
                 )
-                quit()
 
             if self.mode in 'training':
                 self.feature_types_for_ad = features_collection.get_all_features()
             elif self.mode in ('test', 'inference') and self.get_ad:
-                self.methods_for_ad, feature_types_for_ad = ad_methods_collection.get_methods_with_features(methods_for_ad=self.methods_for_ad,
-                                                                                                            features_for_ad=features_collection.get_all_features())
+                self.methods_for_ad, feature_types_for_ad = ad_methods_collection.get_methods_with_features(
+                    methods_for_ad=self.methods_for_ad,
+                    features_for_ad=features_collection.get_all_features())
                 self.feature_types_for_ad = features_collection.get_features_by_name(feature_types_for_ad)
 
             # parameters that are only used in training mode
@@ -278,3 +327,4 @@ class ParameterSetter(BaseModel):
         except Exception as e:
             logging.getLogger('workflow_logger').critical(e)
             quit()
+
