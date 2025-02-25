@@ -64,7 +64,7 @@ class ParameterSetter(BaseModel):
     probability_threshold: Annotated[Optional[PositiveFloat],
                                      Field(
                                          description='Probability threshold for constructing a graph based on ESM-2 contact maps',
-                                         ge=0, le=1)] = None
+                                         ge=0.5, le=1.0)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
                                          Field(description='Amino acid representations')] = 'CA'
@@ -144,7 +144,7 @@ class ParameterSetter(BaseModel):
     split_method: Annotated[Optional[Literal['random', 'expectation_maximization']],
                             Field(description='Method for data partition')] = None
 
-    split_training_fraction: Annotated[Optional[PositiveFloat], Field(default=0.80, description='Train size', ge=0.6, le=1)] = None
+    split_training_fraction: Annotated[Optional[PositiveFloat], Field(description='Train size', ge=0.6, le=0.9)] = None
 
     @model_validator(mode='after')
     def validator(self) -> 'ParameterSetter':

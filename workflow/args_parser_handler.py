@@ -81,7 +81,8 @@ class ArgsParserHandler:
                                  help='ESM-2 model to be used to obtain ESM-2 contact map')
 
         self.parser.add_argument('--probability_threshold', type=float, default=None,
-                                 help='Probability threshold for constructing a graph based on ESM-2 contact maps')
+                                 help='Probability threshold for constructing a graph based on ESM-2 contact maps. '
+                                      'It takes a value between 0.5 and 1.0.')
 
         self.parser.add_argument('--amino_acid_representation', type=str, default=None,
                                  choices=['CA'],
@@ -124,7 +125,9 @@ class ArgsParserHandler:
                                  help='Method to split an input dataset in training and validation sets. This parameter is used when an used-defined validation set is not given. To use this parameter, all no-test instances must be marked as training, i.e., value 1 in the input CSV file.')
 
         self.parser.add_argument('--split_training_fraction', type=float, default=None,
-                                 help='If the --split_method is specified, this parameter represents the percentage of instances to be considered as training. The other ones will be allocated in the validation set. It takes a value between 0.6 and 1.0.')
+                                 help='If the --split_method is specified, this parameter represents the percentage of instances '
+                                      'to be considered as training. The other ones will be allocated in the validation set. '
+                                      'It takes a value between 0.6 and 0.9.')
 
         args = self.parser.parse_args()
         return vars(args)
