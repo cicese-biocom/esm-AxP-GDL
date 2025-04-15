@@ -83,8 +83,13 @@
       "modes": ["training", "test", "inference"],
       "files": [
         {
-          "key": "parameter_file",
-          "name": "Parameters.json",
+          "key": "workflow_input_args_file",
+          "name": "WorkflowInputArgs.json",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "workflow_execution_args_file",
+          "name": "WorkflowExecutionArgs.json",
           "modes": ["training", "test", "inference"]
         }
       ]

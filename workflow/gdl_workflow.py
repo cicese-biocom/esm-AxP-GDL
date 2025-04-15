@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from sklearn.model_selection import train_test_split
 from tensorboardX import SummaryWriter
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
@@ -37,6 +36,9 @@ class GDLWorkflow(ABC):
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
+        # Execution Workflow Args
+        self.save_parameters(workflow_settings=workflow_settings)
+
         ad_models = self.building_applicability_domain_model(workflow_settings)
 
         # Workflow execution
@@ -62,8 +64,6 @@ class GDLWorkflow(ABC):
 
             self.getting_applicability_domain(workflow_settings, ad_models, features)
 
-        self.save_parameters(workflow_settings=workflow_settings)
-
     @abstractmethod
     def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
         pass
@@ -71,9 +71,9 @@ class GDLWorkflow(ABC):
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['output_path'])
 
-    @abstractmethod
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
-        pass
+        input_workflow_args_file = output_setting['workflow_input_args_file']
+        json_parser.save_json(input_workflow_args_file, parameters)
 
     def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
                          dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
@@ -118,7 +118,7 @@ class GDLWorkflow(ABC):
         pass
 
     def save_parameters(self, workflow_settings: ParameterSetter):
-        json_file = workflow_settings.output_setting['parameter_file']
+        json_file = workflow_settings.output_setting['workflow_execution_args_file']
         parameters = EvalOutputParameter(**workflow_settings.model_dump())
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
@@ -129,6 +129,7 @@ class TrainingWorkflow(GDLWorkflow):
         return path_creator_context.create_path(parameters['gdl_model_path'])
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
 
     def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
@@ -204,7 +205,7 @@ class TrainingWorkflow(GDLWorkflow):
         return train_graphs, val_graphs
 
     def save_parameters(self, workflow_settings: ParameterSetter):
-        json_file = workflow_settings.output_setting['parameter_file']
+        json_file = workflow_settings.output_setting['workflow_execution_args_file']
         parameters = TrainingOutputParameter(**workflow_settings.model_dump())
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
@@ -476,10 +477,12 @@ class PredictionWorkflow(GDLWorkflow, ABC):
 
 class TestWorkflow(PredictionWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
+
         return workflow_settings
 
     def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
@@ -597,10 +600,13 @@ class InferenceWorkflow(PredictionWorkflow):
         workflow_settings.output_setting['features_file'] = path.joinpath(f"Features-batch_{substr}.csv")
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
-        return ParameterSetter(mode='inference', output_setting=output_setting, **merged_parameters)
+        workflow_settings = ParameterSetter(mode='inference', output_setting=output_setting, **merged_parameters)
+
+        return workflow_settings
 
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
