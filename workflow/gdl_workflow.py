@@ -685,7 +685,7 @@ def save_to_fasta(df: pd.DataFrame, fasta_file):
         sequence_id = row['id']
         sequence = row['sequence']
         activity = int(row['activity'])
-        record_id = f"{sequence_id}_{'Pos' if activity == 1 else 'Neg'}"
+        record_id = f"{sequence_id}_class_{activity}"
         record = SeqRecord(Seq(sequence), id=record_id, description="")
         fasta_records.append(record)
 
