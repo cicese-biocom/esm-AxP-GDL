@@ -176,7 +176,7 @@ class TrainingWorkflow(GDLWorkflow):
         if 'partition' not in data.columns:
             # partitioning data in training and validation
             data = to_partition(
-                method=workflow_settings.split_method,
+                split_method=workflow_settings.split_method,
                 data=data,
                 features=features,
                 split_training_fraction=workflow_settings.split_training_fraction
