@@ -76,7 +76,8 @@ class GDLWorkflow(ABC):
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
         input_workflow_args_file = output_setting['workflow_input_args_file']
-        json_parser.save_json(input_workflow_args_file, parameters)
+        filtered_parameters = {k: v for k, v in parameters.items() if v is not None}
+        json_parser.save_json(input_workflow_args_file, filtered_parameters)
 
     def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
                          dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
@@ -191,7 +192,7 @@ class TrainingWorkflow(GDLWorkflow):
             filtered_data = data[['id', 'sequence', 'activity', 'partition']]
             filtered_data.to_csv(csv_file, index=False)
             logging.getLogger('workflow_logger'). \
-                info(f" Partitioned dataset saved to CSV file. See: {csv_file}")
+                info(f"Partitioned dataset saved to CSV file. See: {csv_file}")
 
             # Save to fasta
             # training data
