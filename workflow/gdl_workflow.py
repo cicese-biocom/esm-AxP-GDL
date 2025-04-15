@@ -24,6 +24,9 @@ from .application_context import ApplicationContext
 from .dto_workflow import ModelParameters, TrainingOutputParameter, EvalOutputParameter
 from .logging_handler import LoggingHandler
 from .path_creator import PathCreatorContext
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
 
 
 class GDLWorkflow(ABC):
@@ -183,14 +186,27 @@ class TrainingWorkflow(GDLWorkflow):
                 split_training_fraction=workflow_settings.split_training_fraction
             )
 
-            csv_path = workflow_settings.output_setting['partitioned_data']
-            data.to_csv(csv_path, index=False)
+            # Save to csv
+            csv_file = workflow_settings.output_setting['data_csv']
+            filtered_data = data[['id', 'sequence', 'activity', 'partition']]
+            filtered_data.to_csv(csv_file, index=False)
+            logging.getLogger('workflow_logger'). \
+                info(f" Partitioned dataset saved to CSV file. See: {csv_file}")
 
-            logging.getLogger('workflow_logger').warning(
-                f"Dataset split completed: {int(workflow_settings.split_training_fraction * 100)}% for training "
-                f"and {int((1 - workflow_settings.split_training_fraction) * 100)}% for validation. "
-                f"Shuffle applied. See CSV in: {csv_path}"
-            )
+            # Save to fasta
+            # training data
+            train_data = filtered_data[filtered_data['partition'] == 1]
+            fasta_file = workflow_settings.output_setting['training_data_fasta']
+            save_to_fasta(train_data, fasta_file)
+            logging.getLogger('workflow_logger'). \
+                info(f"Training sequences saved to FASTA file. See: {fasta_file}")
+
+            # validation data
+            val_data = filtered_data[filtered_data['partition'] == 2]
+            fasta_file = workflow_settings.output_setting['validation_data_fasta']
+            save_to_fasta(val_data, fasta_file)
+            logging.getLogger('workflow_logger'). \
+                info(f"Validation sequences saved to FASTA file. See: {fasta_file}")
 
         partitions = data['partition']
         train_graphs = []
@@ -661,3 +677,17 @@ class InferenceWorkflow(PredictionWorkflow):
         csv_file = workflow_settings.output_setting['prediction_file']
         df = pd.DataFrame(res_data, columns=column_order)
         df.to_csv(csv_file, index=False)
+
+
+def save_to_fasta(df: pd.DataFrame, fasta_file):
+    fasta_records = []
+    for i, row in df.iterrows():
+        sequence_id = row['id']
+        sequence = row['sequence']
+        activity = int(row['activity'])
+        record_id = f"{sequence_id}_{'Pos' if activity == 1 else 'Neg'}"
+        record = SeqRecord(Seq(sequence), id=record_id, description="")
+        fasta_records.append(record)
+
+    with open(fasta_file, 'w') as output_handle:
+        SeqIO.write(fasta_records, output_handle, 'fasta')

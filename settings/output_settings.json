@@ -41,11 +41,6 @@
           "modes": ["training", "test", "inference"]
         },
         {
-          "key": "partitioned_data",
-          "name": "partitioned_data.csv",
-          "modes": ["training"]
-        },
-        {
           "key": "sequences_with_non_natural_amino_acids_file",
           "name": "Sequences_with_non_natural_amino_acids.csv",
           "modes": ["training", "test", "inference"]
@@ -103,6 +98,28 @@
           "key": "features_file",
           "name": "Features.csv",
           "modes": ["training", "test", "inference"]
+        }
+      ]
+    },
+    {
+      "key": "partitioned_data_path",
+      "name": "Partitioned_Data",
+      "modes": ["training"],
+      "files": [
+        {
+          "key": "data_csv",
+          "name": "data.csv",
+          "modes": ["training"]
+        },
+        {
+          "key": "training_data_fasta",
+          "name": "data-training.fasta",
+          "modes": ["training"]
+        },
+        {
+          "key": "validation_data_fasta",
+          "name": "data-validation.fasta",
+          "modes": ["training"]
         }
       ]
     }
