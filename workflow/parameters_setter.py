@@ -40,7 +40,7 @@ class ParameterSetter(BaseModel):
                                                            'sequences in input CSV file are predicted using the '
                                                            'specified method')] = None
 
-    pdb_path: Annotated[Optional[DirectoryPath],
+    pdb_path: Annotated[Optional[Path],
                         Field(description='Path where tertiary structures are saved in or loaded from PDB files',
                               exclude=True)] = None
 
@@ -159,6 +159,11 @@ class ParameterSetter(BaseModel):
             self.dataset = file_system_handler.check_file_exists(self.dataset)
             self.dataset_name = self.dataset.name
             self.dataset_extension = file_system_handler.check_file_format(self.dataset)
+
+            # pdb path
+            if self.tertiary_structure_method:
+                self.pdb_path = self.pdb_path.resolve()
+                self.pdb_path.mkdir(parents=True, exist_ok=True)
 
             #
             if 'distance_based_threshold' in self.edge_construction_functions \

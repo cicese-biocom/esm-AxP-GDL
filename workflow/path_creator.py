@@ -23,7 +23,8 @@ class TrainingModePathCreator(PathCreator):
 
 class TestModePathCreator(PathCreator):
     def create_path(self, base_path: Path) -> Dict:
-        base_path = file_system_handler.check_directory_exists(base_path)
+        # base_path = file_system_handler.check_directory_exists(base_path)
+        base_path.mkdir(parents=True, exist_ok=True)
         current_time = datetime.now().replace(microsecond=0).isoformat().replace(':', '.')
         new_dir = base_path.joinpath(f"{current_time}-Prediction")
         new_dir.mkdir(parents=True)
@@ -32,7 +33,8 @@ class TestModePathCreator(PathCreator):
 
 class InferenceModePathCreator(PathCreator):
     def create_path(self, base_path: Path) -> Dict:
-        base_path = file_system_handler.check_directory_exists(base_path)
+        # base_path = file_system_handler.check_directory_exists(base_path)
+        base_path.mkdir(parents=True, exist_ok=True)
         current_time = datetime.now().replace(microsecond=0).isoformat().replace(':', '.')
         new_dir = base_path.joinpath(f"{current_time}-Inference")
         new_dir.mkdir(parents=True)
