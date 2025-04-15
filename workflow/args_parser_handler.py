@@ -141,7 +141,7 @@ class ArgsParserHandler:
     def get_inference_arguments(self) -> Dict:
         self._add_eval_arguments()
 
-        self.parser.add_argument('--inference_batch_size', type=Path, default=20000,
+        self.parser.add_argument('--inference_batch_size', type=int, default=20000,
                                  help='As the inference data are unlimited, this parameters contains the number of instances to be processed in a specific chunk (batch) at a time.')
 
         args = self.parser.parse_args()
