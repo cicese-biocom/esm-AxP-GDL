@@ -17,7 +17,7 @@ class RandomPartitioner(DataPartitioner):
         data = kwargs.get('data')
         train_indexes, val_indexes, _, _ = train_test_split(data.index,
                                                             data['activity'],
-                                                            split_training_fraction=kwargs.get('split_training_fraction'),
+                                                            train_size=kwargs.get('split_training_fraction'),
                                                             shuffle=True)
 
         training = data.drop(val_indexes).assign(partition=lambda x: 1)
