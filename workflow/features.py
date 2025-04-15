@@ -172,7 +172,7 @@ class PerplexityDecorator(FeatureDecorator):
         features_input = self.feature_component.compute_features(pbar)
 
         perplexities = self.perplexities
-        if not perplexities:
+        if perplexities.empty:
             model = esm2_model_handler.get_models('esm2_t36')
             _, _, perplexities = esm2_model_handler.get_representations(self.data, model[0]['model'], show_pbar=True)
 

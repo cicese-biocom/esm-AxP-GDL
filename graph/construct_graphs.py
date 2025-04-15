@@ -31,7 +31,7 @@ def construct_graphs(workflow_settings: ParameterSetter, data: pd.DataFrame):
         model = esm2_model_handler.get_models(workflow_settings.esm2_model_for_contact_map)
         _, esm2_contact_maps, perplexities_2 = esm2_model_handler.get_representations(data, model[0]['model'])
 
-    perplexities_output = None
+    perplexities_output = pd.DataFrame()
     if workflow_settings.esm2_representation == 'esm2_t36':
         perplexities_output = perplexities_1
     elif workflow_settings.esm2_model_for_contact_map == 'esm2_t36':
