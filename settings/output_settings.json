@@ -113,12 +113,12 @@
         },
         {
           "key": "training_data_fasta",
-          "name": "data-training.fasta",
+          "name": "data_training.fasta",
           "modes": ["training"]
         },
         {
           "key": "validation_data_fasta",
-          "name": "data-validation.fasta",
+          "name": "data_validation.fasta",
           "modes": ["training"]
         }
       ]
