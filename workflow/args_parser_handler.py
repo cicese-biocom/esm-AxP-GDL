@@ -1,6 +1,9 @@
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict
+
+from utils.json_parser import load_json
 from workflow.ad_methods_collection_loader import ADMethodCollectionLoader
 
 
@@ -18,6 +21,7 @@ def methods_for_ad():
 class ArgsParserHandler:
     def __init__(self):
         self.parser = ArgumentParser()
+        check_json_params_arg()
 
     def _add_common_arguments(self):
         self.parser.add_argument('--dataset', type=Path, required=True, help='Path to the input dataset in CSV format')
@@ -146,3 +150,30 @@ class ArgsParserHandler:
 
         args = self.parser.parse_args()
         return vars(args)
+
+
+def check_json_params_arg():
+    user_args = sys.argv[1:]
+
+    if '--json_params' in user_args:
+        if len(user_args) > 2:
+            raise ValueError("--json_params cannot be used together with any other parameters. "
+                             "Please either provide this path or specify parameters individually, not both.")
+
+        json_file_path = Path(user_args[1]).resolve()
+        json_args = load_json(json_file_path)
+
+        argv = []
+        for key, value in json_args.items():
+            if isinstance(value, bool):
+                if value:
+                    argv.append(f"--{key}")
+            elif isinstance(value, list):
+                if value:  # evitar listas vacías
+                    comma_separated = ",".join(map(str, value))
+                    argv.extend([f"--{key}", comma_separated])
+            elif value is not None:
+                argv.extend([f"--{key}", str(value)])
+
+        sys.argv = [sys.argv[0]] + argv
+
