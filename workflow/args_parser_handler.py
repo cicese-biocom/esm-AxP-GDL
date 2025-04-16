@@ -155,9 +155,9 @@ class ArgsParserHandler:
 def check_json_params_arg():
     user_args = sys.argv[1:]
 
-    if '--json_params' in user_args:
+    if '--command_line_params' in user_args:
         if len(user_args) > 2:
-            raise ValueError("--json_params cannot be used together with any other parameters. "
+            raise ValueError("--command_line_params cannot be used together with any other parameters. "
                              "Please either provide this path or specify parameters individually, not both.")
 
         json_file_path = Path(user_args[1]).resolve()
