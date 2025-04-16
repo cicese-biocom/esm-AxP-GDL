@@ -79,12 +79,12 @@
       "files": [
         {
           "key": "workflow_input_args_file",
-          "name": "WorkflowInputArgs.json",
+          "name": "command_line_params.json",
           "modes": ["training", "test", "inference"]
         },
         {
           "key": "workflow_execution_args_file",
-          "name": "WorkflowExecutionArgs.json",
+          "name": "all_params.json",
           "modes": ["training", "test", "inference"]
         }
       ]
