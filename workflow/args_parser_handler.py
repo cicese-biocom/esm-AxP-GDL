@@ -47,7 +47,7 @@ class ArgsParserHandler:
                                  help='The path where the output data will be saved.')
 
         self.parser.add_argument('--seed', type=int, default=None,
-                                 help=' Seed to run the Test/Inference mode')
+                                 help='Seed to run the Test/Inference mode')
 
         self.parser.add_argument('--methods_for_ad', type=set_of_functions, default=None,
                                  help=f"Methods to build applicability domain model. The options available are: "
@@ -169,7 +169,7 @@ def check_json_params_arg():
                 if value:
                     argv.append(f"--{key}")
             elif isinstance(value, list):
-                if value:  # evitar listas vacías
+                if value:
                     comma_separated = ",".join(map(str, value))
                     argv.extend([f"--{key}", comma_separated])
             elif value is not None:
