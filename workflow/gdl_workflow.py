@@ -1,5 +1,4 @@
 import logging
-import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict
@@ -511,17 +510,6 @@ class TestWorkflow(PredictionWorkflow):
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
 
-        seed = workflow_settings.seed
-        if seed is not None:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            torch.use_deterministic_algorithms(True)
-
         y_true = []
         y_pred = []
         y_score = []
@@ -628,17 +616,6 @@ class InferenceWorkflow(PredictionWorkflow):
     def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
-
-        seed = workflow_settings.seed
-        if seed is not None:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            torch.use_deterministic_algorithms(True)
 
         y_pred = []
         y_score = []

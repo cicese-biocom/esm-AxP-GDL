@@ -1,6 +1,9 @@
 import logging
+import os
 from pathlib import Path
-from pydantic import BaseModel, FilePath, DirectoryPath, Field, PositiveFloat, PositiveInt, model_validator
+import random
+import numpy as np
+from pydantic import BaseModel, FilePath, Field, PositiveFloat, PositiveInt, model_validator
 from typing import Optional, List, Dict, Union, Set
 from typing_extensions import Annotated, Literal, Type
 import torch
@@ -136,8 +139,10 @@ class ParameterSetter(BaseModel):
 
     output_setting: Annotated[Optional[Dict], Field(description='Output settings', exclude=True)] = None
 
-    seed: Annotated[Optional[PositiveInt],
-                    Field(description='Percentage of rows to be scrambling')] = None
+    from pydantic import conint
+
+    seed: Annotated[Optional[conint(ge=0)],
+                    Field(description='Seed to run the Test/Inference mode')] = None
 
     get_ad: Annotated[Optional[bool], Field(description='Get Applicability Domain')] = False
 
@@ -151,6 +156,25 @@ class ParameterSetter(BaseModel):
         try:
             # device
             logging.getLogger('workflow_logger').info(f"Device: {self.device}")
+
+            # seed
+            if self.seed is not None:
+                os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+                torch.manual_seed(self.seed)
+                random.seed(self.seed)
+                np.random.seed(self.seed)
+                torch.cuda.manual_seed(self.seed)
+                torch.cuda.manual_seed_all(self.seed)
+                torch.backends.cudnn.deterministic = True
+                torch.backends.cudnn.benchmark = False
+
+                # The option warn_only=True is used in the call to torch.use_deterministic_algorithms(True, warn_only=True)
+                # to ensure that PyTorch attempts to apply deterministic algorithms whenever possible, but without
+                # interrupting execution if an operation does not have a deterministic implementation. This setting is
+                # especially useful in the current context, as some functions like scatter_add_cuda_kernel (used internally
+                # by PyTorch Geometric) do not have deterministic versions available.
+                torch.use_deterministic_algorithms(True, warn_only=True)
 
             self.gdl_model_path = self.gdl_model_path.resolve()
             self.checkpoint = str(self.gdl_model_path.name)
