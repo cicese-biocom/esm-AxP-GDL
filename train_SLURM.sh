@@ -12,6 +12,7 @@
 module purge
 module load python/ondemand-jupyter-python3.8
 module load cuda/11.3.0
+module load java/1.8.0_181-oracle
 
 source activate esm-axp-gdl-env
 
