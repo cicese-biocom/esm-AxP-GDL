@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, PositiveInt, PositiveFloat
+from pydantic import BaseModel, Field, PositiveInt, PositiveFloat, conint
 from typing import Optional, List, Dict
 from typing_extensions import Annotated, Literal
 
@@ -210,8 +210,8 @@ class EvalOutputParameter(BaseModel):
     randomness_percentage: Annotated[Optional[PositiveInt],
                                      Field(description='Percentage of rows to be randomly created')] = None
 
-    seed: Annotated[Optional[PositiveInt],
-                    Field(description='Percentage of rows to be scrambling')] = None
+    seed: Annotated[Optional[conint(ge=0)],
+                    Field(description='Seed to run the Test/Inference mode')] = None
 
     feature_types_for_ad: Annotated[
         Optional[List[Dict]],
