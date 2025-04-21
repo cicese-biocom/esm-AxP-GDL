@@ -2,7 +2,7 @@ import argparse
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from utils.json_parser import load_json
 from workflow.ad_methods_collection_loader import ADMethodCollectionLoader
@@ -22,7 +22,6 @@ def methods_for_ad():
 class ArgsParserHandler:
     def __init__(self):
         self._parser = ArgumentParser()
-        self.check_json_params_arg()
 
     def _relax_required_args(self):
         required_args = []
@@ -33,6 +32,15 @@ class ArgsParserHandler:
                 action.required = False
 
         return required_args
+
+    def _parse_args(self):
+        required_args = self._relax_required_args()
+
+        args = vars(self._parser.parse_args())
+        args = self.check_json_params_arg(args)
+
+        self.check_required_args(args, required_args)
+        return args
 
     def _add_common_arguments(self):
         self._parser.add_argument('--dataset', type=Path, required=True, help='Path to the input dataset in CSV format')
@@ -150,16 +158,11 @@ class ArgsParserHandler:
                                        'to be considered as training. The other ones will be allocated in the validation set. '
                                        'It takes a value between 0.6 and 0.9.')
 
-        required_args = self._relax_required_args()
-        args = self._parser.parse_args()
-        self.check_required_args(required_args)
-        return vars(args)
+        return self._parse_args()
 
     def get_eval_arguments(self) -> Dict:
         self._add_eval_arguments()
-
-        args = self._parser.parse_args()
-        return vars(args)
+        return self._parse_args()
 
     def get_inference_arguments(self) -> Dict:
         self._add_eval_arguments()
@@ -168,45 +171,52 @@ class ArgsParserHandler:
                                   help='As the inference data are unlimited, this parameters contains the number of '
                                        'instances to be processed in a specific chunk (batch) at a time.')
 
-        args = self._parser.parse_args()
-        return vars(args)
+        return self._parse_args()
 
-    def check_required_args(self, keys_args):
-        user_args = sys.argv[1:]
+    def check_required_args(self, args: Dict, keys_to_check: List):
+        none_keys = [key for key in keys_to_check if args.get(key) is None]
 
-        required_args = []
-        for key in keys_args:
-            if f"--{key}" not in user_args:
-                required_args.append(f"--{key}")
-
-        if required_args:
-            msg = 'missing required arguments: ' + ' '.join(required_args)
+        if none_keys:
+            msg = 'missing required arguments: ' + ' '.join(f'--{key}' for key in none_keys)
             self._parser.error(msg)
 
-    def check_json_params_arg(self):
-        user_args = sys.argv[1:]
-
-        if '--command_line_params' in user_args:
+    def check_json_params_arg(self, args):
+        command_line_params = args.get("command_line_params")
+        if command_line_params:
             try:
-                index = user_args.index('--command_line_params')
-                json_file_path = Path(user_args[index + 1]).resolve()
+                json_file_path = Path(command_line_params).resolve()
                 json_args = load_json(json_file_path)
 
-                argv = []
+                argv = {}
                 for key, value in json_args.items():
-                    if f"--{key}" not in user_args:
-                        if isinstance(value, bool):
+                    if args[key] is None:   # the value of the json is used
+                        if isinstance(value, list):
                             if value:
-                                argv.append(f"--{key}")
-                        elif isinstance(value, list):
-                            if value:
-                                comma_separated = ",".join(map(str, value))
-                                argv.extend([f"--{key}", comma_separated])
+                                argv[key] = ",".join(map(str, value))
                         elif value is not None:
-                            argv.extend([f"--{key}", str(value)])
-
-                sys.argv = [sys.argv[0]] + argv + user_args
-
-            except (IndexError, FileNotFoundError, ValueError) as e:
-                msg = f"The value provided for --command_line_params is invalid: {e}"
+                            argv[key] = value
+                sys.argv = dict_to_argv(sys.argv[0], {**args, **argv})
+                return vars(self._parser.parse_args())
+            except KeyError as e:
+                msg = f"unrecognized argument in json file: {e}"
                 self._parser.error(msg)
+            except (IndexError, FileNotFoundError, ValueError) as e:
+                msg = f"the value provided for --command_line_params is invalid: {e}"
+                self._parser.error(msg)
+
+        return args
+
+
+def dict_to_argv(script_path, params):
+    argv = [script_path]
+    for key, value in params.items():
+        if isinstance(value, bool):
+            if value:
+                argv.append(f"--{key}")
+        elif isinstance(value, (list, set)):
+            if value:
+                comma_separated = ",".join(map(str, value))
+                argv.extend([f"--{key}", comma_separated])
+        elif value:
+            argv.extend([f"--{key}", str(value)])
+    return argv
