@@ -1,3 +1,4 @@
+import argparse
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -21,18 +22,17 @@ def methods_for_ad():
 class ArgsParserHandler:
     def __init__(self):
         self._parser = ArgumentParser()
-        check_json_params_arg()
+        self.check_json_params_arg()
 
-    def _check_unknown_args(self):
-        temp_parser = ArgumentParser(add_help=False)
+    def _relax_required_args(self):
+        required_args = []
+
         for action in self._parser._actions:
-            for opt in action.option_strings:
-                temp_parser.add_argument(opt)
+            if getattr(action, 'required', False):
+                required_args.append(action.dest)
+                action.required = False
 
-        _, unknown_args = temp_parser.parse_known_args()
-
-        if unknown_args:
-            raise ValueError(f"Unknown arguments: {unknown_args}")
+        return required_args
 
     def _add_common_arguments(self):
         self._parser.add_argument('--dataset', type=Path, required=True, help='Path to the input dataset in CSV format')
@@ -150,14 +150,14 @@ class ArgsParserHandler:
                                        'to be considered as training. The other ones will be allocated in the validation set. '
                                        'It takes a value between 0.6 and 0.9.')
 
-        self._check_unknown_args()
+        required_args = self._relax_required_args()
         args = self._parser.parse_args()
+        self.check_required_args(required_args)
         return vars(args)
 
     def get_eval_arguments(self) -> Dict:
         self._add_eval_arguments()
 
-        self._check_unknown_args()
         args = self._parser.parse_args()
         return vars(args)
 
@@ -165,31 +165,48 @@ class ArgsParserHandler:
         self._add_eval_arguments()
 
         self._parser.add_argument('--inference_batch_size', type=int, default=20000,
-                                  help='As the inference data are unlimited, this parameters contains the number of instances to be processed in a specific chunk (batch) at a time.')
+                                  help='As the inference data are unlimited, this parameters contains the number of '
+                                       'instances to be processed in a specific chunk (batch) at a time.')
 
-        self._check_unknown_args()
         args = self._parser.parse_args()
         return vars(args)
 
+    def check_required_args(self, keys_args):
+        user_args = sys.argv[1:]
 
-def check_json_params_arg():
-    user_args = sys.argv[1:]
-
-    if '--command_line_params' in user_args:
-        json_file_path = Path(user_args[1]).resolve()
-        json_args = load_json(json_file_path)
-
-        argv = []
-        for key, value in json_args.items():
+        required_args = []
+        for key in keys_args:
             if f"--{key}" not in user_args:
-                if isinstance(value, bool):
-                    if value:
-                        argv.append(f"--{key}")
-                elif isinstance(value, list):
-                    if value:
-                        comma_separated = ",".join(map(str, value))
-                        argv.extend([f"--{key}", comma_separated])
-                elif value is not None:
-                    argv.extend([f"--{key}", str(value)])
+                required_args.append(f"--{key}")
 
-        sys.argv = [sys.argv[0]] + argv + user_args
+        if required_args:
+            msg = 'missing required arguments: ' + ' '.join(required_args)
+            self._parser.error(msg)
+
+    def check_json_params_arg(self):
+        user_args = sys.argv[1:]
+
+        if '--command_line_params' in user_args:
+            try:
+                index = user_args.index('--command_line_params')
+                json_file_path = Path(user_args[index + 1]).resolve()
+                json_args = load_json(json_file_path)
+
+                argv = []
+                for key, value in json_args.items():
+                    if f"--{key}" not in user_args:
+                        if isinstance(value, bool):
+                            if value:
+                                argv.append(f"--{key}")
+                        elif isinstance(value, list):
+                            if value:
+                                comma_separated = ",".join(map(str, value))
+                                argv.extend([f"--{key}", comma_separated])
+                        elif value is not None:
+                            argv.extend([f"--{key}", str(value)])
+
+                sys.argv = [sys.argv[0]] + argv + user_args
+
+            except (IndexError, FileNotFoundError, ValueError) as e:
+                msg = f"The value provided for --command_line_params is invalid: {e}"
+                self._parser.error(msg)
