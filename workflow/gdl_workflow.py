@@ -1,4 +1,5 @@
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict
@@ -515,82 +516,99 @@ class TestWorkflow(PredictionWorkflow):
         y_score = []
 
         model.eval()
+        seen_warnings = set()
+        with warnings.catch_warnings(record=True) as W:
+            warnings.simplefilter("always")
 
-        with tqdm(total=len(graphs), desc="Testing") as progress:
-            with torch.no_grad():
-                for data_loader in dataloader:
-                    data_loader = data_loader.to(workflow_settings.device)
+            with tqdm(total=len(graphs), desc="Testing") as progress:
+                with torch.no_grad():
+                    for data_loader in dataloader:
+                        data_loader = data_loader.to(workflow_settings.device)
 
-                    if workflow_settings.use_edge_attr:
-                        output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
+                        if workflow_settings.use_edge_attr:
+                            output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr,
+                                           data_loader.batch)
+                        else:
+                            output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+
+                        out = output[0]
+
+                        pred = out.argmax(dim=1)
+                        score = F.softmax(out, dim=1)[:, 1]
+
+                        y_score.extend(score.cpu().detach().data.numpy().tolist())
+                        y_true.extend(data_loader.y.cpu().detach().data.numpy().tolist())
+                        y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+
+                        progress.update(data_loader.num_graphs)
+                        progress.set_postfix(
+                            Recall_Pos=f"{'.'}",
+                            Recall_Neg=f"{'.'}",
+                            Test_MCC=f"{'.'}",
+                            Test_ACC=f"{'.'}",
+                            Test_AUC=f"{'.'}"
+                        )
+
+                    mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
+                    acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
+
+                    if len(set(y_true)) > 1:
+                        auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
                     else:
-                        output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+                        auc = None
 
-                    out = output[0]
+                    recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
+                    recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
 
-                    pred = out.argmax(dim=1)
-                    score = F.softmax(out, dim=1)[:, 1]
+                    metrics_data = {
+                        'MCC/Test': [mcc],
+                        'ACC/Test': [acc],
+                        'AUC/Test': [auc],
+                        'Recall_Pos/Test': [recall_pos],
+                        'Recall_Neg/Test': [recall_neg],
+                    }
 
-                    y_score.extend(score.cpu().detach().data.numpy().tolist())
-                    y_true.extend(data_loader.y.cpu().detach().data.numpy().tolist())
-                    y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+                    csv_file = workflow_settings.output_setting['metrics_file']
+                    columns = ['MCC/Test', 'ACC/Test', 'AUC/Test', 'Recall_Pos/Test', 'Recall_Neg/Test']
+                    metrics_df = pd.DataFrame(metrics_data, columns=columns)
+                    metrics_df.to_csv(csv_file, index=False)
 
-                    progress.update(data_loader.num_graphs)
+                    progress.set_description("Test result")
                     progress.set_postfix(
-                        Recall_Pos=f"{'.'}",
-                        Recall_Neg=f"{'.'}",
-                        Test_MCC=f"{'.'}",
-                        Test_ACC=f"{'.'}",
-                        Test_AUC=f"{'.'}"
+                        Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
+                        Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg) else None,
+                        Test_MCC=f"{mcc:.4f}",
+                        Test_ACC=f"{acc:.4f}",
+                        Test_AUC=f"{auc:.4f}" if auc else None
                     )
 
-                mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
-                acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
+            # Caught warnings
+            if W:
+                warning_messages = []
+                for warning in W:
+                    warning_msg = str(warning.message)
+                    if warning_msg not in seen_warnings:
+                        seen_warnings.add(warning_msg)
+                        warning_messages.append(warning_msg)
 
-                if len(set(y_true)) > 1:
-                    auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
-                else:
-                    auc = None
+                if warning_messages:
+                    logging.getLogger('workflow_logger').warning(
+                        f"\n".join(warning_messages))
 
-                recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
-                recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
+            res_data = {
+                'id': data.id,
+                'sequence': data.sequence,
+                'sequence_length': data.length,
+                'true_activity': data.activity,
+                'predicted_activity': y_pred,
+                'predicted_activity_score': y_score,
+            }
+            column_order = ['id', 'sequence', 'sequence_length', 'true_activity', 'predicted_activity',
+                            'predicted_activity_score']
 
-                metrics_data = {
-                    'MCC/Test': [mcc],
-                    'ACC/Test': [acc],
-                    'AUC/Test': [auc],
-                    'Recall_Pos/Test': [recall_pos],
-                    'Recall_Neg/Test': [recall_neg],
-                }
-
-                csv_file = workflow_settings.output_setting['metrics_file']
-                columns = ['MCC/Test', 'ACC/Test', 'AUC/Test', 'Recall_Pos/Test', 'Recall_Neg/Test']
-                metrics_df = pd.DataFrame(metrics_data, columns=columns)
-                metrics_df.to_csv(csv_file, index=False)
-
-                progress.set_description("Test result")
-                progress.set_postfix(
-                    Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
-                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg) else None,
-                    Test_MCC=f"{mcc:.4f}",
-                    Test_ACC=f"{acc:.4f}",
-                    Test_AUC=f"{auc:.4f}" if auc else None
-                )
-
-        res_data = {
-            'id': data.id,
-            'sequence': data.sequence,
-            'sequence_length': data.length,
-            'true_activity': data.activity,
-            'predicted_activity': y_pred,
-            'predicted_activity_score': y_score,
-        }
-        column_order = ['id', 'sequence', 'sequence_length', 'true_activity', 'predicted_activity',
-                        'predicted_activity_score']
-
-        csv_file = workflow_settings.output_setting['prediction_file']
-        df = pd.DataFrame(res_data, columns=column_order)
-        df.to_csv(csv_file, index=False)
+            csv_file = workflow_settings.output_setting['prediction_file']
+            df = pd.DataFrame(res_data, columns=column_order)
+            df.to_csv(csv_file, index=False)
 
     def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
         pass
@@ -621,40 +639,55 @@ class InferenceWorkflow(PredictionWorkflow):
         y_score = []
 
         model.eval()
+        seen_warnings = set()
+        with warnings.catch_warnings(record=True) as W:
+            warnings.simplefilter("always")
+            with tqdm(total=len(graphs), desc="Inferring") as progress:
+                with torch.no_grad():
+                    for data_loader in dataloader:
+                        data_loader = data_loader.to(workflow_settings.device)
 
-        with tqdm(total=len(graphs), desc="Inferring") as progress:
-            with torch.no_grad():
-                for data_loader in dataloader:
-                    data_loader = data_loader.to(workflow_settings.device)
+                        if workflow_settings.use_edge_attr:
+                            output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
+                        else:
+                            output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
 
-                    if workflow_settings.use_edge_attr:
-                        output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
-                    else:
-                        output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+                        out = output[0]
 
-                    out = output[0]
+                        pred = out.argmax(dim=1)
+                        score = F.softmax(out, dim=1)[:, 1]
 
-                    pred = out.argmax(dim=1)
-                    score = F.softmax(out, dim=1)[:, 1]
+                        y_score.extend(score.cpu().detach().data.numpy().tolist())
+                        y_pred.extend(pred.cpu().detach().data.numpy().tolist())
 
-                    y_score.extend(score.cpu().detach().data.numpy().tolist())
-                    y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+                        progress.update(data_loader.num_graphs)
+                        progress.set_postfix()
 
-                    progress.update(data_loader.num_graphs)
-                    progress.set_postfix()
+            # Caught warnings
+            if W:
+                warning_messages = []
+                for warning in W:
+                    warning_msg = str(warning.message)
+                    if warning_msg not in seen_warnings:
+                        seen_warnings.add(warning_msg)
+                        warning_messages.append(warning_msg)
 
-        res_data = {
-            'id': data.id,
-            'sequence': data.sequence,
-            'sequence_length': data.length,
-            'predicted_activity': y_pred,
-            'predicted_activity_score': y_score,
-        }
-        column_order = ['id', 'sequence', 'sequence_length', 'predicted_activity', 'predicted_activity_score']
+                if warning_messages:
+                    logging.getLogger('workflow_logger').warning(
+                        f"\n".join(warning_messages))
 
-        csv_file = workflow_settings.output_setting['prediction_file']
-        df = pd.DataFrame(res_data, columns=column_order)
-        df.to_csv(csv_file, index=False)
+            res_data = {
+                'id': data.id,
+                'sequence': data.sequence,
+                'sequence_length': data.length,
+                'predicted_activity': y_pred,
+                'predicted_activity_score': y_score,
+            }
+            column_order = ['id', 'sequence', 'sequence_length', 'predicted_activity', 'predicted_activity_score']
+
+            csv_file = workflow_settings.output_setting['prediction_file']
+            df = pd.DataFrame(res_data, columns=column_order)
+            df.to_csv(csv_file, index=False)
 
 
 def save_to_fasta(df: pd.DataFrame, fasta_file):
