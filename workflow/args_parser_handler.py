@@ -189,7 +189,9 @@ class ArgsParserHandler:
 
                 argv = {}
                 for key, value in json_args.items():
-                    if args[key] is None:   # the value of the json is used
+                    if isinstance(value, bool):
+                        argv[key] = value
+                    elif args[key] is None:   # the value of the json is used
                         if isinstance(value, list):
                             if value:
                                 argv[key] = ",".join(map(str, value))
