@@ -386,17 +386,35 @@ class TrainingWorkflow(GDLWorkflow):
         metrics_df = pd.DataFrame(metrics_data, columns=columns)
         metrics_df.to_csv(csv_file, index=False)
 
+        model_path_with_best_mcc = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            f"epoch={epoch_of_the_best_mcc}_train-loss={train_loss_of_the_best_mcc:.2f}_val-loss"
+            f"={val_loss_of_the_best_mcc:.2f}_(best-mcc).pt"
+        )
+
+        base_path = workflow_settings.output_setting['checkpoints_path']
+
         if not workflow_settings.save_ckpt_per_epoch:
-            model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            # Save the model of the last epoch
+            model_path = base_path.joinpath(
                 f"epoch={epoch}_train-loss={train_loss:.2f}_val-loss={val_loss:.2f}.pt"
             )
             torch.save(current_model, model_path)
+            logging.getLogger('workflow_logger').info(f"Saved model from the last epoch at {model_path}")
 
-            model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            # Save the model with best mcc
+            torch.save(model_with_best_mcc, model_path_with_best_mcc)
+            logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {model_path_with_best_mcc}")
+        else:
+            logging.getLogger('workflow_logger').info(f"Saved models per epoch in directory {base_path}")
+
+            # Mark .pt with best mcc
+            model_path_to_rename = base_path.joinpath(
                 f"epoch={epoch_of_the_best_mcc}_train-loss={train_loss_of_the_best_mcc:.2f}_val-loss"
-                f"={val_loss_of_the_best_mcc:.2f}_(best-mcc).pt"
+                f"={val_loss_of_the_best_mcc:.2f}.pt"
             )
-            torch.save(model_with_best_mcc, model_path)
+            if model_path_to_rename.exists():
+                model_path_to_rename.replace(model_path_with_best_mcc)
+                logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {model_path_with_best_mcc}")
 
         bar.set_postfix(
             Epoch_Best_MCC=f"{epoch_of_the_best_mcc}",
