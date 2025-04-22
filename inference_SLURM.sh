@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=esm-axp-gdl-env_TEST
+#SBATCH --job-name=esm-axp-gdl-env_INFERENCE
 #SBATCH --nodes=
 #SBATCH --ntasks-per-node=
-#SBATCH --output=slurm_esm-axp-gdl-env_TEST.out
-#SBATCH --error=slurm_esm-axp-gdl-env_TEST.err
+#SBATCH --output=slurm_esm-axp-gdl-env_INFERENCE.out
+#SBATCH --error=slurm_esm-axp-gdl-env_INFERENCE.err
 #SBATCH --time=00:00:00
 #SBATCH --cluster=
 #SBATCH --partition=
@@ -31,8 +31,8 @@ seed=0
 inference_batch_size=20000
 
 python inference.py \
-    --dataset "$dataset" \
-    --pdb_path "$pdb_path" \
+    --dataset="$dataset" \
+    --pdb_path="$pdb_path" \
     --gdl_model_path="$gdl_model_path" \
     --tertiary_structure_method="$tertiary_structure_method"  \
     --methods_for_ad="$methods_for_ad"  \

@@ -13,8 +13,8 @@ seed=0
 inference_batch_size=20000
 
 python inference.py \
-    --dataset "$dataset" \
-    --pdb_path "$pdb_path" \
+    --dataset="$dataset" \
+    --pdb_path="$pdb_path" \
     --gdl_model_path="$gdl_model_path" \
     --tertiary_structure_method="$tertiary_structure_method"  \
     --methods_for_ad="$methods_for_ad"  \

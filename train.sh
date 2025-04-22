@@ -18,11 +18,11 @@ batch_size=512
 number_of_epoch=5
 
 python train.py \
-    --dataset "$dataset" \
-    --pdb_path "$pdb_path" \
+    --dataset="$dataset" \
+    --pdb_path="$pdb_path" \
     --tertiary_structure_method="$tertiary_structure_method"  \
     --gdl_model_path="$gdl_model_path"  \
-    --esm2_representation "$esm2_representation" \
+    --esm2_representation="$esm2_representation" \
     --edge_construction_functions="$edge_construction_functions" \
     --distance_function="$distance_function" \
     --distance_threshold="$distance_threshold" \
