@@ -1,71 +1,110 @@
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from workflow.classification_metrics import ClassificationMetricsContext
-from workflow.data_loader import DataLoaderContext
-from workflow.dataset_validator import DatasetValidatorContext
-from workflow.parameters_setter import ParameterSetter
-from graph.construct_graphs import construct_graphs
-import pandas as pd
 from typing import List, Dict
-from sklearn.model_selection import train_test_split
-from models.GAT.GAT import GATModel
+import numpy as np
+import pandas as pd
 import torch
-from torch_geometric.loader import DataLoader
 import torch.nn.functional as F
 from tensorboardX import SummaryWriter
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
-import numpy as np
-import random
+from workflow.ad_methods import build_model
+from workflow.features import filter_features, FeaturesContext
+from graph.construct_graphs import construct_graphs
+from models.GAT.GAT import GATModel
 from utils import json_parser as json_parser
+from .classification_metrics import ClassificationMetricsContext
+from .data_partitioner import to_partition
+from .dataset_validator import DatasetValidatorContext
+from .parameters_setter import ParameterSetter
 from .application_context import ApplicationContext
 from .dto_workflow import ModelParameters, TrainingOutputParameter, EvalOutputParameter
 from .logging_handler import LoggingHandler
 from .path_creator import PathCreatorContext
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
 
 
 class GDLWorkflow(ABC):
     def run_workflow(self, context: ApplicationContext, parameters: Dict) -> None:
-
         # Initialization of workflow parameters
         output_setting = self.create_path(path_creator_context=context.path_creator, parameters=parameters)
 
-        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'), log_output_path=output_setting['log_file'])
+        LoggingHandler.initialize_logger(logger_settings_path=Path('settings').joinpath('logger_setting.json'),
+                                         log_output_path=output_setting['log_file'])
 
         workflow_settings = self.parameters_setter(output_setting=output_setting, parameters=parameters)
 
-        # Workflow execution
-        data = self.load_data(workflow_settings, context.data_loader, context.dataset_validator)
-
-        graphs, data = construct_graphs(workflow_settings=workflow_settings, data=data)
-
-        graphs = self.getting_graphs_by_partition(graphs=graphs, data=data)
-
-        model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
-
-        self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model, classification_metrics=context.classification_metrics, data=data)
-
+        # Execution Workflow Args
         self.save_parameters(workflow_settings=workflow_settings)
+
+        ad_models = self.building_applicability_domain_model(workflow_settings)
+
+        # Workflow execution
+        data_loaded = context.data_loader.read_file(workflow_settings=workflow_settings)
+
+        for i, data_chunck in enumerate(data_loaded):
+            self.generate_filenames(workflow_settings=workflow_settings, substr=str(i + 1))
+
+            data_chunck = self.validate_dataset(workflow_settings, data_chunck, context.dataset_validator)
+
+            graphs, perplexities = construct_graphs(workflow_settings, data_chunck)
+
+            features = self.computing_features(workflow_settings=workflow_settings, data=data_chunck, graphs=graphs,
+                                               perplexities=perplexities)
+
+            graphs = self.getting_graphs_by_partition(workflow_settings=workflow_settings, graphs=graphs,
+                                                      data=data_chunck, features=features)
+
+            model = self.initialize_model(workflow_settings=workflow_settings, graphs=graphs)
+
+            self.execute(workflow_settings=workflow_settings, graphs=graphs, model=model,
+                         classification_metrics=context.classification_metrics, data=data_chunck)
+
+            self.getting_applicability_domain(workflow_settings, ad_models, features)
+
+    @abstractmethod
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
 
     def create_path(self, path_creator_context: PathCreatorContext, parameters: Dict):
         return path_creator_context.create_path(parameters['output_path'])
 
-    @abstractmethod
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
-        pass
+        input_workflow_args_file = output_setting['workflow_input_args_file']
+        filtered_parameters = {k: v for k, v in parameters.items() if v is not None}
+        json_parser.save_json(input_workflow_args_file, filtered_parameters)
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = data_loader.read_file(filepath=workflow_settings.dataset)
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
         data = dataset_validator.processing_dataset(dataset=data,
                                                     output_setting=workflow_settings.output_setting)
         return data
 
-    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
+    # computing features
+    def computing_features(self, workflow_settings: ParameterSetter,
+                           data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
+        csv_path = workflow_settings.output_setting['features_file']
+        kwargs = {
+            'features_to_calculate': workflow_settings.feature_types_for_ad,
+            'data': data,
+            'graphs': graphs,
+            'perplexities': perplexities}
+
+        feature_context = FeaturesContext()
+        features = feature_context.compute_features(**kwargs)
+
+        features.to_csv(csv_path, index=False)
+        return features
+
+    def getting_graphs_by_partition(self, workflow_settings: ParameterSetter, graphs: List, data: pd.DataFrame, features: pd.DataFrame) -> List:
         return graphs
 
     def initialize_model(self, workflow_settings: ParameterSetter, graphs: List):
-        logging.getLogger('workflow_logger').info(f"The parameter add_self_loops has been set to {workflow_settings.add_self_loops}")
         return None
 
     @abstractmethod
@@ -73,8 +112,17 @@ class GDLWorkflow(ABC):
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         pass
 
+    @abstractmethod
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict],
+                                     features: pd.DataFrame):
+        pass
+
+    @abstractmethod
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
+        pass
+
     def save_parameters(self, workflow_settings: ParameterSetter):
-        json_file = workflow_settings.output_setting['parameter_file']
+        json_file = workflow_settings.output_setting['workflow_execution_args_file']
         parameters = EvalOutputParameter(**workflow_settings.model_dump())
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
@@ -85,49 +133,82 @@ class TrainingWorkflow(GDLWorkflow):
         return path_creator_context.create_path(parameters['gdl_model_path'])
 
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         return ParameterSetter(mode='training', output_setting=output_setting, **parameters)
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        try:
-            data = super().load_data(workflow_settings, data_loader, dataset_validator)
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super().validate_dataset(workflow_settings, data, dataset_validator)
 
-            # keeping only the instances belonging to the training and validation sets
-            data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
-            if data.size == 0:
-                raise Exception("The input set does not contain training instances nor validation instances.")
+        # keeping only the instances belonging to the training and validation sets
+        data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
 
-            # there are no training or validation instances
-            # therefore, the 'partition' column is removed
-            if data.query('partition == 1').size == 0 or data.query('partition == 2').size == 0:
-                data.drop(['partition'], axis=1, inplace=True)
-
-            # the 'partition' column was removed above
-            # thus, the data are randomly split (80% training, 20%validation),
-            #       and the 'partition' column is added with the values 1 or 2 as appropriate
-            if 'partition' not in data.columns:
-                # split training dataset: 80% train y 20% test, with seed and shuffle
-                train_indexes, val_indexes, _, _ = train_test_split(data.index, data['activity'], test_size=0.2, shuffle=True, random_state=41)
-
-                training = data.drop(val_indexes).assign(partition=lambda x: 1)
-                validation = data.drop(train_indexes).assign(partition=lambda x: 2)
-
-                data = pd.concat([training, validation])
-
-                data.reset_index(drop=True)
-
-                csv_file = workflow_settings.output_setting['partitioned_data']
-                data.to_csv(csv_file, index=False)
-
-                logging.getLogger('workflow_logger'). \
-                    warning(f"Split training dataset: 80% train y 20% test, with seed and shuffle. See: {csv_file}")
-
-            return data
-        except Exception as e:
-            logging.getLogger('workflow_logger').exception(e)
+        if data.query('partition == 1').empty:
+            logging.getLogger('workflow_logger').critical(
+                "The dataset does not contain training set."
+            )
             quit()
 
-    def getting_graphs_by_partition(self, graphs: List, data: pd.DataFrame) -> List:
+        if data.query('partition == 2').empty:
+            if workflow_settings.split_method and workflow_settings.split_training_fraction:
+                data.drop(['partition'], axis=1, inplace=True)
+            elif not workflow_settings.split_method:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset does not contain validation set; the parameter 'split_method' must be specified."
+                )
+                quit()
+            elif not workflow_settings.split_training_fraction:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset does not contain validation set; the parameter 'split_training_fraction' must be specified."
+                )
+                quit()
+        # if not (data.query('partition == 1').empty and data.query('partition == 2').empty)
+        elif workflow_settings.split_method or workflow_settings.split_training_fraction:
+            if workflow_settings.split_method:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset contains training and validation sets; the parameter split_method must not be specified."
+                )
+                quit()
+            elif workflow_settings.split_training_fraction:
+                logging.getLogger('workflow_logger').critical(
+                    "The dataset contains training and validation sets; the parameter split_training_fraction must not be specified."
+                )
+                quit()
+
+        return data
+
+    def getting_graphs_by_partition(self, workflow_settings: ParameterSetter, graphs: List, data: pd.DataFrame, features: pd.DataFrame) -> List:
+        if 'partition' not in data.columns:
+            # partitioning data in training and validation
+            data = to_partition(
+                split_method=workflow_settings.split_method,
+                data=data,
+                features=features,
+                split_training_fraction=workflow_settings.split_training_fraction
+            )
+
+            # Save to csv
+            csv_file = workflow_settings.output_setting['data_csv']
+            filtered_data = data[['id', 'sequence', 'activity', 'partition']]
+            filtered_data.to_csv(csv_file, index=False)
+            logging.getLogger('workflow_logger'). \
+                info(f"Partitioned dataset saved to CSV file. See: {csv_file}")
+
+            # Save to fasta
+            # training data
+            train_data = filtered_data[filtered_data['partition'] == 1]
+            fasta_file = workflow_settings.output_setting['training_data_fasta']
+            save_to_fasta(train_data, fasta_file)
+            logging.getLogger('workflow_logger'). \
+                info(f"Training sequences saved to FASTA file. See: {fasta_file}")
+
+            # validation data
+            val_data = filtered_data[filtered_data['partition'] == 2]
+            fasta_file = workflow_settings.output_setting['validation_data_fasta']
+            save_to_fasta(val_data, fasta_file)
+            logging.getLogger('workflow_logger'). \
+                info(f"Validation sequences saved to FASTA file. See: {fasta_file}")
+
         partitions = data['partition']
         train_graphs = []
         val_graphs = []
@@ -141,7 +222,7 @@ class TrainingWorkflow(GDLWorkflow):
         return train_graphs, val_graphs
 
     def save_parameters(self, workflow_settings: ParameterSetter):
-        json_file = workflow_settings.output_setting['parameter_file']
+        json_file = workflow_settings.output_setting['workflow_execution_args_file']
         parameters = TrainingOutputParameter(**workflow_settings.model_dump())
         json_data = parameters.model_dump()
         json_parser.save_json(json_file, json_data)
@@ -158,7 +239,7 @@ class TrainingWorkflow(GDLWorkflow):
                          workflow_settings.add_self_loops).to(workflow_settings.device)
         return model
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         train_graphs, val_graphs = graphs
 
@@ -300,21 +381,40 @@ class TrainingWorkflow(GDLWorkflow):
             scheduler.step()
 
         csv_file = workflow_settings.output_setting['metrics_file']
-        columns = ['Epoch', 'Loss/Train', 'Loss/Val', 'MCC/Val', 'ACC/Val', 'AUC/Val', 'Recall_Pos/Val', 'Recall_Neg/Val']
+        columns = ['Epoch', 'Loss/Train', 'Loss/Val', 'MCC/Val', 'ACC/Val', 'AUC/Val', 'Recall_Pos/Val',
+                   'Recall_Neg/Val']
         metrics_df = pd.DataFrame(metrics_data, columns=columns)
         metrics_df.to_csv(csv_file, index=False)
 
+        model_path_with_best_mcc = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            f"epoch={epoch_of_the_best_mcc}_train-loss={train_loss_of_the_best_mcc:.2f}_val-loss"
+            f"={val_loss_of_the_best_mcc:.2f}_(best-mcc).pt"
+        )
+
+        base_path = workflow_settings.output_setting['checkpoints_path']
+
         if not workflow_settings.save_ckpt_per_epoch:
-            model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            # Save the model of the last epoch
+            model_path = base_path.joinpath(
                 f"epoch={epoch}_train-loss={train_loss:.2f}_val-loss={val_loss:.2f}.pt"
             )
             torch.save(current_model, model_path)
+            logging.getLogger('workflow_logger').info(f"Saved model from the last epoch at {model_path}")
 
-            model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
+            # Save the model with best mcc
+            torch.save(model_with_best_mcc, model_path_with_best_mcc)
+            logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {model_path_with_best_mcc}")
+        else:
+            logging.getLogger('workflow_logger').info(f"Saved models per epoch in directory {base_path}")
+
+            # Mark .pt with best mcc
+            model_path_to_rename = base_path.joinpath(
                 f"epoch={epoch_of_the_best_mcc}_train-loss={train_loss_of_the_best_mcc:.2f}_val-loss"
-                f"={val_loss_of_the_best_mcc:.2f}_(best-mcc).pt"
+                f"={val_loss_of_the_best_mcc:.2f}.pt"
             )
-            torch.save(model_with_best_mcc, model_path)
+            if model_path_to_rename.exists():
+                model_path_to_rename.replace(model_path_with_best_mcc)
+                logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {model_path_with_best_mcc}")
 
         bar.set_postfix(
             Epoch_Best_MCC=f"{epoch_of_the_best_mcc}",
@@ -323,10 +423,22 @@ class TrainingWorkflow(GDLWorkflow):
             Validation_MCC=f"{best_mcc:.4f}",
             Validation_ACC=f"{acc_of_the_best_mcc:.4f}",
             Validation_AUC=f"{auc_of_the_best_mcc:.4f}" if auc_of_the_best_mcc else None,
-            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc and not np.isnan(recall_pos_of_the_best_mcc) else None,
-            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc and not np.isnan(recall_neg_of_the_best_mcc) else None
+            Validation_Recall_Pos=f"{recall_pos_of_the_best_mcc:.4f}" if recall_pos_of_the_best_mcc and not np.isnan(
+                recall_pos_of_the_best_mcc) else None,
+            Validation_Recall_Neg=f"{recall_neg_of_the_best_mcc:.4f}" if recall_neg_of_the_best_mcc and not np.isnan(
+                recall_neg_of_the_best_mcc) else None
         )
         bar.close()
+
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict],
+                                     features: pd.DataFrame):
+        pass
+
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
+        pass
+
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
 
 
 class PredictionWorkflow(GDLWorkflow, ABC):
@@ -339,175 +451,272 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.to(workflow_settings.device)
         return model
 
+    def computing_features(self, workflow_settings: ParameterSetter,
+                           data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
+        if workflow_settings.get_ad:
+            return super().computing_features(workflow_settings, data, graphs, perplexities)
+
+    def building_applicability_domain_model(self, workflow_settings: ParameterSetter):
+        if workflow_settings.get_ad:
+            features_to_build_domain = pd.read_csv(workflow_settings.feature_file_for_ad)
+
+            ad_models = []
+            with tqdm(total=len(workflow_settings.methods_for_ad),
+                      desc="Building applicability domain models",
+                      disable=False) as progress:
+                for method_for_ad in workflow_settings.methods_for_ad:
+                    features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
+                    model_for_ad = build_model(method_for_ad['method_name'], features_selected)
+
+                    ad_models_dict = {
+                        'method': method_for_ad,
+                        'model': model_for_ad,
+                    }
+                    ad_models.append(ad_models_dict)
+
+                    progress.update()
+            return ad_models
+
+    def getting_applicability_domain(self, workflow_settings: ParameterSetter, ad_models: List[Dict], features: pd.DataFrame):
+        if workflow_settings.get_ad:
+            instance_id = features.iloc[:, 0]
+            features_to_eval = features.iloc[:, 1:]
+
+            domain = pd.DataFrame()
+            with tqdm(total=len(ad_models),
+                      desc="Getting applicability domain", disable=False) as progress:
+                for ad_model in ad_models:
+                    method_for_ad = ad_model['method']
+                    model_for_ad = ad_model['model']
+
+                    features_to_eval_selected = filter_features(features_to_eval, method_for_ad['features'])
+                    outlier, outlier_score = model_for_ad.eval_model(features_to_eval_selected)
+
+                    temp_domain = pd.DataFrame({
+                        f"{method_for_ad['method_id']}": ['out' if x == -1 else 'in' for x in outlier],
+                        f"{method_for_ad['method_id']}_score": outlier_score
+                    })
+
+                    domain = pd.concat([domain, temp_domain], axis=1)
+                    progress.update(1)
+            domain['sequence'] = instance_id
+
+            csv_path = workflow_settings.output_setting['prediction_file']
+            prediction = pd.read_csv(csv_path)
+            merged_df = pd.merge(prediction, domain, on='sequence', how='inner')
+            merged_df.to_csv(csv_path, index=False)
+
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
+
 
 class TestWorkflow(PredictionWorkflow):
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
         workflow_settings = ParameterSetter(mode='test', output_setting=output_setting, **merged_parameters)
+
         return workflow_settings
 
-    def load_data(self, workflow_settings: ParameterSetter, data_loader: DataLoaderContext,
-                  dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
-        data = super().load_data(workflow_settings, data_loader, dataset_validator)
+    def validate_dataset(self, workflow_settings: ParameterSetter, data: pd.DataFrame,
+                         dataset_validator: DatasetValidatorContext) -> pd.DataFrame:
+        data = super().validate_dataset(workflow_settings, data, dataset_validator)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
-
-        seed = workflow_settings.seed
-        if seed is not None:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            torch.use_deterministic_algorithms(True)
 
         y_true = []
         y_pred = []
         y_score = []
 
         model.eval()
+        seen_warnings = set()
+        with warnings.catch_warnings(record=True) as W:
+            warnings.simplefilter("always")
 
-        with tqdm(total=len(graphs), desc="Testing") as progress:
-            with torch.no_grad():
-                for data_loader in dataloader:
-                    data_loader = data_loader.to(workflow_settings.device)
+            with tqdm(total=len(graphs), desc="Testing") as progress:
+                with torch.no_grad():
+                    for data_loader in dataloader:
+                        data_loader = data_loader.to(workflow_settings.device)
 
-                    if workflow_settings.use_edge_attr:
-                        output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
+                        if workflow_settings.use_edge_attr:
+                            output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr,
+                                           data_loader.batch)
+                        else:
+                            output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+
+                        out = output[0]
+
+                        pred = out.argmax(dim=1)
+                        score = F.softmax(out, dim=1)[:, 1]
+
+                        y_score.extend(score.cpu().detach().data.numpy().tolist())
+                        y_true.extend(data_loader.y.cpu().detach().data.numpy().tolist())
+                        y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+
+                        progress.update(data_loader.num_graphs)
+                        progress.set_postfix(
+                            Recall_Pos=f"{'.'}",
+                            Recall_Neg=f"{'.'}",
+                            Test_MCC=f"{'.'}",
+                            Test_ACC=f"{'.'}",
+                            Test_AUC=f"{'.'}"
+                        )
+
+                    mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
+                    acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
+
+                    if len(set(y_true)) > 1:
+                        auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
                     else:
-                        output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+                        auc = None
 
-                    out = output[0]
+                    recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
+                    recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
 
-                    pred = out.argmax(dim=1)
-                    score = F.softmax(out, dim=1)[:, 1]
+                    metrics_data = {
+                        'MCC/Test': [mcc],
+                        'ACC/Test': [acc],
+                        'AUC/Test': [auc],
+                        'Recall_Pos/Test': [recall_pos],
+                        'Recall_Neg/Test': [recall_neg],
+                    }
 
-                    y_score.extend(score.cpu().detach().data.numpy().tolist())
-                    y_true.extend(data_loader.y.cpu().detach().data.numpy().tolist())
-                    y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+                    csv_file = workflow_settings.output_setting['metrics_file']
+                    columns = ['MCC/Test', 'ACC/Test', 'AUC/Test', 'Recall_Pos/Test', 'Recall_Neg/Test']
+                    metrics_df = pd.DataFrame(metrics_data, columns=columns)
+                    metrics_df.to_csv(csv_file, index=False)
 
-                    progress.update(data_loader.num_graphs)
+                    progress.set_description("Test result")
                     progress.set_postfix(
-                        Recall_Pos=f"{'.'}",
-                        Recall_Neg=f"{'.'}",
-                        Test_MCC=f"{'.'}",
-                        Test_ACC=f"{'.'}",
-                        Test_AUC=f"{'.'}"
+                        Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
+                        Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg) else None,
+                        Test_MCC=f"{mcc:.4f}",
+                        Test_ACC=f"{acc:.4f}",
+                        Test_AUC=f"{auc:.4f}" if auc else None
                     )
 
-                mcc = classification_metrics.matthews_correlation_coefficient(y_true=y_true, y_pred=y_pred)
-                acc = classification_metrics.accuracy(y_true=y_true, y_pred=y_pred)
+            # Caught warnings
+            if W:
+                warning_messages = []
+                for warning in W:
+                    warning_msg = str(warning.message)
+                    if warning_msg not in seen_warnings:
+                        seen_warnings.add(warning_msg)
+                        warning_messages.append(warning_msg)
 
-                if len(set(y_true)) > 1:
-                    auc = classification_metrics.roc_auc(y_true=y_true, y_score=y_score)
-                else:
-                    auc = None
+                if warning_messages:
+                    logging.getLogger('workflow_logger').warning(
+                        f"\n".join(warning_messages))
 
-                recall_pos = classification_metrics.sensitivity(y_true=y_true, y_pred=y_pred)
-                recall_neg = classification_metrics.specificity(y_true=y_true, y_pred=y_pred)
+            res_data = {
+                'id': data.id,
+                'sequence': data.sequence,
+                'sequence_length': data.length,
+                'true_activity': data.activity,
+                'predicted_activity': y_pred,
+                'predicted_activity_score': y_score,
+            }
+            column_order = ['id', 'sequence', 'sequence_length', 'true_activity', 'predicted_activity',
+                            'predicted_activity_score']
 
-                metrics_data = {
-                    'MCC/Test': [mcc],
-                    'ACC/Test': [acc],
-                    'AUC/Test': [auc],
-                    'Recall_Pos/Test': [recall_pos],
-                    'Recall_Neg/Test': [recall_neg],
-                }
+            csv_file = workflow_settings.output_setting['prediction_file']
+            df = pd.DataFrame(res_data, columns=column_order)
+            df.to_csv(csv_file, index=False)
 
-                csv_file = workflow_settings.output_setting['metrics_file']
-                columns = ['MCC/Test', 'ACC/Test', 'AUC/Test', 'Recall_Pos/Test', 'Recall_Neg/Test']
-                metrics_df = pd.DataFrame(metrics_data, columns=columns)
-                metrics_df.to_csv(csv_file, index=False)
-
-                progress.set_description("Test result")
-                progress.set_postfix(
-                    Recall_Pos=f"{recall_pos:.4f}" if recall_pos and not np.isnan(recall_pos) else None,
-                    Recall_Neg=f"{recall_neg:.4f}" if recall_neg and not np.isnan(recall_neg)else None,
-                    Test_MCC=f"{mcc:.4f}",
-                    Test_ACC=f"{acc:.4f}",
-                    Test_AUC=f"{auc:.4f}" if auc else None
-                )
-
-        res_data = {
-            'id': data.id,
-            'sequence': data.sequence,
-            'sequence_length': data.length,
-            'true_activity': data.activity,
-            'predicted_activity': y_pred,
-            'predicted_activity_score': y_score,
-        }
-        column_order = ['id', 'sequence', 'sequence_length', 'true_activity', 'predicted_activity',
-                        'predicted_activity_score']
-
-        csv_file = workflow_settings.output_setting['prediction_file']
-        df = pd.DataFrame(res_data, columns=column_order)
-        df.to_csv(csv_file, index=False)
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        pass
 
 
 class InferenceWorkflow(PredictionWorkflow):
+    def generate_filenames(self, workflow_settings: ParameterSetter, substr: str):
+        path = Path(workflow_settings.output_setting['prediction_path'])
+        workflow_settings.output_setting['prediction_file'] = path.joinpath(f"Prediction-batch_{substr}.csv")
+
+        path = Path(workflow_settings.output_setting['features_path'])
+        workflow_settings.output_setting['features_file'] = path.joinpath(f"Features-batch_{substr}.csv")
+
     def parameters_setter(self, output_setting: Dict, parameters: Dict):
+        super().parameters_setter(output_setting, parameters)
         checkpoint = torch.load(parameters['gdl_model_path'])
         trained_model_parameters = checkpoint['parameters']
         merged_parameters = {**trained_model_parameters, **parameters}
-        return ParameterSetter(mode='inference', output_setting=output_setting, **merged_parameters)
+        workflow_settings = ParameterSetter(mode='inference', output_setting=output_setting, **merged_parameters)
 
-    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel, 
+        return workflow_settings
+
+    def execute(self, workflow_settings: ParameterSetter, graphs: List, model: GATModel,
                 classification_metrics: ClassificationMetricsContext, data: pd.DataFrame) -> Dict:
         dataloader = DataLoader(dataset=graphs, batch_size=workflow_settings.batch_size, shuffle=False)
-
-        seed = workflow_settings.seed
-        if seed is not None:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            torch.use_deterministic_algorithms(True)
 
         y_pred = []
         y_score = []
 
         model.eval()
+        seen_warnings = set()
+        with warnings.catch_warnings(record=True) as W:
+            warnings.simplefilter("always")
+            with tqdm(total=len(graphs), desc="Inferring") as progress:
+                with torch.no_grad():
+                    for data_loader in dataloader:
+                        data_loader = data_loader.to(workflow_settings.device)
 
-        with tqdm(total=len(graphs), desc="Inferring") as progress:
-            with torch.no_grad():
-                for data_loader in dataloader:
-                    data_loader = data_loader.to(workflow_settings.device)
+                        if workflow_settings.use_edge_attr:
+                            output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
+                        else:
+                            output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
 
-                    if workflow_settings.use_edge_attr:
-                        output = model(data_loader.x, data_loader.edge_index, data_loader.edge_attr, data_loader.batch)
-                    else:
-                        output = model(data_loader.x, data_loader.edge_index, None, data_loader.batch)
+                        out = output[0]
 
-                    out = output[0]
+                        pred = out.argmax(dim=1)
+                        score = F.softmax(out, dim=1)[:, 1]
 
-                    pred = out.argmax(dim=1)
-                    score = F.softmax(out, dim=1)[:, 1]
+                        y_score.extend(score.cpu().detach().data.numpy().tolist())
+                        y_pred.extend(pred.cpu().detach().data.numpy().tolist())
 
-                    y_score.extend(score.cpu().detach().data.numpy().tolist())
-                    y_pred.extend(pred.cpu().detach().data.numpy().tolist())
+                        progress.update(data_loader.num_graphs)
+                        progress.set_postfix()
 
-                    progress.update(data_loader.num_graphs)
-                    progress.set_postfix()
+            # Caught warnings
+            if W:
+                warning_messages = []
+                for warning in W:
+                    warning_msg = str(warning.message)
+                    if warning_msg not in seen_warnings:
+                        seen_warnings.add(warning_msg)
+                        warning_messages.append(warning_msg)
 
-        res_data = {
-            'id': data.id,
-            'sequence': data.sequence,
-            'sequence_length': data.length,
-            'predicted_activity': y_pred,
-            'predicted_activity_score': y_score,
-        }
-        column_order = ['id', 'sequence', 'sequence_length', 'predicted_activity', 'predicted_activity_score']
+                if warning_messages:
+                    logging.getLogger('workflow_logger').warning(
+                        f"\n".join(warning_messages))
 
-        csv_file = workflow_settings.output_setting['prediction_file']
-        df = pd.DataFrame(res_data, columns=column_order)
-        df.to_csv(csv_file, index=False)
+            res_data = {
+                'id': data.id,
+                'sequence': data.sequence,
+                'sequence_length': data.length,
+                'predicted_activity': y_pred,
+                'predicted_activity_score': y_score,
+            }
+            column_order = ['id', 'sequence', 'sequence_length', 'predicted_activity', 'predicted_activity_score']
+
+            csv_file = workflow_settings.output_setting['prediction_file']
+            df = pd.DataFrame(res_data, columns=column_order)
+            df.to_csv(csv_file, index=False)
+
+
+def save_to_fasta(df: pd.DataFrame, fasta_file):
+    fasta_records = []
+    for i, row in df.iterrows():
+        sequence_id = row['id']
+        sequence = row['sequence']
+        activity = int(row['activity'])
+        record_id = f"{sequence_id}_class_{activity}"
+        record = SeqRecord(Seq(sequence), id=record_id, description="")
+        fasta_records.append(record)
+
+    with open(fasta_file, 'w') as output_handle:
+        SeqIO.write(fasta_records, output_handle, 'fasta')

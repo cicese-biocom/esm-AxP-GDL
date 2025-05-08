@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=esm-axp-gdl-env_TEST
+#SBATCH --job-name=esm-axp-gdl-env_INFERENCE
 #SBATCH --nodes=
 #SBATCH --ntasks-per-node=
-#SBATCH --output=slurm_esm-axp-gdl-env_TEST.out
-#SBATCH --error=slurm_esm-axp-gdl-env_TEST.err
+#SBATCH --output=slurm_esm-axp-gdl-env_INFERENCE.out
+#SBATCH --error=slurm_esm-axp-gdl-env_INFERENCE.err
 #SBATCH --time=00:00:00
 #SBATCH --cluster=
 #SBATCH --partition=
@@ -28,8 +28,9 @@ tertiary_structure_method='esmfold'
 methods_for_ad='percentile_based(gc), percentile_based(perp), IF(gc_perp_aad), IF(perp_aad), IF(gc), IF(aad)'
 batch_size=512
 seed=0
+inference_batch_size=20000
 
-python test.py \
+python inference.py \
     --dataset="$dataset" \
     --pdb_path="$pdb_path" \
     --gdl_model_path="$gdl_model_path" \
@@ -37,4 +38,5 @@ python test.py \
     --methods_for_ad="$methods_for_ad"  \
     --feature_file_for_ad="$feature_file_for_ad"  \
     --output_path="$output_path"  \
-    --seed="$seed"
+    --seed="$seed"  \
+    --inference_batch_size="$inference_batch_size"

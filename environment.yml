@@ -16,6 +16,7 @@ dependencies:
   - pyg::pytorch-scatter=2.1.0=py37_torch_1.12.0_cu113
   - pip
   - pip:
+    - torcheval
     - absl-py==1.2.0
     - astor==0.8.1
     - certifi==2022.9.14
@@ -69,3 +70,5 @@ dependencies:
     - pydantic==2.5.3
     - 'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
     - 'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307'
+    - networkx
+    - python-weka-wrapper3
