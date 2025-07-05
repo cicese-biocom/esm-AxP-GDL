@@ -8,6 +8,7 @@ from esm import FastaBatchedDataset
 import os
 from tqdm import tqdm
 from utils import json_parser
+from torch.utils.data import DataLoader
 
 
 def get_models(esm2_representation):
@@ -60,7 +61,7 @@ def get_representations(data, model_name, show_pbar=False):
             model = model.cuda()
 
         dataset = FastaBatchedDataset(data.id, data.sequence)
-        data_loader = torch.utils.data.DataLoader(dataset, collate_fn=alphabet.get_batch_converter(),
+        data_loader = DataLoader(dataset, collate_fn=alphabet.get_batch_converter(),
                                                   batch_sampler=None)
 
         repr_layers = model.num_layers
