@@ -102,7 +102,8 @@ Python: 3.7 </br>
 PyTorch: 1.12.0+cu113 </br>
 PyTorch Geometric: (torch-cluster: 1.6.1, torch-scatter: 2.1.0, torch-sparse: 0.6.15, torch-geometric: 2.3.1) </br>
 ESM-2 (fair-esm:2.0.0) </br> 
-ESMFold (fair-esm:2.0.0) 
+ESMFold (fair-esm:2.0.0) </br> 
+Expectation-Maximization algorithm for data partitioning (python-weka-wrapper3; requires Java 11)
 
 The Python libraries used in the workflow are specified in the `environment.yml` file.
 
@@ -132,10 +133,12 @@ the framework directory.
 The installation on computer clusters depends on the applications available to users through modular environment commands. 
 An installation example could be:
 ```
-1. module load python/ondemand-jupyter-python3.8
-2. module load gcc/9.2.0
-3. module load cuda/11.3.0
-4. conda env create -f environment.yml
+1. module purge
+2. module load python/ondemand-jupyter-python3.8
+3. module load gcc/9.2.0
+4. module load cuda/11.3.0
+5. module load java/1.8.0_181-oracle
+6. conda env create -f environment.yml
 ```
 
 NOTE: we provide template scripts to run training/test/inference Slurm batch jobs.
