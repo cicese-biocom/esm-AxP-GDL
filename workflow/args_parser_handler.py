@@ -70,8 +70,14 @@ class ArgsParserHandler:
         self._parser.add_argument('--output_path', type=Path, required=True,
                                   help='The path where the output data will be saved.')
 
-        self._parser.add_argument('--seed', type=int, default=None,
-                                  help='Seed to run the Test/Inference mode')
+        self._parser.add_argument(
+            '--seed',
+            type=int,
+            default=None,
+            help='Seed used during test/inference mode to enable deterministic behavior when possible. '
+                 'Operations without deterministic implementations (e.g., scatter_add_cuda_kernel) will fall back '
+                 'to non-deterministic versions, issuing a warning (warn_only=True).'
+        )
 
         self._parser.add_argument('--methods_for_ad', type=set_of_functions, default=None,
                                   help=f"Methods to build applicability domain model. The options available are: "
