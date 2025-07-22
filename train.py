@@ -1,27 +1,19 @@
 import logging
-
-from workflow.args_parser_handler import ArgsParserHandler
-from workflow.gdl_workflow import TrainingWorkflow
-from workflow.application_context import ApplicationContext
+from src.config.enum import ExecutionMode
+from src.workflow.gdl_workflow import TrainingWorkflow
+from src.workflow.params_setup import argument_parser
 import time
 
 
-def train(args):
-    context = ApplicationContext(mode='training')
-    TrainingWorkflow().run_workflow(context=context, parameters=args)
+def main():
+    parameters = argument_parser(ExecutionMode.TRAIN)
+    TrainingWorkflow(parameters).run()
 
 
 if __name__ == '__main__':
-    try:
-        args_handler = ArgsParserHandler()
-        args = args_handler.get_training_arguments()
 
-        start_time = time.time()
-        train(args)
-        final_time = time.time()
-        logging.getLogger('workflow_logger').info(
-            f"Training execution time in: {str(final_time - start_time)} seconds")
-
-    except Exception as e:
-        logging.getLogger('workflow_logger').critical(e)
-        quit()
+    start_time = time.time()
+    main()
+    final_time = time.time()
+    logging.getLogger('logger').info(
+        f"Graph analyzer execution time in: {str(final_time - start_time)} seconds")

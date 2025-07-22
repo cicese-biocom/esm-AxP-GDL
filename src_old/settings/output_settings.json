@@ -1,0 +1,127 @@
+{
+  "output_settings": [
+    {
+      "key": "checkpoints_path",
+      "name": "Checkpoints",
+      "modes": ["training"],
+      "files": []
+    },
+    {
+      "key": "metrics_path",
+      "name": "Metrics",
+      "modes": ["training", "test"],
+      "files": [
+        {
+          "key": "metrics_file",
+          "name": "Metrics.csv",
+          "modes": ["training", "test"]
+        }
+      ]
+    },
+    {
+      "key": "prediction_path",
+      "name": "Prediction",
+      "modes": ["test", "inference"],
+      "files": [
+        {
+          "key": "prediction_file",
+          "name": "Prediction.csv",
+           "modes": ["test", "inference"]
+        }
+      ]
+    },
+    {
+      "key": "log_path",
+      "name": "Logs",
+      "modes": ["training", "test", "inference"],
+      "files": [
+        {
+          "key": "log_file",
+          "name": "Run.log",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "sequences_with_non_natural_amino_acids_file",
+          "name": "Sequences_with_non_natural_amino_acids.csv",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "duplicated_sequence_ids_file",
+          "name": "Duplicated_sequence_IDs.csv",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "duplicated_sequences_file",
+          "name": "Duplicated_sequences.csv",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "sequences_with_erroneous_activity_file",
+          "name": "Sequences_with_erroneous_activity.csv",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "sequences_with_baseless_partitions_file",
+          "name": "Sequences_with_baseless_partitions.csv",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "non_pdb_bound_sequences_file",
+          "name": "Non-pdb_bound_sequences.csv",
+          "modes": ["training", "test", "inference"]
+        }
+      ]
+    },
+    {
+      "key": "parameters_path",
+      "name": "Parameters",
+      "modes": ["training", "test", "inference"],
+      "files": [
+        {
+          "key": "workflow_input_args_file",
+          "name": "command_line_params.json",
+          "modes": ["training", "test", "inference"]
+        },
+        {
+          "key": "workflow_execution_args_file",
+          "name": "all_params.json",
+          "modes": ["training", "test", "inference"]
+        }
+      ]
+    },
+    {
+      "key": "features_path",
+      "name": "Features",
+      "modes": ["training", "test", "inference"],
+      "files": [
+        {
+          "key": "features_file",
+          "name": "Features.csv",
+          "modes": ["training", "test", "inference"]
+        }
+      ]
+    },
+    {
+      "key": "partitioned_data_path",
+      "name": "Partitioned_Data",
+      "modes": ["training"],
+      "files": [
+        {
+          "key": "data_csv",
+          "name": "data.csv",
+          "modes": ["training"]
+        },
+        {
+          "key": "training_data_fasta",
+          "name": "data_training.fasta",
+          "modes": ["training"]
+        },
+        {
+          "key": "validation_data_fasta",
+          "name": "data_validation.fasta",
+          "modes": ["training"]
+        }
+      ]
+    }
+  ]
+}

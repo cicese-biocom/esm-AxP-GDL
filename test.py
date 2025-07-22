@@ -1,7 +1,7 @@
 import logging
-from workflow.application_context import ApplicationContext
-from workflow.args_parser_handler import ArgsParserHandler
-from workflow.gdl_workflow import TestWorkflow
+from src_old.workflow.application_context import ApplicationContext
+from src_old.workflow.args_parser_handler import ArgsParserHandler
+from src_old.workflow.gdl_workflow import TestWorkflow
 import time
 
 
