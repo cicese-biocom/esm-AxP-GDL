@@ -9,14 +9,14 @@ import torch
 import esm
 from esm import FastaBatchedDataset
 from tqdm import tqdm
-
-from src.config.enum import ESM2Representation
-from src_old.utils import json_parser
 from torch.utils.data import DataLoader
+
+from src.utils.json import load_json
+from src.config.enum import ESM2Representation
 
 
 def get_models(esm2_representation: ESM2Representation):
-    data = json_parser.load_json(
+    data = load_json(
         Path(os.getenv("ESM2_REPRESENTATION_CONFIG_FILE")).resolve()
     )
 

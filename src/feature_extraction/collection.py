@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 from typing import List, Dict
-from src_old.utils.json_parser import load_json
+
+from src.utils.json import load_json
 
 
 class FeaturesCollectionLoader:

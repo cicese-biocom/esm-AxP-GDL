@@ -1,26 +1,19 @@
 import logging
-from src_old.workflow.application_context import ApplicationContext
-from src_old.workflow.args_parser_handler import ArgsParserHandler
-from src_old.workflow.gdl_workflow import TestWorkflow
+from src.config.enum import ExecutionMode
+from src.workflow.gdl_workflow import TestWorkflow
+from src.workflow.params_setup import argument_parser
 import time
 
 
-def test(args):
-    context = ApplicationContext(mode='test')
-    TestWorkflow().run_workflow(context=context, parameters=args)
+def main():
+    parameters = argument_parser(ExecutionMode.TRAIN)
+    TestWorkflow(parameters).run()
 
 
 if __name__ == '__main__':
-    try:
-        args_handler = ArgsParserHandler()
-        args = args_handler.get_eval_arguments()
 
-        start_time = time.time()
-        test(args)
-        final_time = time.time()
-        logging.getLogger('workflow_logger').info(
-            f"Inference execution time in: {str(final_time - start_time)} seconds")
-
-    except Exception as e:
-        logging.getLogger('workflow_logger').critical(e)
-        quit()
+    start_time = time.time()
+    main()
+    final_time = time.time()
+    logging.getLogger('logger').info(
+        f"Graph analyzer execution time in: {str(final_time - start_time)} seconds")

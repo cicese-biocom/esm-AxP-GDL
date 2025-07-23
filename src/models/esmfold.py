@@ -3,7 +3,8 @@ import esm
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from src_old.utils import pdb_parser
+
+from src.utils.pdb import save_pdb
 
 
 def predict_structures(data):
@@ -37,7 +38,7 @@ def main(args):
 
     with tqdm(range(len(pdbs)), total=len(pdbs), desc="Saving pdb files", disable=False) as progress:
         for (pdb_name, pdb_str) in zip(pdb_names, pdbs):
-            pdb_parser.save_pdb(pdb_str, pdb_name, path)
+            save_pdb(pdb_str, pdb_name, path)
             progress.update(1)
 
 
