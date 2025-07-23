@@ -7,9 +7,9 @@ from tqdm import tqdm
 
 from src.config.enum import AminoAcidRepresentation
 from src.models.esmfold import predict_structures
-from src.utils.distances import translate_positive_coordinates
+from src.utils.distance import translate_positive_coordinates
 from src.utils.dto import DTO
-from src.utils.pdb_parser import get_atom_coordinates_from_pdb, save_pdb, open_pdb
+from src.utils.pdb import get_atom_coordinates_from_pdb, save_pdb, open_pdb
 
 
 class PredictTertiaryStructuresDTO(DTO):

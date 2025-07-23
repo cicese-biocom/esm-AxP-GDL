@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List, Dict
 from src_old.utils.json_parser import load_json
@@ -7,7 +8,8 @@ class FeaturesCollectionLoader:
     def __init__(
             self
     ):
-        json_path = Path.cwd().joinpath("settings", "features_collection.json")
+        json_path = Path(os.getenv("FEATURE_COLLECTION_FILE")).resolve()
+
         try:
             self.features_collection = load_json(json_path)['features_collection']
         except FileNotFoundError:

@@ -1,6 +1,6 @@
 from typing import Tuple
 import numpy as np
-from src_old.utils import distance
+from src.utils import distance
 from functools import partial
 
 

@@ -29,9 +29,8 @@ from src.config.enum import (
     AminoAcidRepresentation
 )
 from src.feature_extraction.collection import FeaturesCollectionLoader
-from src.utils import file_system_handler
-from src.utils.file_system_handler import check_directory_empty, get_output_path_settings
-from src.workflow.logging import Logging
+from src.utils import path
+from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists, check_file_format
 
 options_methods_for_ad = ", ".join(f"'{e.value}'" for e in MethodsForAD)
 options_edge_construction_functions = ", ".join(f"'{e.value}'" for e in EdgeConstructionFunctions)
@@ -79,6 +78,7 @@ class CommonArguments(BaseModel):
                     "specified in this file."
     )
 
+
     @root_validator(skip_on_failure=True)
     def check_numbers_of_class_required(cls, values):
         modeling_task = values.get("modeling_task")
@@ -118,9 +118,9 @@ class CommonArguments(BaseModel):
     @root_validator(skip_on_failure=True)
     def resolve_dataset(cls, values):
         if values.get('dataset'):
-            values['dataset'] = file_system_handler.check_file_exists(values['dataset'])
+            values['dataset'] = check_file_exists(values['dataset'])
             values['dataset_name'] = str(values['dataset'].name)
-            values['dataset_extension'] = file_system_handler.check_file_format(values['dataset'])
+            values['dataset_extension'] = check_file_format(values['dataset'])
         return values
 
     @root_validator(skip_on_failure=True)
@@ -166,6 +166,40 @@ class CommonArguments(BaseModel):
         if not config_file.is_file():
             raise FileNotFoundError(f"ESM2 representations configuration file not found at: {config_file}")
         return values
+
+    @root_validator(skip_on_failure=True)
+    def validate_feature_collection_file(cls, values):
+        config_file = os.getenv("FEATURE_COLLECTION_FILE")
+        if config_file is None:
+            raise EnvironmentError("FEATURE_COLLECTION_FILE environment variable is not set in .env file.")
+
+        config_file = Path(config_file).resolve()
+        if not config_file.is_file():
+            raise FileNotFoundError(f"Feature collection file not found at: {config_file}")
+        return values
+
+    @root_validator(skip_on_failure=True)
+    def validate_output_setting_file(cls, values):
+        config_file = os.getenv("OUTPUT_SETTINGS")
+        if config_file is None:
+            raise EnvironmentError("OUTPUT_SETTINGS environment variable is not set in .env file.")
+
+        config_file = Path(config_file).resolve()
+        if not config_file.is_file():
+            raise FileNotFoundError(f"Output setting file not found at: {config_file}")
+        return values
+
+    @root_validator(skip_on_failure=True)
+    def validate_ad_method_collection_file(cls, values):
+        config_file = os.getenv("AD_METHODS_COLLECTION_FILE")
+        if config_file is None:
+            raise EnvironmentError("AD_METHODS_COLLECTION_FILE environment variable is not set in .env file.")
+
+        config_file = Path(config_file).resolve()
+        if not config_file.is_file():
+            raise FileNotFoundError(f"Applicability Domain methods collection file not found at: {config_file}")
+        return values
+
 
     @root_validator(skip_on_failure=True)
     def validate_amino_acid_descriptors_file(cls, values):
@@ -302,7 +336,7 @@ class TrainingArguments(CommonArguments):
                 values['amino_acid_representation'] = 'CA'
 
             if values.get('pdb_path'):
-                values['pdb_path'] = file_system_handler.check_file_exists(values['pdb_path'])
+                values['pdb_path'] = check_file_exists(values['pdb_path'])
             else:
                 raise ValueError("The parameter 'pdb_path' is required.")
         else:

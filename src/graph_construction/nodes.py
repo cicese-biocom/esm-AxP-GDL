@@ -9,7 +9,6 @@ from pydantic.v1 import PositiveFloat
 from src.config.enum import ExecutionMode, ValidationMode, ESM2Representation
 from src.models.esm2 import get_models, get_representations
 from src.utils.dto import DTO
-from src.utils.scrambling import random_node_features
 
 
 class RandomEmbeddingDTO(DTO):
@@ -102,6 +101,19 @@ def _apply_random_embeddings(random_embedding_dto: RandomEmbeddingDTO):
                     )
                 progress.update(1)
     return random_embedding_dto.embeddings
+
+
+def random_node_features(feature_matrix, randomness_percentage, min, max):
+    total_coefficients = feature_matrix.shape[1]
+    total_coefficients_to_build = int(total_coefficients * (randomness_percentage / 100))
+
+    idxs_to_replace = np.random.choice(total_coefficients, total_coefficients_to_build, replace=False)
+    for feature_vector in feature_matrix:
+        vals_to_replace = np.random.uniform(min, max, size=total_coefficients_to_build)
+        feature_vector[idxs_to_replace] = vals_to_replace[range(total_coefficients_to_build)]
+
+    return feature_matrix
+
 
 
 def _cat(*args):

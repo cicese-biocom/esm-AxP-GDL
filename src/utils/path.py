@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict
 from src_old.utils import json_parser
@@ -31,8 +32,7 @@ def check_directory_empty(base_path: Path) -> Path:
 
 
 def get_output_path_settings(base_path: Path, mode: str) -> Dict:
-    settings_file = Path('settings/output_settings.json').resolve()
-    data = json_parser.load_json(settings_file)
+    data = json_parser.load_json(Path(os.getenv("OUTPUT_SETTINGS")).resolve())
 
     output_path_settings = {}
     for setting in data["output_settings"]:

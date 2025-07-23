@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List, Dict, Union, Any
 from src_old.utils.json_parser import load_json
@@ -7,7 +8,8 @@ class ADMethodCollectionLoader:
     def __init__(
             self
     ):
-        json_path = Path.cwd().joinpath("settings", "ad_methods_collection.json")
+        json_path = Path(os.getenv("AD_METHODS_COLLECTION_FILE")).resolve()
+
         try:
             self.methods_for_ad = load_json(json_path)['ad_methods_collection']
         except FileNotFoundError:
