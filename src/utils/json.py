@@ -1,6 +1,9 @@
+import enum
 import json
 from pathlib import Path
 from typing import Dict
+
+import torch
 
 
 def load_json(json_file: Path) -> Dict:
@@ -10,10 +13,12 @@ def load_json(json_file: Path) -> Dict:
 
 def save_json(json_file: Path, json_data: Dict) -> None:
     def path_converter(obj):
-        if isinstance(obj, Path):
+        if isinstance(obj, (Path, torch.device)):
             return str(obj)
         elif isinstance(obj, set):
             return list(obj)
+        elif isinstance(obj, enum.Enum):
+            return obj.value
         raise TypeError(f"Type {type(obj)} not serializable")
 
     with open(json_file, 'w') as file:
