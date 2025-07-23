@@ -78,7 +78,7 @@
       "modes": ["training", "test", "inference"],
       "files": [
         {
-          "key": "workflow_input_args_file",
+          "key": "command_line_params",
           "name": "command_line_params.json",
           "modes": ["training", "test", "inference"]
         },
