@@ -6,7 +6,7 @@ import time
 
 
 def main():
-    parameters = argument_parser(ExecutionMode.TRAIN)
+    parameters = argument_parser(ExecutionMode.TEST)
     TestWorkflow(parameters).run()
 
 
