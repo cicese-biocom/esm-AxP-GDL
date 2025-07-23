@@ -29,8 +29,8 @@ from src.config.enum import (
     AminoAcidRepresentation
 )
 from src.feature_extraction.collection import FeaturesCollectionLoader
-from src.utils import path
-from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists, check_file_format
+from src.utils.json import save_json
+from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists
 
 options_methods_for_ad = ", ".join(f"'{e.value}'" for e in MethodsForAD)
 options_edge_construction_functions = ", ".join(f"'{e.value}'" for e in EdgeConstructionFunctions)
@@ -58,17 +58,8 @@ class CommonArguments(BaseModel):
     )
 
     gdl_model_path: Path = Field(
-        default=None,
-        description="The path to save/load the models",
-    )
-
-    modeling_task: ModelingTask = Field(
-        description="Type of modeling task to execute"
-    )
-
-    numbers_of_class: Optional[PositiveInt] = Field(
-        default=None,
-        description="Number of classes to predict (required if modeling_task is 'multiclass')."
+        description="Path where trained models are saved, or from where a trained model is "
+                    "loaded for test/inference mode",
     )
 
     command_line_params: Optional[Path] = Field(
@@ -78,30 +69,6 @@ class CommonArguments(BaseModel):
                     "specified in this file."
     )
 
-
-    @root_validator(skip_on_failure=True)
-    def check_numbers_of_class_required(cls, values):
-        modeling_task = values.get("modeling_task")
-        n_classes = values.get("numbers_of_class")
-
-        if modeling_task == ModelingTask.MULTICLASS_CLASSIFICATION:
-            if n_classes is None:
-                raise ValueError("'numbers_of_class' is required when modeling_task is 'multiclass_classification'")
-            values["classes"] = list(range(n_classes))
-
-        elif modeling_task == ModelingTask.BINARY_CLASSIFICATION:
-            if n_classes is not None:
-                raise ValueError("'numbers_of_class' should not be set when modeling_task is 'binary_classification'")
-            values["numbers_of_class"] = 2
-            values["classes"] = [0, 1]
-
-        elif modeling_task == ModelingTask.REGRESSION:
-            if n_classes is not None:
-                raise ValueError("'numbers_of_class' should not be set when modeling_task is 'regression'")
-            values["numbers_of_class"] = 1
-
-        return values
-
     @root_validator(skip_on_failure=True)
     def set_device(cls, values):
         values['device'] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -109,18 +76,9 @@ class CommonArguments(BaseModel):
         return values
 
     @root_validator(skip_on_failure=True)
-    def resolve_gdl_model_path(cls, values):
-        if values.get('gdl_model_path'):
-            values['gdl_model_path'] = values['gdl_model_path'].resolve()
-            values['checkpoint'] = str(values['gdl_model_path'].name)
-        return values
-
-    @root_validator(skip_on_failure=True)
     def resolve_dataset(cls, values):
         if values.get('dataset'):
             values['dataset'] = check_file_exists(values['dataset'])
-            values['dataset_name'] = str(values['dataset'].name)
-            values['dataset_extension'] = check_file_format(values['dataset'])
         return values
 
     @root_validator(skip_on_failure=True)
@@ -199,7 +157,6 @@ class CommonArguments(BaseModel):
         if not config_file.is_file():
             raise FileNotFoundError(f"Applicability Domain methods collection file not found at: {config_file}")
         return values
-
 
     @root_validator(skip_on_failure=True)
     def validate_amino_acid_descriptors_file(cls, values):
@@ -325,6 +282,20 @@ class TrainingArguments(CommonArguments):
         description='GDL architecture to use'
     )
 
+    modeling_task: ModelingTask = Field(
+        description="Type of modeling task to execute"
+    )
+
+    numbers_of_class: Optional[PositiveInt] = Field(
+        default=None,
+        description="Number of classes to predict (required if modeling_task is 'multiclass')."
+    )
+
+    @root_validator(skip_on_failure=True)
+    def resolve_gdl_model_path(cls, values):
+        values['gdl_model_path'] = values['gdl_model_path'].resolve()
+        return values
+
     @root_validator(skip_on_failure=True)
     def validate_edge_construction_requirements(cls, values):
         funcs = values.get('edge_construction_functions')
@@ -429,6 +400,29 @@ class TrainingArguments(CommonArguments):
         return values
 
     @root_validator(skip_on_failure=True)
+    def check_numbers_of_class_required(cls, values):
+        modeling_task = values.get("modeling_task")
+        n_classes = values.get("numbers_of_class")
+
+        if modeling_task == ModelingTask.MULTICLASS_CLASSIFICATION:
+            if n_classes is None:
+                raise ValueError("'numbers_of_class' is required when modeling_task is 'multiclass_classification'")
+            values["classes"] = list(range(n_classes))
+
+        elif modeling_task == ModelingTask.BINARY_CLASSIFICATION:
+            if n_classes is not None:
+                raise ValueError("'numbers_of_class' should not be set when modeling_task is 'binary_classification'")
+            values["numbers_of_class"] = 2
+            values["classes"] = [0, 1]
+
+        elif modeling_task == ModelingTask.REGRESSION:
+            if n_classes is not None:
+                raise ValueError("'numbers_of_class' should not be set when modeling_task is 'regression'")
+            values["numbers_of_class"] = 1
+
+        return values
+
+    @root_validator(skip_on_failure=True)
     def set_mode(cls, values):
         values['execution_mode'] = ExecutionMode.TRAIN
         return values
@@ -443,7 +437,6 @@ class TrainingArguments(CommonArguments):
 
 class PredictionArguments(CommonArguments):
     output_path: Path = Field(
-        default=None,
         description="The path where the output data will be saved",
     )
 
@@ -541,6 +534,12 @@ class PredictionArguments(CommonArguments):
         values['output_dir'] = get_output_path_settings(new_dir, 'test')
         return values
 
+    @root_validator(skip_on_failure=True)
+    def add_model_parameters(cls, values):
+        checkpoint = torch.load(values['gdl_model_path'])
+        values.update(checkpoint.get('parameters', {}))
+        return values
+
 
 class InferenceArguments(PredictionArguments):
     @root_validator(skip_on_failure=True)
@@ -557,9 +556,37 @@ def argument_parser(execution_mode: ExecutionMode):
         ExecutionMode.INFERENCE: InferenceArguments
     }
 
+    model=mode_mapping[execution_mode]
+
     # load environment variables
     load_dotenv(dotenv_path='.env')
 
     # parse arguments
-    parser = pydantic_argparse.ArgumentParser(model=mode_mapping[execution_mode], exit_on_error=True)
-    return parser.parse_typed_args()
+    parser = pydantic_argparse.ArgumentParser(model=model, exit_on_error=True)
+    args = parser.parse_typed_args()
+
+    # save parameters
+    _save_all_parameters(args)
+    _save_command_line_parameters(model, args)
+
+    return args
+
+
+def _save_all_parameters(args):
+    save_json(
+        json_file=args.output_dir['workflow_execution_args_file'],
+        json_data=args.dict()
+    )
+
+
+def _save_command_line_parameters(model, args):
+    user_fields = model.__fields__.keys()
+    user_provided = {
+        k: v for k, v in args.dict().items()
+        if v is not None and k in user_fields
+    }
+
+    save_json(
+        json_file=args.output_dir['command_line_params'],
+        json_data=user_provided
+    )
