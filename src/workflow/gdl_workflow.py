@@ -42,7 +42,6 @@ from src.workflow.params_setup import TrainingArguments, PredictionArguments, In
 
 class ModelParametersDTO(DTO):
     esm2_representation: ESM2Representation
-    tertiary_structure_method: Optional[TertiaryStructurePredictionMethod]
     edge_construction_functions: List[EdgeConstructionFunctions]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
@@ -98,7 +97,7 @@ class GDLWorkflow(ABC):
             # Step 9: execute modeling task
             self.execute(model=model, graphs=graphs, data=batch)
 
-            # Step 10: execute task
+            # Step 10: execute modeling task
             self.get_applicability_domain(ad_models, features)
 
 
@@ -174,7 +173,6 @@ class GDLWorkflow(ABC):
                 data=data
             )
         )
-
 
 class TrainingWorkflow(GDLWorkflow):
     def get_applicability_domain(self, ad_models, features):
@@ -553,14 +551,14 @@ def save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
 
 def save_checkpoints(model: ModelDTO, checkpoints_path: Path):
     filename = get_filename(model, checkpoints_path)
-    torch.save(model, filename)
+    torch.save(model.dict(), filename)
     return filename
 
 
 def save_best_model(model: ModelDTO, checkpoints_path: Path):
     filename = get_filename(model, checkpoints_path)
     filename = filename.with_name(filename.stem + "_(best).pt")
-    torch.save(model, filename)
+    torch.save(model.dict(), filename)
     return filename
 
 
