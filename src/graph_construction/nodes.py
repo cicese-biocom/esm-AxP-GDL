@@ -6,7 +6,7 @@ from tqdm import tqdm
 from typing import List, Optional
 from pydantic.v1 import PositiveFloat
 
-from src.config.enum import ExecutionMode, ValidationMode, ESM2Representation
+from src.config.types import ExecutionMode, ValidationMode, ESM2Representation
 from src.models.esm2 import get_models, get_representations
 from src.utils.dto import DTO
 

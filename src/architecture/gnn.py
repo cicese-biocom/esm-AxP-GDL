@@ -6,7 +6,7 @@ from torch import nn
 from src.architecture.gat_v1 import GATv1
 from src.architecture.gat_v2 import GATv2
 
-from src.config.enum import GDLArchitecture
+from src.config.types import GDLArchitecture
 
 
 class GNNParametersDTO(BaseModel):

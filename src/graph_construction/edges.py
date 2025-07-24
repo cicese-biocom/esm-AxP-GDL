@@ -9,7 +9,7 @@ from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
-from src.config.enum import (
+from src.config.types import (
     ValidationMode,
     ExecutionMode,
     EdgeConstructionFunctions,

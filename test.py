@@ -1,5 +1,5 @@
 import logging
-from src.config.enum import ExecutionMode
+from src.config.types import ExecutionMode
 from src.workflow.gdl_workflow import TestWorkflow
 from src.workflow.params_setup import argument_parser
 import time

@@ -16,7 +16,7 @@ from Bio import SeqIO
 from torch_geometric.data import Data
 
 from src.architecture.gnn import GNNParametersDTO
-from src.config.enum import (
+from src.config.types import (
     ValidationMode,
     ESM2ModelForContactMap,
     ESM2Representation,

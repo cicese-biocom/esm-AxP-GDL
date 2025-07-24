@@ -10,7 +10,7 @@ from typing import Dict
 import pandas as pd
 from tqdm import tqdm
 
-from src.config.enum import ESM2Representation
+from src.config.types import ESM2Representation
 from src.models.esm2 import get_models, get_representations
 from src.utils.dto import DTO
 

@@ -11,7 +11,7 @@ from pydantic.v1 import PositiveFloat
 from src.graph_construction.edges import get_edges, GetEdgesDTO
 from src.graph_construction.nodes import esm2_derived_features, ESM2DerivedFeaturesDTO
 from src.models.esm2 import get_models, get_representations
-from src.config.enum import (
+from src.config.types import (
     ValidationMode,
     ExecutionMode,
     ESM2ModelForContactMap,

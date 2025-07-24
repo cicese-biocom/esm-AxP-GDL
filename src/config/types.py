@@ -1,5 +1,7 @@
 from enum import Enum, auto
 
+from typing_extensions import Literal
+
 
 class ExecutionMode(Enum):
     TRAIN = 'TRAIN'
@@ -16,6 +18,11 @@ class Partition(Enum):
     TRAINING = 1
     VALIDATION = 2
     TEST = 3
+
+TertiaryStructurePredictionMethod = Literal['esmfold']
+
+
+AminoAcidRepresentation = Literal['CA']
 
 
 class DistanceFunction(Enum):

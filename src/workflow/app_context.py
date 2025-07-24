@@ -1,7 +1,7 @@
 from injector import Injector
 
 from src.architecture.gnn import GNNFactory
-from src.config.enum import ModelingTask, ExecutionMode
+from src.config.types import ModelingTask, ExecutionMode
 from src.data_processing.data_loader import DataLoaderContext, CSVLoader, CSVByChunkLoader
 from src.data_processing.data_validator import DatasetValidatorContext, LabeledDatasetValidator, DatasetValidator
 from src.workflow.execution_factory import (

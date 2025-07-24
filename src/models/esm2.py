@@ -12,7 +12,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 from src.utils.json import load_json
-from src.config.enum import ESM2Representation
+from src.config.types import ESM2Representation
 
 
 def get_models(esm2_representation: ESM2Representation):
