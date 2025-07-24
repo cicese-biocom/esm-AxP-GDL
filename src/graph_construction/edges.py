@@ -9,8 +9,12 @@ from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
-from src.config.enum import ValidationMode, ExecutionMode, TertiaryStructurePredictionMethod, AminoAcidRepresentation, \
-    EdgeConstructionFunctions, DistanceFunction
+from src.config.enum import (
+    ValidationMode,
+    ExecutionMode,
+    EdgeConstructionFunctions,
+    DistanceFunction
+)
 
 from src.graph_construction.edge_functions import EdgeConstructionContext
 from src.utils.dto import DTO
@@ -34,9 +38,9 @@ class GetEdgesDTO(DTO):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
-    tertiary_structure_method: Optional[TertiaryStructurePredictionMethod]
+    tertiary_structure_method: Optional[str]
     pdb_path: Optional[Path]
-    amino_acid_representation: AminoAcidRepresentation
+    amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
     edge_construction_functions: List[EdgeConstructionFunctions]
     distance_function: Optional[DistanceFunction]

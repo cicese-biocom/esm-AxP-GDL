@@ -11,13 +11,12 @@ class ModelingTask(Enum):
     MULTICLASS_CLASSIFICATION = 'multiclass_classification'
     REGRESSION = 'regression'
 
+
 class Partition(Enum):
     TRAINING = 1
     VALIDATION = 2
     TEST = 3
 
-class TertiaryStructurePredictionMethod(Enum):
-    ESMFOLD = 'esmfold'
 
 class DistanceFunction(Enum):
     EUCLIDEAN = 'euclidean'
@@ -78,6 +77,3 @@ class GDLArchitecture(Enum):
     GATV1 = 'GATv1'
     GATV2 = 'GATv2'
 
-
-class AminoAcidRepresentation(Enum):
-    CA = 'CA'

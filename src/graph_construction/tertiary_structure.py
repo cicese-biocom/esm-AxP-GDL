@@ -5,25 +5,29 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from src.config.enum import AminoAcidRepresentation
+import io
+from Bio.PDB import PDBParser
+from Bio.PDB.PDBExceptions import PDBConstructionWarning
+import warnings
+warnings.simplefilter('ignore', PDBConstructionWarning)
+
 from src.models.esmfold import predict_structures
 from src.utils.distance import translate_positive_coordinates
 from src.utils.dto import DTO
-from src.utils.pdb import get_atom_coordinates_from_pdb, save_pdb, open_pdb
+from src.utils.pdb import save_pdb, open_pdb
 
 
 class PredictTertiaryStructuresDTO(DTO):
     pdb_path: Path
-    amino_acid_representation: AminoAcidRepresentation
+    amino_acid_representation: str
     data: pd.DataFrame
 
 
 class LoadTertiaryStructuresDTO(DTO):
     pdb_path: Path
-    amino_acid_representation: AminoAcidRepresentation
+    amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
     data: pd.DataFrame
-
 
 
 def load_tertiary_structures(load_tertiary_structures_dto: LoadTertiaryStructuresDTO):
@@ -87,3 +91,34 @@ def predict_tertiary_structures(predict_tertiary_structures_dto: PredictTertiary
     return atom_coordinates_matrices
 
 
+def get_atom_coordinates_from_pdb(pdb_str, atom_type: str):
+    try:
+        pdb_filehandle = io.StringIO(pdb_str)
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure("pdb", pdb_filehandle)
+
+        atom_coordinates = []
+        for model in structure:
+            for chain in model:
+                for residue in chain:
+                    if residue.has_id(atom_type):
+                        atom = residue[atom_type]
+                        atom_coordinates.append(np.float64(atom.coord))
+
+        pdb_filehandle.close()
+        return atom_coordinates
+
+    except Exception as e:
+        raise ValueError(f"Error parsing the PDB structure: {e}")
+
+
+def _get_random_coordinates(atom_coordinates, coordinate_min, coordinate_max):
+    random_atom_coordinates = np.zeros(atom_coordinates.shape)
+    random_atom_coordinates[:, 0] = \
+        np.random.uniform(coordinate_min[0], coordinate_max[0], size=atom_coordinates.shape[0])
+    random_atom_coordinates[:, 1] = \
+        np.random.uniform(coordinate_min[1], coordinate_max[1], size=atom_coordinates.shape[0])
+    random_atom_coordinates[:, 2] = \
+        np.random.uniform(coordinate_min[2], coordinate_max[2], size=atom_coordinates.shape[0])
+
+    return random_atom_coordinates

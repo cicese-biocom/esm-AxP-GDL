@@ -20,8 +20,6 @@ from src.config.enum import (
     ValidationMode,
     ESM2ModelForContactMap,
     ESM2Representation,
-    TertiaryStructurePredictionMethod,
-    AminoAcidRepresentation,
     EdgeConstructionFunctions,
     DistanceFunction,
     ModelingTask,
@@ -47,7 +45,7 @@ class ModelParametersDTO(DTO):
     distance_threshold: Optional[PositiveFloat]
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     probability_threshold: Optional[PositiveFloat]
-    amino_acid_representation: AminoAcidRepresentation
+    amino_acid_representation: str
     hidden_layer_dimension: PositiveInt
     add_self_loops: bool
     use_edge_attr: bool

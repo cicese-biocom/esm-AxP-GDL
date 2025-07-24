@@ -12,10 +12,10 @@ import pydantic_argparse
 from typing import Optional, List
 
 from torch import hub
+from typing_extensions import Literal
 
 from src.applicability_domain.collection import ADMethodCollectionLoader
 from src.config.enum import (
-    TertiaryStructurePredictionMethod,
     ExecutionMode,
     DistanceFunction,
     EdgeConstructionFunctions,
@@ -25,8 +25,7 @@ from src.config.enum import (
     SplitMethod,
     MethodsForAD,
     ModelingTask,
-    GDLArchitecture,
-    AminoAcidRepresentation
+    GDLArchitecture
 )
 from src.feature_extraction.collection import FeaturesCollectionLoader
 from src.utils.json import save_json
@@ -41,7 +40,7 @@ class CommonArguments(BaseModel):
         description="Path to the input dataset in csv format",
     )
 
-    tertiary_structure_method: Optional[TertiaryStructurePredictionMethod] = Field(
+    tertiary_structure_method: Optional[Literal['esmfold']] = Field(
         default=None,
         description="3D structure prediction method. None indicates to load existing tertiary "
                     "structures from PDB files , otherwise, sequences in input CSV file are "
@@ -202,8 +201,8 @@ class TrainingArguments(CommonArguments):
                     "It takes a value between 0.5 and 1.0."
     )
 
-    amino_acid_representation: Optional[AminoAcidRepresentation] = Field(
-        default=AminoAcidRepresentation.CA,
+    amino_acid_representation: Optional[Literal['CA']] = Field(
+        default="CA",
         description='Reference atom into an amino acid to define a relationship (e.g., distance) regarding another amino acid'
     )
 
