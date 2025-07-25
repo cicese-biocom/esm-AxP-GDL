@@ -60,6 +60,7 @@ class ApplicationContext:
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
+            self.__prediction_processor = ml_factory.create_prediction_processor()
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetValidatorContext, DatasetValidator)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))

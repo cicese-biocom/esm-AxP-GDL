@@ -39,6 +39,7 @@ class ConstructGraphDTO(DTO):
     use_edge_attr: Optional[bool]
     data: pd.DataFrame
     device: torch.device
+    use_edge_attr: bool
 
 
 def construct_graphs(construct_graph_dto: ConstructGraphDTO):
@@ -98,20 +99,22 @@ def construct_graphs(construct_graph_dto: ConstructGraphDTO):
                     "sequence_id": sequence_info['id'],
                     "sequence": sequence_info['sequence'],
                     "sequence_length": sequence_info['length'],
-                }
+                },
+                use_edge_attr=construct_graph_dto.use_edge_attr
             )
         )
 
     return graphs, perplexities_output
 
 
-def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, sequence_info: Dict, eps=1e-6):
+def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, sequence_info: Dict, use_edge_attr: bool, eps=1e-6):
     """
-    :param y:
+    :param label:
     :param sequence_info: Dict
     :param adjacency_matrix: Adjacency matrix with shape (n_nodes, n_nodes)
     :param weights_matrix: Edge matrix with shape (n_nodes, n_nodes, n_edge_features)
     :param nodes_features: node embedding with shape (n_nodes, n_node_features)
+    :param use_edge_attr
     :param eps: default eps=1e-6
     :return:
     """
@@ -130,7 +133,7 @@ def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, seq
                     e_vec.append(weights_matrix[i][j])
     edge_index = torch.tensor([rows, cols], dtype=torch.int64)
     x = torch.tensor(nodes_features, dtype=torch.float32)
-    edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
+    edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32) if use_edge_attr else None
     y = torch.tensor([label], dtype=torch.int64) if label is not None else None
 
     data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, sequence_info=sequence_info)

@@ -122,6 +122,6 @@ class InferenceBatchProcessor(BatchProcessor):
         output = super().process(batch)
 
         return ProcessedBatchDTO(
-            sequence_info=[item["sequence_info"] for item in batch],
+            sequence_info=batch.sequence_info,
             prediction=self._prediction.process(output)
         )

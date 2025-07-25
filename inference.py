@@ -11,7 +11,6 @@ def main():
 
 
 if __name__ == '__main__':
-
     start_time = time.time()
     main()
     final_time = time.time()

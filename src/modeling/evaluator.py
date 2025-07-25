@@ -180,5 +180,5 @@ class InferenceModeEvaluator(Evaluator):
 
         return EvaluationOutputDTO(
             prediction=BatchesData().get_prediction(processed_batches),
-            sequence_info=BatchesData().get_metadata(processed_batches),
+            sequence_info=BatchesData().get_sequence_info(processed_batches),
         )

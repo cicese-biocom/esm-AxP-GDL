@@ -69,7 +69,7 @@ class GDLWorkflow(ABC):
     def __init__(self, parameters):
         self._parameters: Union[TrainingArguments, PredictionArguments, InferenceArguments] = parameters
         self._context = ApplicationContext(**parameters.dict())
-        self._eval_output: Optional[List[Dict]] = None
+        self._eval_output: Optional[List[EvaluationOutputDTO]] = []
         self._path: Dict = parameters.output_dir
 
     def run(self):
@@ -88,6 +88,10 @@ class GDLWorkflow(ABC):
 
             # Step 4: validate dataset
             batch = self.validate_dataset(batch)
+
+            # Skip iteration if batch is empty
+            if batch.empty:
+                continue
 
             # Step 5: construct graphs
             graphs, perplexities = self.construct_graphs(data=batch)
@@ -461,30 +465,39 @@ class TestWorkflow(PredictionWorkflow):
         )
 
     def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> None:
-        eval_output = super().modeling_task(model_evaluator, graphs)
+        # save output
+        self._eval_output.append(super().modeling_task(model_evaluator, graphs))
 
-        # save prediction
-        self._eval_output.append(
-            {
-                **eval_output.sequence_info,
-                'y_true': eval_output.y_true,
-                **eval_output.prediction.dict()
-            }
-        )
 
     def save_evaluation_outputs(self) -> None:
         # save predictions
-        pd.DataFrame(self._eval_output).to_csv(self._path['prediction_file'], index=False)
+        # df = pd.DataFrame.from_records(self._eval_output)
 
         # compute metrics
         prediction = PredictionDTO()
         y_true = []
+        sequence_info = {}
 
         for eval_output in self._eval_output:
-            prediction.extend(PredictionDTO(**eval_output))
-            y_true.extend(eval_output.get("y_true"))
+            prediction.extend(eval_output.prediction)
+            y_true.extend(eval_output.y_true)
+
+            for key, value in eval_output.sequence_info.items():
+                if key not in sequence_info:
+                    sequence_info[key] = []
+                sequence_info[key].extend(value)
+
+        # save predictions
+        pd.DataFrame(
+            {
+                **sequence_info,
+                'y_true': y_true,
+                **prediction.dict()
+            }
+        ).to_csv(self._path['prediction_file'], index=False)
 
 
+        # compute metrics
         test_metrics = format_metric_keys(
             metrics=self._context.metrics.calculate(
                 prediction=prediction,
