@@ -5,6 +5,8 @@ from weka.clusterers import Clusterer
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from src.config.types import SplitMethod
+
 
 class DataPartitioner(ABC):
     @abstractmethod
@@ -86,10 +88,10 @@ class ExpectationMaximizationPartitioner(DataPartitioner):
             jvm.stop()
 
 
-def to_partition(split_method: str, **kwargs):
+def to_partition(split_method: SplitMethod, **kwargs):
     methods = {
-        "random": RandomPartitioner,
-        "expectation_maximization": ExpectationMaximizationPartitioner
+        SplitMethod.RANDOM: RandomPartitioner,
+        SplitMethod.EXPECTATION_MAXIMIZATION: ExpectationMaximizationPartitioner
     }
     data_partitioner = methods[split_method]()
     return data_partitioner.to_partition(**kwargs)

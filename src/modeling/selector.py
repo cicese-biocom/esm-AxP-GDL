@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Optional
-from pydantic.v1 import PositiveInt
 from torch import nn
 
 from src.utils.dto import DTO
 
 
 class ModelDTO(DTO):
-    epoch: Optional[PositiveInt] = None
+    epoch: Optional[int] = None
     model: Optional[nn.Module] = None
     model_state_dict: Optional[Dict] = None
     optimizer_state_dict: Optional[Dict] = None

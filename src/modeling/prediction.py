@@ -7,8 +7,8 @@ from src.utils.dto import DTO
 
 
 class PredictionDTO(DTO):
-    y_pred: Optional[List]
-    y_score: Optional[List]
+    y_pred: Optional[List] = None
+    y_score: Optional[List] = None
 
     def extend(self, prediction_dto: "PredictionDTO"):
         # y_pred
