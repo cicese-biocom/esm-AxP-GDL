@@ -69,14 +69,14 @@ class BinaryClassificationMetrics(Metrics):
                 - "Recall_Neg": Sensitivity (recall for class 1)
         """
 
-        recalls = recall_score(y_true, prediction.y_pred, average=None, labels=self._classes)
+        recall_per_class = recall_score(y_true, prediction.y_pred, average=None, labels=self._classes)
+        recall_dict = {f"Recall_class_{c}": r for c, r in zip(self._classes, recall_per_class)}
 
         return {
             "MCC": matthews_corrcoef(y_true, prediction.y_pred),
             "ACC": accuracy_score(y_true, prediction.y_pred),
             "AUC": roc_auc_score(y_true, prediction.y_score),
-            "Recall_Pos": recalls[0],
-            "Recall_Neg": recalls[1]
+            **recall_dict
         }
 
 class MulticlassClassificationMetrics(Metrics):
