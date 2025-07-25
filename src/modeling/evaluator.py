@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional, List, Dict
 
 import torch
@@ -10,19 +11,18 @@ from torch import nn
 
 from src.modeling.batch import BatchProcessor, ProcessedBatchDTO, TrainingBatchProcessor, ValidationBatchProcessor, \
     TestBatchProcessor, InferenceBatchProcessor
-from src.modeling.metrics import Metrics
 from src.modeling.prediction import PredictionDTO, PredictionProcessor
 from src.utils.dto import DTO
 
 
 class EvaluationOutputDTO(DTO):
     loss: Optional[PositiveFloat]
-    metrics: Optional[Dict]
     y_true: Optional[List]
     prediction: Optional[PredictionDTO]
     optimizer_state_dict: Optional[Dict] = None
     scheduler_state_dict: Optional[Dict] = None
     model: nn.Module = None
+    sequence_info: Optional[Dict]
 
 
 class BatchesData:
@@ -45,12 +45,24 @@ class BatchesData:
             predictions.extend(batch.prediction)
         return predictions
 
+    @staticmethod
+    def get_sequence_info(batches: List[ProcessedBatchDTO]) -> dict:
+        merged_info = defaultdict(list)
+        for batch in batches:
+            for key, value_list in batch.sequence_info.items():
+                merged_info[key].extend(value_list)
+        return dict(merged_info)
+
 
 class Evaluator:
     def __init__(self, model: nn.Module, device: torch.device,):
         self._model = model
         self._device = device,
         self._batch_processor = BatchProcessor(model, device)
+
+    @property
+    def model(self) -> nn.Module:
+        return self._model
 
     def eval(self, data_loader: DataLoader) -> List[ProcessedBatchDTO]:
         processed_batches = []
@@ -115,11 +127,9 @@ class ValidationModeEvaluator(Evaluator):
             device: torch.device,
             loss_fn: _Loss,
             prediction: PredictionProcessor,
-            metrics: Metrics
     ):
         super(ValidationModeEvaluator, self).__init__(model, device)
         self._batch_processor = ValidationBatchProcessor(model, device, loss_fn, prediction)
-        self._metrics = metrics
 
 
     def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
@@ -128,10 +138,8 @@ class ValidationModeEvaluator(Evaluator):
 
         return EvaluationOutputDTO(
             loss=BatchesData().get_mean_loss(processed_batches),
-            metrics=self._metrics.calculate(
-                    prediction=BatchesData().get_prediction(processed_batches),
-                    y_true=BatchesData().get_y_true(processed_batches)
-            ),
+            prediction=BatchesData().get_prediction(processed_batches),
+            y_true=BatchesData().get_y_true(processed_batches)
         )
 
 
@@ -141,26 +149,18 @@ class TestModeEvaluator(Evaluator):
             model: nn.Module,
             device: torch.device,
             prediction: PredictionProcessor,
-            metrics: Metrics
     ):
         super(TestModeEvaluator, self).__init__(model, device)
         self._batch_processor = TestBatchProcessor(model, device, prediction)
-        self._metrics = metrics
 
     def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
         self._model.eval()
         processed_batches = super().eval(data_loader)
 
-        prediction = BatchesData().get_prediction(processed_batches)
-        y_true = BatchesData().get_y_true(processed_batches)
-
         return EvaluationOutputDTO(
-            metrics=self._metrics.calculate(
-                    prediction=prediction,
-                    y_true=y_true
-                ),
-            prediction=prediction,
-            y_true=y_true
+            prediction=BatchesData().get_prediction(processed_batches),
+            y_true=BatchesData().get_y_true(processed_batches),
+            sequence_info=BatchesData().get_sequence_info(processed_batches),
         )
 
 
@@ -179,5 +179,6 @@ class InferenceModeEvaluator(Evaluator):
         processed_batches = super().eval(data_loader)
 
         return EvaluationOutputDTO(
-            prediction=BatchesData().get_prediction(processed_batches)
+            prediction=BatchesData().get_prediction(processed_batches),
+            sequence_info=BatchesData().get_metadata(processed_batches),
         )

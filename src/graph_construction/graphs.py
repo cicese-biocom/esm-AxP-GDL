@@ -5,7 +5,7 @@ import torch
 from torch_geometric.data import Data
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic.v1 import PositiveFloat
 
 from src.graph_construction.edges import get_edges, GetEdgesDTO
@@ -84,25 +84,31 @@ def construct_graphs(construct_graph_dto: ConstructGraphDTO):
     )
 
     n_samples = len(adjacency_matrices)
-    with tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs", disable=False) as progress:
-        graphs = []
-        for i in range(n_samples):
-            graphs.append(
-                to_parse_matrix(
-                    adjacency_matrix=adjacency_matrices[i],
-                    nodes_features=np.array(nodes_features[i], dtype=np.float32),
-                    weights_matrix=weights_matrices[i],
-                    label=construct_graph_dto.data.iloc[i]['activity'] if 'activity' in construct_graph_dto.data.columns else None
-                )
+    graphs = []
+
+    for i in tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs"):
+        sequence_info = construct_graph_dto.data.iloc[i]
+        graphs.append(
+            to_parse_matrix(
+                adjacency_matrix=adjacency_matrices[i],
+                nodes_features=np.array(nodes_features[i], dtype=np.float32),
+                weights_matrix=weights_matrices[i],
+                label=sequence_info['activity'] if 'activity' in construct_graph_dto.data.columns else None,
+                sequence_info={
+                    "sequence_id": sequence_info['id'],
+                    "sequence": sequence_info['sequence'],
+                    "sequence_length": sequence_info['length'],
+                }
             )
-            progress.update(1)
+        )
 
     return graphs, perplexities_output
 
 
-def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps=1e-6):
+def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, sequence_info: Dict, eps=1e-6):
     """
-    :param label: label
+    :param y:
+    :param sequence_info: Dict
     :param adjacency_matrix: Adjacency matrix with shape (n_nodes, n_nodes)
     :param weights_matrix: Edge matrix with shape (n_nodes, n_nodes, n_edge_features)
     :param nodes_features: node embedding with shape (n_nodes, n_node_features)
@@ -127,6 +133,6 @@ def to_parse_matrix(adjacency_matrix, nodes_features, weights_matrix, label, eps
     edge_attr = torch.tensor(np.array(e_vec), dtype=torch.float32)
     y = torch.tensor([label], dtype=torch.int64) if label is not None else None
 
-    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, sequence_info=sequence_info)
     data.validate(raise_on_error=True)
     return data

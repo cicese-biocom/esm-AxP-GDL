@@ -12,6 +12,7 @@ from src.utils.dto import DTO
 class ProcessedBatchDTO(DTO):
     loss: Optional[float] = None
     y_true: Optional[List] = None
+    sequence_info: Optional[Dict] = None
     prediction: Optional[PredictionDTO] = None
 
 
@@ -103,6 +104,7 @@ class TestBatchProcessor(BatchProcessor):
 
         return ProcessedBatchDTO(
             y_true=batch.y.tolist(),
+            sequence_info=batch.sequence_info,
             prediction=self._prediction.process(output)
         )
 
@@ -120,5 +122,6 @@ class InferenceBatchProcessor(BatchProcessor):
         output = super().process(batch)
 
         return ProcessedBatchDTO(
+            sequence_info=[item["sequence_info"] for item in batch],
             prediction=self._prediction.process(output)
         )

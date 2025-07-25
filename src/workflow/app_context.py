@@ -53,16 +53,16 @@ class ApplicationContext:
         # TEST
         elif execution_mode == ExecutionMode.TEST:
             self.__prediction_processor = ml_factory.create_prediction_processor()
-            self.__metrics = ml_factory.create_metrics()
+            self.__metrics = ml_factory.create_metrics(classes=classes)
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetValidatorContext, LabeledDatasetValidator)
-            self.__injector.binder.bind(DataLoaderContext, CSVLoader)
+            self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetValidatorContext, DatasetValidator)
-            self.__injector.binder.bind(DataLoaderContext, CSVByChunkLoader)
+            self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         self.__dataset_validator = self.__injector.get(DatasetValidatorContext)
         self.__data_loader = self.__injector.get(DataLoaderContext)
@@ -99,15 +99,6 @@ class ApplicationContext:
     def gnn_factory(self):
         return self.__gnn_factory
 
-    @property
-    def batch_evaluator(self):
-        return self.__batch_evaluator
-
-
-    @property
-    def model_evaluator(self):
-        return self.__model_evaluator
-
 
 if __name__ == '__main__':
     params = {
@@ -118,7 +109,6 @@ if __name__ == '__main__':
     context = ApplicationContext(**params)
     metrics = context.metrics
     loss = context.loss_fn
-    output_processor = context.output_processor
     best_model_selector = context.best_model_selector
     class_validator = context.class_validator
     dataset_validator = context.dataset_validator

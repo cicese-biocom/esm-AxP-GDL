@@ -488,34 +488,35 @@ class PredictionArguments(CommonArguments):
 
     @root_validator(skip_on_failure=True)
     def set_applicability_domain(cls, values):
+        values['get_ad'] = False
+        features_collection = FeaturesCollectionLoader()
+        ad_methods_collection = ADMethodCollectionLoader()
+
+        none_params = [
+            param for param in [
+                'methods_for_ad',
+                'feature_file_for_ad'
+            ] if values.get(param) is None
+        ]
+
+        if len(none_params) == 0:
+            values['get_ad'] = True
+
+            valid_methods = ad_methods_collection.get_method_names()
+            for method in values['methods_for_ad']:
+                if method not in valid_methods:
+                    raise ValueError(
+                        f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
+                    )
+
+        elif len(none_params) == 2:
+            values['get_ad'] = False
+        else:
+            raise ValueError(
+                f"The following parameters must be specified: {', '.join(none_params)}"
+            )
+
         if values.get('get_ad'):
-            features_collection = FeaturesCollectionLoader()
-            ad_methods_collection = ADMethodCollectionLoader()
-
-            none_params = [
-                param for param in [
-                    'methods_for_ad',
-                    'feature_file_for_ad'
-                ] if values.get(param) is None
-            ]
-
-            if len(none_params) == 0:
-                values['get_ad'] = True
-
-                valid_methods = ad_methods_collection.get_method_names()
-                for method in values['methods_for_ad']:
-                    if method not in valid_methods:
-                        raise ValueError(
-                            f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
-                        )
-
-            elif len(none_params) == 2:
-                values['get_ad'] = False
-            else:
-                raise ValueError(
-                    f"The following parameters must be specified: {', '.join(none_params)}"
-                )
-
             values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
                 methods_for_ad=values['methods_for_ad'],
                 features_for_ad=features_collection.get_all_features()
