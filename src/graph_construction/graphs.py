@@ -16,7 +16,8 @@ from src.config.types import (
     ExecutionMode,
     ESM2ModelForContactMap,
     ESM2Representation,
-    EdgeConstructionFunction, DistanceFunction,
+    EdgeConstructionFunction,
+    DistanceFunction
 )
 from src.utils.dto import DTO
 

@@ -23,16 +23,21 @@ from src.config.types import (
     ESM2Representation,
     EdgeConstructionFunction,
     ModelingTask,
-    GDLArchitecture, ExecutionMode
+    GDLArchitecture, ExecutionMode, DistanceFunction
 )
 
 from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import to_partition
 from src.feature_extraction.features import filter_features, FeaturesContext, FeatureDTO
-from src.graph_construction.distance import DistanceStrategy
 from src.graph_construction.graphs import construct_graphs, ConstructGraphDTO
-from src.modeling.evaluator import TrainingModeEvaluator, ValidationModeEvaluator, TestModeEvaluator, \
-    EvaluationOutputDTO, Evaluator, InferenceModeEvaluator
+from src.modeling.evaluator import (
+    TrainingModeEvaluator,
+    ValidationModeEvaluator,
+    TestModeEvaluator,
+    EvaluationOutputDTO,
+    Evaluator,
+    InferenceModeEvaluator
+)
 from src.modeling.prediction import PredictionDTO
 from src.modeling.selector import ModelDTO
 from src.utils.dto import DTO
@@ -44,7 +49,7 @@ from src.workflow.params_setup import ExecutionParameters
 class ModelParametersDTO(DTO):
     esm2_representation: ESM2Representation
     edge_construction_functions: List[EdgeConstructionFunction]
-    distance_strategy: Optional[DistanceStrategy]
+    distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     probability_threshold: Optional[PositiveFloat]
