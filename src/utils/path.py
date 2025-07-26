@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
+from src.config.types import ExecutionMode
 from src.utils.json import load_json
 
 
@@ -32,16 +33,16 @@ def check_directory_empty(base_path: Path) -> Path:
     return base_path.resolve()
 
 
-def get_output_path_settings(base_path: Path, mode: str) -> Dict:
+def get_output_path_settings(base_path: Path, execution_mode: ExecutionMode) -> Dict:
     data = load_json(Path(os.getenv("OUTPUT_SETTINGS")).resolve())
 
     output_path_settings = {}
     for setting in data["output_settings"]:
-        if mode in setting["modes"]:
+        if execution_mode.value in setting["modes"]:
             output_path_settings[setting["key"]] = base_path.joinpath(setting["name"])
             output_path_settings[setting["key"]].mkdir(parents=True, exist_ok=True)
 
             for file in setting.get("files", []):
-                if mode in file["modes"]:
+                if execution_mode.value in file["modes"]:
                     output_path_settings[file["key"]] = output_path_settings[setting["key"]].joinpath(file["name"])
     return output_path_settings
