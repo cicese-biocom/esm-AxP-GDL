@@ -70,6 +70,30 @@ class CommonArguments(BaseModel):
                     "specified in this file."
     )
 
+    @root_validator(pre=True)
+    def check_json_params_arg(cls, values):
+        command_line_params = values.get("command_line_params")
+        if command_line_params:
+            try:
+                json_file_path = Path(command_line_params).resolve()
+                json_args = load_json(json_file_path)
+
+                argv = {}
+                for key, value in json_args.items():
+                    if isinstance(value, bool):
+                        argv[key] = value
+                    elif key not in values or values[key] is None:
+                        if isinstance(value, list) and value:
+                            argv[key] = ",".join(map(str, value))
+                        elif value is not None:
+                            argv[key] = value
+
+                sys.argv = _dict_to_argv(sys.argv[0], {**values, **argv})
+            except Exception as e:
+                raise ValueError(f"Error loading JSON parameters from '{command_line_params}': {e}")
+
+        return values
+
     @root_validator(skip_on_failure=True)
     def set_device(cls, values):
         values['device'] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -590,6 +614,20 @@ def _save_command_line_parameters(model, args):
         json_data=user_provided
     )
 
+
+def _dict_to_argv(script_path, params):
+    argv = [script_path]
+    for key, value in params.items():
+        if isinstance(value, bool):
+            if value:
+                argv.append(f"--{key}")
+        elif isinstance(value, (list, set)):
+            if value:
+                comma_separated = ",".join(map(str, value))
+                argv.extend([f"--{key}", comma_separated])
+        elif value:
+            argv.extend([f"--{key}", str(value)])
+    return argv
 
 
 
