@@ -12,8 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 from src.config.types import (
     ValidationMode,
     ExecutionMode,
-    EdgeConstructionFunctions,
-    DistanceFunction
+    EdgeConstructionFunction, DistanceFunction,
 )
 
 from src.graph_construction.edge_functions import EdgeConstructionContext
@@ -42,7 +41,7 @@ class GetEdgesDTO(DTO):
     pdb_path: Optional[Path]
     amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
-    edge_construction_functions: List[EdgeConstructionFunctions]
+    edge_construction_functions: List[EdgeConstructionFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
@@ -51,7 +50,7 @@ class GetEdgesDTO(DTO):
     esm2_contact_maps: List
 
 class ConstructEdgesDTO(DTO):
-    edge_construction_functions: List[EdgeConstructionFunctions]
+    edge_construction_functions: List[EdgeConstructionFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]

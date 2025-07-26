@@ -20,7 +20,7 @@ from src.applicability_domain.collection import ADMethodCollectionLoader
 from src.config.types import (
     ExecutionMode,
     DistanceFunction,
-    EdgeConstructionFunctions,
+    EdgeConstructionFunction,
     ESM2Representation,
     ESM2ModelForContactMap,
     ValidationMode,
@@ -34,7 +34,7 @@ from src.utils.json import save_json, load_json
 from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists
 
 options_methods_for_ad = ", ".join(f"'{e.value}'" for e in MethodsForAD)
-options_edge_construction_functions = ", ".join(f"'{e.value}'" for e in EdgeConstructionFunctions)
+options_edge_construction_functions = ", ".join(f"'{e.value}'" for e in EdgeConstructionFunction)
 
 
 class CommonArguments(BaseModel):
@@ -201,7 +201,7 @@ class TrainingArguments(CommonArguments):
         description='ESM-2 representation to be used'
     )
 
-    edge_construction_functions: List[EdgeConstructionFunctions] = Field(
+    edge_construction_functions: List[EdgeConstructionFunction] = Field(
         description = f"Functions to build edges. Options: {options_edge_construction_functions}",
         unique_items=True
     )
@@ -325,8 +325,8 @@ class TrainingArguments(CommonArguments):
     def validate_edge_construction_requirements(cls, values):
         funcs = values.get('edge_construction_functions')
 
-        if EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD in funcs or \
-                (EdgeConstructionFunctions.SEQUENCE_BASED in funcs and values['distance_function']):
+        if EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD in funcs or \
+                (EdgeConstructionFunction.SEQUENCE_BASED in funcs and values['distance_function']):
 
             if not values.get('amino_acid_representation'):
                 values['amino_acid_representation'] = 'CA'
@@ -359,18 +359,18 @@ class TrainingArguments(CommonArguments):
     def validate_distance_parameters(cls, values):
         funcs = values['edge_construction_functions']
         if values.get('distance_function') is None:
-            if EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD in funcs:
+            if EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD in funcs:
                 raise ValueError("The parameter 'distance_function' is required.")
         else:
-            if not {EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD,
-                    EdgeConstructionFunctions.SEQUENCE_BASED}.intersection(funcs):
+            if not {EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD,
+                    EdgeConstructionFunction.SEQUENCE_BASED}.intersection(funcs):
                 raise ValueError("'distance_function' is not required for the selected edge construction methods.")
 
         if values.get('distance_threshold') is None:
-            if EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD in funcs:
+            if EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD in funcs:
                 raise ValueError("The parameter 'distance_threshold' is required.")
         else:
-            if EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD not in funcs:
+            if EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD not in funcs:
                 raise ValueError("'distance_threshold' is not required for the selected edge construction methods.")
 
         return values
@@ -379,14 +379,14 @@ class TrainingArguments(CommonArguments):
     def validate_esm2_contact_map_parameters(cls, values):
         funcs = values['edge_construction_functions']
 
-        if not values.get('esm2_model_for_contact_map') and EdgeConstructionFunctions.ESM2_CONTACT_MAP in funcs:
+        if not values.get('esm2_model_for_contact_map') and EdgeConstructionFunction.ESM2_CONTACT_MAP in funcs:
             raise ValueError("The parameter 'esm2_model_for_contact_map' is required.")
-        elif values.get('esm2_model_for_contact_map') and EdgeConstructionFunctions.ESM2_CONTACT_MAP not in funcs:
+        elif values.get('esm2_model_for_contact_map') and EdgeConstructionFunction.ESM2_CONTACT_MAP not in funcs:
             raise ValueError("'esm2_model_for_contact_map' is not required for the selected edge construction methods.")
 
-        if not values.get('probability_threshold') and EdgeConstructionFunctions.ESM2_CONTACT_MAP in funcs:
+        if not values.get('probability_threshold') and EdgeConstructionFunction.ESM2_CONTACT_MAP in funcs:
             raise ValueError("The parameter 'probability_threshold' is required.")
-        elif values.get('probability_threshold') and EdgeConstructionFunctions.ESM2_CONTACT_MAP not in funcs:
+        elif values.get('probability_threshold') and EdgeConstructionFunction.ESM2_CONTACT_MAP not in funcs:
             raise ValueError("'probability_threshold' is not required for the selected edge construction methods.")
 
         return values
@@ -395,9 +395,9 @@ class TrainingArguments(CommonArguments):
     def validate_use_edge_attr(cls, values):
         funcs = values['edge_construction_functions']
         if values.get('use_edge_attr'):
-            if not {EdgeConstructionFunctions.DISTANCE_BASED_THRESHOLD,
-                    EdgeConstructionFunctions.ESM2_CONTACT_MAP}.intersection(funcs) \
-                    and EdgeConstructionFunctions.SEQUENCE_BASED in funcs and values.get('distance_function') is None:
+            if not {EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD,
+                    EdgeConstructionFunction.ESM2_CONTACT_MAP}.intersection(funcs) \
+                    and EdgeConstructionFunction.SEQUENCE_BASED in funcs and values.get('distance_function') is None:
                 raise ValueError(
                     "The parameter 'use_edge_attr' is not required for the selected edge construction methods.")
         return values

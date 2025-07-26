@@ -16,8 +16,7 @@ from src.config.types import (
     ExecutionMode,
     ESM2ModelForContactMap,
     ESM2Representation,
-    EdgeConstructionFunctions,
-    DistanceFunction
+    EdgeConstructionFunction, DistanceFunction,
 )
 from src.utils.dto import DTO
 
@@ -32,8 +31,8 @@ class ConstructGraphDTO(DTO):
     pdb_path: Optional[Path]
     amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
-    edge_construction_functions: List[EdgeConstructionFunctions]
-    distance_function: Optional[DistanceFunction]
+    edge_construction_functions: List[EdgeConstructionFunction]
+    distance_function: DistanceFunction
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
     use_edge_attr: Optional[bool]

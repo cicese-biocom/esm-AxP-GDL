@@ -12,7 +12,6 @@ import warnings
 warnings.simplefilter('ignore', PDBConstructionWarning)
 
 from src.models.esmfold import predict_structures
-from src.utils.distance import translate_positive_coordinates
 from src.utils.dto import DTO
 from src.utils.pdb import save_pdb, open_pdb
 
@@ -49,7 +48,7 @@ def load_tertiary_structures(load_tertiary_structures_dto: LoadTertiaryStructure
                         load_tertiary_structures_dto.amino_acid_representation),
                     dtype='float64'
                 )
-                coordinates_matrix = np.array(translate_positive_coordinates(coordinates_matrix), dtype='float64')
+                coordinates_matrix = np.array(_translate_positive_coordinates(coordinates_matrix), dtype='float64')
                 atom_coordinates_matrices.append(coordinates_matrix)
                 progress.update(1)
             except Exception as e:
@@ -83,7 +82,7 @@ def predict_tertiary_structures(predict_tertiary_structures_dto: PredictTertiary
             coordinates_matrix = \
                 np.array(get_atom_coordinates_from_pdb(pdb_str, predict_tertiary_structures_dto.amino_acid_representation),
                          dtype='float64')
-            coordinates_matrix = np.array(translate_positive_coordinates(coordinates_matrix), dtype='float64')
+            coordinates_matrix = np.array(_translate_positive_coordinates(coordinates_matrix), dtype='float64')
             atom_coordinates_matrices.append(coordinates_matrix)
             progress.update(1)
     logging.getLogger('workflow_logger'). \
@@ -122,3 +121,12 @@ def _get_random_coordinates(atom_coordinates, coordinate_min, coordinate_max):
         np.random.uniform(coordinate_min[2], coordinate_max[2], size=atom_coordinates.shape[0])
 
     return random_atom_coordinates
+
+
+def _translate_positive_coordinates(coordinates):
+    min_x = min(min(coordinate[0] for coordinate in coordinates), 0)
+    min_y = min(min(coordinate[1] for coordinate in coordinates), 0)
+    min_z = min(min(coordinate[2] for coordinate in coordinates), 0)
+
+    eps = 1e-6
+    return [np.float64((coordinate[0] - min_x + eps, coordinate[1] - min_y + eps, coordinate[2] - min_z + eps)) for coordinate in coordinates]

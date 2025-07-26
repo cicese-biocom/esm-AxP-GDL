@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum
 
 from typing_extensions import Literal
 
@@ -35,7 +35,7 @@ class DistanceFunction(Enum):
     ANGULAR_SEPARATION = 'angular_separation'
 
 
-class EdgeConstructionFunctions(Enum):
+class EdgeConstructionFunction(Enum):
     DISTANCE_BASED_THRESHOLD = 'distance_based_threshold'
     SEQUENCE_BASED = 'sequence_based'
     ESM2_CONTACT_MAP = 'esm2_contact_map'
