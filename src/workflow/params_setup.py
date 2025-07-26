@@ -557,7 +557,7 @@ class PredictionArguments(CommonArguments):
         current_time = datetime.now().replace(microsecond=0).isoformat().replace(':', '.')
         new_dir = values.get('output_path').joinpath(f"{current_time}-{values.get('mode_path_name')}")
         new_dir.mkdir(parents=True)
-        values['output_dir'] = get_output_path_settings(new_dir, 'test')
+        values['output_dir'] = get_output_path_settings(new_dir, values.get("execution_mode"))
         return values
 
     @root_validator(skip_on_failure=True)
