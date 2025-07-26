@@ -1,16 +1,18 @@
 import logging
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 import random
 import numpy as np
 import torch
 from dotenv import load_dotenv
-from pydantic import PositiveInt, PositiveFloat, confloat
+from pydantic import PositiveInt, PositiveFloat, confloat, create_model
 from pydantic.v1 import BaseModel, Field, root_validator, FilePath, DirectoryPath
 import pydantic_argparse
-from typing import Optional, List
+from typing import Optional, List, Dict, get_origin, Union, get_args
 
+from pydantic_argparse import ArgumentParser
 from torch import hub
 
 
@@ -28,7 +30,7 @@ from src.config.types import (
     GDLArchitecture, TertiaryStructurePredictionMethod, AminoAcidRepresentation
 )
 from src.feature_extraction.collection import FeaturesCollectionLoader
-from src.utils.json import save_json
+from src.utils.json import save_json, load_json
 from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists
 
 options_methods_for_ad = ", ".join(f"'{e.value}'" for e in MethodsForAD)
@@ -549,29 +551,26 @@ class InferenceArguments(PredictionArguments):
         return values
 
 
-def argument_parser(execution_mode: ExecutionMode):
-    mode_mapping = {
-        ExecutionMode.TRAIN: TrainingArguments,
-        ExecutionMode.TEST: PredictionArguments,
-        ExecutionMode.INFERENCE: InferenceArguments
-    }
+class ExecutionParameters:
+    def __init__(self, execution_mode: ExecutionMode):
+        self._model = {
+            ExecutionMode.TRAIN: TrainingArguments,
+            ExecutionMode.TEST: PredictionArguments,
+            ExecutionMode.INFERENCE: InferenceArguments
+        }[execution_mode]
 
-    model=mode_mapping[execution_mode]
+    def get_parameters(self) -> Union[TrainingArguments, PredictionArguments, InferenceArguments]:
+        load_dotenv(dotenv_path='.env')
 
-    # load environment variables
-    load_dotenv(dotenv_path='.env')
+        parser = pydantic_argparse.ArgumentParser(model=self._model, exit_on_error=True)
+        args = parser.parse_typed_args()
 
-    # parse arguments
-    parser = pydantic_argparse.ArgumentParser(model=model, exit_on_error=True)
-    args = parser.parse_typed_args()
+        _save_all_parameters(args)
+        _save_command_line_parameters(self._model, args)
 
-    # save parameters
-    _save_all_parameters(args)
-    _save_command_line_parameters(model, args)
+        return args
 
-    return args
-
-
+        
 def _save_all_parameters(args):
     save_json(
         json_file=args.output_dir['workflow_execution_args_file'],
@@ -590,3 +589,7 @@ def _save_command_line_parameters(model, args):
         json_file=args.output_dir['command_line_params'],
         json_data=user_provided
     )
+
+
+
+

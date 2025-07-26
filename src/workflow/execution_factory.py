@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Optional, List
 
 import torch
 from torch.nn import CrossEntropyLoss, MSELoss
@@ -16,7 +17,7 @@ class ExecutionFactory(ABC):
         pass
 
     @abstractmethod
-    def create_metrics(self, classes) -> Metrics:
+    def create_metrics(self, prediction_processor: PredictionProcessor, classes: Optional[List[int]]) -> Metrics:
         pass
 
     @abstractmethod
@@ -40,8 +41,8 @@ class BinaryExecutionFactory(ExecutionFactory):
     def create_loss(self) -> CrossEntropyLoss:
         return torch.nn.CrossEntropyLoss()
 
-    def create_metrics(self,classes) -> BinaryClassificationMetrics:
-        return BinaryClassificationMetrics(classes)
+    def create_metrics(self, prediction_processor: PredictionProcessor, classes: Optional[List[int]])-> BinaryClassificationMetrics:
+        return BinaryClassificationMetrics(prediction_processor, classes)
 
     def create_best_model_selector(self) -> MaximumMCCBestModelSelector:
         return MaximumMCCBestModelSelector()
@@ -58,8 +59,8 @@ class MulticlassExecutionFactory(ExecutionFactory):
     def create_loss(self) -> CrossEntropyLoss:
         return torch.nn.CrossEntropyLoss()
 
-    def create_metrics(self, classes) -> MulticlassClassificationMetrics:
-        return MulticlassClassificationMetrics(classes)
+    def create_metrics(self, prediction_processor: PredictionProcessor, classes: Optional[List[int]]) -> MulticlassClassificationMetrics:
+        return MulticlassClassificationMetrics(prediction_processor, classes)
 
     def create_best_model_selector(self) -> MaximumMCCBestModelSelector:
         return MaximumMCCBestModelSelector()
@@ -76,8 +77,8 @@ class RegressionExecutionFactory(ExecutionFactory):
     def create_loss(self) -> MSELoss:
         return torch.nn.MSELoss()
 
-    def create_metrics(self,classes) -> RegressionMetrics:
-        return RegressionMetrics(classes)
+    def create_metrics(self, prediction_processor: PredictionProcessor, classes: Optional[List[int]])-> RegressionMetrics:
+        return RegressionMetrics(prediction_processor)
 
     def create_best_model_selector(self) -> MinimumRMSEBestModelSelector:
         return MinimumRMSEBestModelSelector()

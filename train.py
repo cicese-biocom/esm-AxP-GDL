@@ -1,13 +1,11 @@
 import logging
 from src.config.types import ExecutionMode
 from src.workflow.gdl_workflow import TrainingWorkflow
-from src.workflow.params_setup import argument_parser
 import time
 
 
 def main():
-    parameters = argument_parser(ExecutionMode.TRAIN)
-    TrainingWorkflow(parameters).run()
+    TrainingWorkflow(ExecutionMode.TRAIN).run()
 
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ from src.config.types import (
     EdgeConstructionFunctions,
     DistanceFunction,
     ModelingTask,
-    GDLArchitecture
+    GDLArchitecture, ExecutionMode
 )
 
 from src.applicability_domain.methods import build_model
@@ -38,7 +38,7 @@ from src.modeling.selector import ModelDTO
 from src.utils.dto import DTO
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
-from src.workflow.params_setup import TrainingArguments, PredictionArguments, InferenceArguments
+from src.workflow.params_setup import TrainingArguments, PredictionArguments, InferenceArguments, ExecutionParameters
 
 
 class ModelParametersDTO(DTO):
@@ -66,11 +66,11 @@ def format_metric_keys(metrics: dict, suffix: str) -> dict:
 
 
 class GDLWorkflow(ABC):
-    def __init__(self, parameters):
-        self._parameters: Union[TrainingArguments, PredictionArguments, InferenceArguments] = parameters
-        self._context = ApplicationContext(**parameters.dict())
+    def __init__(self, execution_mode: ExecutionMode):
+        self._parameters = ExecutionParameters(execution_mode).get_parameters()
+        self._context = ApplicationContext(**self._parameters.dict())
         self._eval_output: Optional[List[EvaluationOutputDTO]] = []
-        self._path: Dict = parameters.output_dir
+        self._path: Dict = self._parameters.output_dir
 
     def run(self):
         # Step 0: Init logging

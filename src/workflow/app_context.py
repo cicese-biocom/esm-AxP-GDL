@@ -40,7 +40,7 @@ class ApplicationContext:
         if execution_mode == ExecutionMode.TRAIN:
             self.__loss_fn = ml_factory.create_loss()
             self.__prediction_processor = ml_factory.create_prediction_processor()
-            self.__metrics = ml_factory.create_metrics(classes=classes)
+            self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
             self.__best_model_selector = ml_factory.create_best_model_selector()
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetValidatorContext, LabeledDatasetValidator)
@@ -53,7 +53,7 @@ class ApplicationContext:
         # TEST
         elif execution_mode == ExecutionMode.TEST:
             self.__prediction_processor = ml_factory.create_prediction_processor()
-            self.__metrics = ml_factory.create_metrics(classes=classes)
+            self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetValidatorContext, LabeledDatasetValidator)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))

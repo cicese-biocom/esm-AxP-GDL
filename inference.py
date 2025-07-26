@@ -1,13 +1,11 @@
 import logging
 from src.config.types import ExecutionMode
 from src.workflow.gdl_workflow import InferenceWorkflow
-from src.workflow.params_setup import argument_parser
 import time
 
 
 def main():
-    parameters = argument_parser(ExecutionMode.INFERENCE)
-    InferenceWorkflow(parameters).run()
+    InferenceWorkflow(ExecutionMode.INFERENCE).run()
 
 
 if __name__ == '__main__':
