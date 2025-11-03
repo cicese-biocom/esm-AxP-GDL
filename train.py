@@ -12,16 +12,11 @@ def train(args):
 
 
 if __name__ == '__main__':
-    try:
-        args_handler = ArgsParserHandler()
-        args = args_handler.get_training_arguments()
+    args_handler = ArgsParserHandler()
+    args = args_handler.get_training_arguments()
 
-        start_time = time.time()
-        train(args)
-        final_time = time.time()
-        logging.getLogger('workflow_logger').info(
-            f"Training execution time in: {str(final_time - start_time)} seconds")
-
-    except Exception as e:
-        logging.getLogger('workflow_logger').critical(e)
-        quit()
+    start_time = time.time()
+    train(args)
+    final_time = time.time()
+    logging.getLogger('workflow_logger').info(
+        f"Training execution time in: {str(final_time - start_time)} seconds")
