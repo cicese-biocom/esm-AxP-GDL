@@ -52,7 +52,7 @@ class ParameterSetter(BaseModel):
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
-                                                  'bhattacharyya', 'angular_separation']],
+                                                  'bhattacharyya', 'cosine']],
                                  Field(
                                      description='Distance function to construct the edges of the distance-based graph')] = None
 

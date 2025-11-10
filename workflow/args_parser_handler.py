@@ -105,7 +105,7 @@ class ArgsParserHandler:
         self._parser.add_argument('--distance_function', type=str, default=None,
                                   choices=['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
                                            'bhattacharyya',
-                                           'angular_separation'],
+                                           'cosine'],
                                   help='Distance function to construct the edges of the distance-based graph')
 
         self._parser.add_argument('--distance_threshold', type=float, default=None,

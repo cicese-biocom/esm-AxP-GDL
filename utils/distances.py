@@ -27,8 +27,8 @@ def distance(point1, point2, distance_function):
             return _soergel(point1, point2)
         elif distance_function == 'bhattacharyya':
             return _bhattacharyya(point1, point2)
-        elif distance_function == 'angular_separation':
-            return _angular_separation(point1, point2)
+        elif distance_function == 'cosine':
+            return _cosine(point1, point2)
         else:
             raise ValueError("Invalid distance name: " + str(distance_function))
     except Exception as e:
@@ -58,7 +58,7 @@ def _bhattacharyya(point1, point2):
     return np.round(np.sqrt(np.sum(np.power(np.subtract(np.sqrt(point1), np.sqrt(point2)), 2))),8)
 
 
-def _angular_separation(point1, point2):
+def _cosine(point1, point2):
     return np.round(np.subtract(1, np.divide(np.sum(np.multiply(point1, point2)), np.sqrt(np.dot(np.sum(np.power(point1, 2)), np.sum(np.power(point2, 2)))))), 8)
 
 

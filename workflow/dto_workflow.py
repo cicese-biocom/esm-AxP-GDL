@@ -21,7 +21,7 @@ class ModelParameters(BaseModel):
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
-                                                  'bhattacharyya', 'angular_separation']],
+                                                  'bhattacharyya', 'cosine']],
                                  Field(description='Distance function to construct graph edges')] = None
 
     distance_threshold: Annotated[Optional[PositiveFloat],
@@ -86,7 +86,7 @@ class TrainingOutputParameter(BaseModel):
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
-                                                  'bhattacharyya', 'angular_separation']],
+                                                  'bhattacharyya', 'cosine']],
                                  Field(description='Distance function to construct graph edges')] = None
 
     distance_threshold: Annotated[Optional[PositiveFloat],
@@ -175,7 +175,7 @@ class EvalOutputParameter(BaseModel):
                                            Field(description='Functions to build edges')]
 
     distance_function: Annotated[Optional[Literal['euclidean', 'canberra', 'lance_williams', 'clark', 'soergel',
-                                                  'bhattacharyya', 'angular_separation']],
+                                                  'bhattacharyya', 'cosine']],
                                  Field(description='Distance function to construct graph edges')] = None
 
     distance_threshold: Annotated[Optional[PositiveFloat],

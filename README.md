@@ -162,7 +162,7 @@ usage: train.py [-h] [--dataset DATASET]
                 [--command_line_params COMMAND_LINE_PARAMS]
                 [--esm2_representation {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48,reduced_esm2_t6,reduced_esm2_t12,reduced_esm2_t30,reduced_esm2_t33,reduced_esm2_t36,combined_esm2}]
                 [--edge_construction_functions EDGE_CONSTRUCTION_FUNCTIONS]
-                [--distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}]
+                [--distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,cosine}]
                 [--distance_threshold DISTANCE_THRESHOLD]
                 [--esm2_model_for_contact_map {esm2_t6,esm2_t12,esm2_t30,esm2_t33,esm2_t36,esm2_t48}]
                 [--probability_threshold PROBABILITY_THRESHOLD]
@@ -203,7 +203,7 @@ optional arguments:
                         (graph edges) between amino acids. The options
                         available are: 'distance_based_threshold',
                         'sequence_based', 'esm2_contact_map'
-  --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,angular_separation}
+  --distance_function {euclidean,canberra,lance_williams,clark,soergel,bhattacharyya,cosine}
                         Distance function to construct the edges of the
                         distance-based graph
   --distance_threshold DISTANCE_THRESHOLD
