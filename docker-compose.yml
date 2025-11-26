@@ -1,5 +1,5 @@
 services:
-   esm-axp-gdl-env:
+   esm-axp-gdl-env-py39:
     build: .
     command: nvidia-smi
     volumes:
