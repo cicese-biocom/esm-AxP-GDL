@@ -75,7 +75,7 @@ def construct_graphs(construct_graph_dto: ConstructGraph):
     elif construct_graph_dto.esm2_model_for_contact_map == ESM2Representation.ESM2_T36:
         perplexities_output = perplexities_2
 
-    # If the ESM-2 model specified to build the graphs and to build the edges is the contact maps returned by the
+    # If the ESM-2 model specified to build the graphs and to build the edges, the contact maps returned by the
     # function esm2_derived_features are used.
     adjacency_matrices, weights_matrices = get_edges(
         GetEdges(

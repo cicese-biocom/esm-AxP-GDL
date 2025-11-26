@@ -87,6 +87,7 @@ class GDLWorkflow(ABC):
         # Step 2: load data
         data = self.load_data()
 
+        features_list = []
         for i, batch in enumerate(data):
             # Step 3: generate files names
             self.set_output_filename(substr=str(i + 1))
@@ -103,6 +104,7 @@ class GDLWorkflow(ABC):
 
             # Step 6: compute feature
             features = self.computing_features(data=batch, graphs=graphs, perplexities=perplexities)
+            features_list.append(features)
 
             # Step 7: Get graphs by partition
             graphs = self.split_data(graphs=graphs, data=batch, features=features)
@@ -116,11 +118,11 @@ class GDLWorkflow(ABC):
             # Step 9: execute modeling task
             self.modeling_task(model_evaluator=evaluator, graphs=graphs)
 
-            # Step 10: modeling_task modeling task
-            self.get_applicability_domain(ad_models, features)
-
         # Step 10: Compute the evaluation metrics and save both the predictions and the metrics
         self.save_evaluation_outputs()
+
+        # Step 11: modeling_task modeling task
+        self.get_applicability_domain(ad_models, pd.concat(features_list, ignore_index=True))
 
     def save_prediction(self, eval_output: EvaluationOutput):
         pass

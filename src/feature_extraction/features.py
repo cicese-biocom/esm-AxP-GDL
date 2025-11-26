@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 from statistics import mean
 import networkx as nx
+import numpy as np
 import torch
+from torch_geometric.data import Data
 from torch_geometric.utils import to_networkx
-from typing import List, Optional
-from networkx import Graph
+from typing import List, Optional, Any
 from typing import Dict
 import pandas as pd
 from tqdm import tqdm
@@ -29,11 +30,11 @@ class FeatureComponent:
 
 
 class EmptyFeatureComponent(FeatureComponent):
-    def __init__(self, data: pd.DataFrame) -> pd.DataFrame:
+    def __init__(self, data: pd.DataFrame) -> None:
         self._features = data[['sequence']].copy()
 
     @property
-    def features(self) -> str:
+    def features(self) -> pd.DataFrame:
         return self._features
 
     def compute_features(self, pbar: tqdm) -> pd.DataFrame:
@@ -60,7 +61,7 @@ class GraphCentralitiesDecorator(FeatureDecorator):
             feature_component: FeatureComponent,
             feature_id: str,
             data: pd.DataFrame,
-            graphs: List[Graph]):
+            graphs: List[Data]):
         super().__init__(feature_component)
         self._feature_id = feature_id
         self._graphs = graphs
@@ -75,29 +76,39 @@ class GraphCentralitiesDecorator(FeatureDecorator):
         return self._sequences
 
     @property
-    def graphs(self) -> List[Graph]:
+    def graphs(self) -> List[Data]:
         return self._graphs
 
     def compute_features(self, pbar: tqdm) -> pd.DataFrame:
         features_input = self.feature_component.compute_features(pbar)
 
-        centrality_functions = {
-            'degree_centrality': nx.degree_centrality,
-            'eigenvector_centrality': nx.eigenvector_centrality_numpy,
-            'closeness_centrality': nx.closeness_centrality,
-            'betweenness_centrality': nx.betweenness_centrality,
-            'harmonic_centrality': nx.harmonic_centrality
-        }
-
         features_list = []  # Collect new features from all graphs
 
         for graph, sequence in zip(self.graphs, self.sequences):
             graph_nx = to_networkx(graph, to_undirected=True)
-            feat = {'sequence': sequence}
+            feat: Dict[str, Any] = {'sequence': sequence}
+            num_nodes = graph_nx.number_of_nodes()
 
-            for metric, func in centrality_functions.items():
-                result = func(graph_nx)
-                feat[f"{self.feature_id}_{metric}"] = mean(result.values())
+            # Eigenvector centrality (only if the graph is connected and large enough)
+            if nx.is_connected(graph_nx) and num_nodes > 2:
+                try:
+                    eigenvector_centrality = mean(nx.eigenvector_centrality_numpy(graph_nx).values())
+                except (nx.NetworkXError, np.linalg.LinAlgError):
+                    eigenvector_centrality = np.nan
+            else:
+                eigenvector_centrality = np.nan
+            feat[f"{self.feature_id}_eigenvector_centrality"] = eigenvector_centrality
+
+            if num_nodes > 1:
+                feat[f"{self.feature_id}_degree_centrality"] = mean(nx.degree_centrality(graph_nx).values())
+                feat[f"{self.feature_id}_closeness_centrality"] = mean(nx.closeness_centrality(graph_nx).values())
+                feat[f"{self.feature_id}_betweenness_centrality"] = mean(nx.betweenness_centrality(graph_nx).values())
+                feat[f"{self.feature_id}_harmonic_centrality"] = mean(nx.harmonic_centrality(graph_nx).values())
+            else:
+                feat[f"{self.feature_id}_degree_centrality"] = np.nan
+                feat[f"{self.feature_id}_closeness_centrality"] = np.nan
+                feat[f"{self.feature_id}_betweenness_centrality"] = np.nan
+                feat[f"{self.feature_id}_harmonic_centrality"] = np.nan
 
             features_list.append(feat)
 
@@ -135,7 +146,7 @@ class AminoAcidDescriptorDecorator(FeatureDecorator):
 
         features_list = []
         for sequence in self.sequences:
-            # Convert sequence to DataFrame for merging
+            # Convert a sequence to DataFrame for merging
             sequence_df = pd.DataFrame(list(sequence), columns=["code_short"])
 
             # Merge sequence with descriptors

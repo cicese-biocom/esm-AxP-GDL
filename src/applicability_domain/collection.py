@@ -13,7 +13,7 @@ class ADMethodCollectionLoader:
         json_path = Path(os.getenv("AD_METHODS_COLLECTION_FILE")).resolve()
 
         try:
-            self.methods_for_ad = load_json(json_path)['ad_methods_collection']
+            self.methods_for_ad: List[Dict] = load_json(json_path)['ad_methods_collection']
         except FileNotFoundError:
             raise FileNotFoundError(f"Config file not found at {json_path}")
         except KeyError:
@@ -38,7 +38,7 @@ class ADMethodCollectionLoader:
         ad_methods = []
         all_features = set()
         for method in self.methods_for_ad:
-            if method['method_id'] in methods_for_ad:
+            if method['method_id'] in provided_methods:
                 intersected_feature_details = [
                     feature for feature in features_for_ad if feature['feature_name'] in method['features']
                 ]

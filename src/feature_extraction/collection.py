@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Set
 
 from src.utils.json import load_json
 
@@ -27,7 +27,7 @@ class FeaturesCollectionLoader:
              "type": item.get("type")}
             for item in self.features_collection if item["feature_name"]]
 
-    def get_features_by_name(self, feature_names: List[str]) -> List[Dict]:
+    def get_features_by_name(self, feature_names: Set[str]) -> List[Dict]:
         return [
             {"feature_name": item["feature_name"],
              "feature_id": item.get("feature_id", ""),
