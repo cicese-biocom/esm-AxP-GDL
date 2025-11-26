@@ -57,7 +57,7 @@ class DistanceContext:
             DistanceFunction.CLARK: ClarkStrategy(),
             DistanceFunction.SOERGEL: SoergelStrategy(),
             DistanceFunction.BHATTACHARYYA: BhattacharyyaStrategy(),
-            DistanceFunction.ANGULAR_SEPARATION: AngularSeparationStrategy()
+            DistanceFunction.COSINE: AngularSeparationStrategy()
         }[distance_function]
 
     def compute(self, point1, point2):
