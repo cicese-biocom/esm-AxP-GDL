@@ -456,7 +456,7 @@ class TrainingArguments(CommonArguments):
     def set_output_dir(cls, values):
         base_path = check_directory_empty(values.get('gdl_model_path'))
         base_path.mkdir(parents=True, exist_ok=True)
-        values['output_dir'] = get_output_path_settings(base_path, 'training')
+        values['output_dir'] = get_output_path_settings(base_path, values.get("execution_mode"))
         return values
 
 
@@ -530,7 +530,7 @@ class PredictionArguments(CommonArguments):
 
             valid_methods = ad_methods_collection.get_method_names()
             for method in values['methods_for_ad']:
-                if method not in valid_methods:
+                if method.value not in valid_methods:
                     raise ValueError(
                         f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
                     )

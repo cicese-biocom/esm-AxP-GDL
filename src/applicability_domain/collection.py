@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Union, Any
 
+from src.config.types import MethodsForAD
 from src.utils.json import load_json
 
 
@@ -21,11 +22,11 @@ class ADMethodCollectionLoader:
             raise RuntimeError(f"An error occurred while loading methods for applicability domain: {e}")
 
     # features_for_ad: List[Dict]
-    def get_methods_with_features(self, methods_for_ad: List[str], features_for_ad: List[Dict]) -> tuple[
+    def get_methods_with_features(self, methods_for_ad: List[MethodsForAD], features_for_ad: List[Dict]) -> tuple[
         list[dict[str, Union[list[dict], Any]]], set[Any]]:
         valid_method_ids = {method['method_id'] for method in self.methods_for_ad}
 
-        provided_methods = set(methods_for_ad)
+        provided_methods = {method.value for method in methods_for_ad}
         invalid_methods = provided_methods - valid_method_ids
 
         if invalid_methods:
