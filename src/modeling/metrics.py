@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import List, Optional
 import numpy as np
-from pydantic import BaseModel
+
 from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
@@ -12,7 +12,7 @@ from sklearn.metrics import (
     r2_score
 )
 
-from src.modeling.prediction import PredictionDTO, PredictionProcessor
+from src.modeling.prediction import Prediction, PredictionProcessor
 
 
 class Metrics(ABC):
@@ -32,13 +32,13 @@ class Metrics(ABC):
         self._prediction_processor = prediction_processor
 
     @abstractmethod
-    def calculate(self, prediction: PredictionDTO, y_true: List) -> dict:
+    def calculate(self, prediction: Prediction, y_true: List) -> dict:
         """
         Abstract method to calculate metrics based on model model_output.
 
         Args:
             y_true:
-            prediction: PredictionDTO of model model_output
+            prediction: Prediction of model model_output
 
         Returns:
             dict: A dictionary with metric names as keys and their calculated values.
@@ -52,13 +52,13 @@ class BinaryClassificationMetrics(Metrics):
     Calculates MCC, accuracy, AUC, specificity, and sensitivity.
     """
 
-    def calculate(self, prediction: PredictionDTO, y_true: List) -> dict:
+    def calculate(self, prediction: Prediction, y_true: List) -> dict:
         """
         Computes binary classification metrics from a list of ProcessedOutput.
 
         Args:
             y_true:
-            prediction: PredictionDTO of model model_output
+            prediction: Prediction of model model_output
 
         Returns:
             dict: Dictionary with keys:
@@ -85,13 +85,13 @@ class MulticlassClassificationMetrics(Metrics):
     Calculates MCC, accuracy, AUC per class, and recall per class.
     """
 
-    def calculate(self, prediction: PredictionDTO, y_true: List) -> dict:
+    def calculate(self, prediction: Prediction, y_true: List) -> dict:
         """
         Computes multi-class classification metrics from processed model model_output.
 
         Args:
             y_true:
-            prediction: PredictionDTO of model model_output
+            prediction: Prediction of model model_output
 
         Returns:
             dict: Dictionary containing:
@@ -118,13 +118,13 @@ class RegressionMetrics(Metrics):
     Calculates Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and R-squared (R²).
     """
 
-    def calculate(self, prediction: PredictionDTO, y_true: List) -> dict:
+    def calculate(self, prediction: Prediction, y_true: List) -> dict:
         """
         Computes regression metrics based on model output.
 
         Args:
             y_true:
-            prediction: PredictionDTO of model model_output
+            prediction: Prediction of model model_output
 
         Returns:
             dict: Dictionary with keys:

@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional
 from torch import nn
 
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class ModelDTO(DTO):
+class Model(BaseDataTransferObject):
     epoch: Optional[int] = None
     model: Optional[nn.Module] = None
     model_state_dict: Optional[Dict] = None
@@ -19,12 +19,12 @@ class ModelDTO(DTO):
 
 class BestModelSelector(ABC):
     @abstractmethod
-    def select(self, best_model: ModelDTO, current_model: ModelDTO) -> ModelDTO:
+    def select(self, best_model: Model, current_model: Model) -> Model:
         pass
 
 
 class MaximumMCCBestModelSelector(BestModelSelector):
-    def select(self, best_model: ModelDTO, current_model: ModelDTO) -> ModelDTO:
+    def select(self, best_model: Model, current_model: Model) -> Model:
         if best_model.metrics is None:
             return current_model
 
@@ -34,7 +34,7 @@ class MaximumMCCBestModelSelector(BestModelSelector):
 
 
 class MinimumRMSEBestModelSelector(BestModelSelector):
-    def select(self, best_model: ModelDTO, current_model: ModelDTO) -> ModelDTO:
+    def select(self, best_model: Model, current_model: Model) -> Model:
         if best_model.metrics is None:
             return current_model
 

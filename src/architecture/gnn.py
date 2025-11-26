@@ -9,7 +9,7 @@ from src.architecture.gat_v2 import GATv2
 from src.config.types import GDLArchitecture
 
 
-class GNNParametersDTO(BaseModel):
+class GNNParameters(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
@@ -27,10 +27,10 @@ class GNNFactory:
     def __init__(self, gdl_architecture: GDLArchitecture):
         self._gdl_architecture = gdl_architecture
 
-    def create(self, gnn_parameters_dto: GNNParametersDTO) -> nn.Module:
+    def create(self, gnn_parameters: GNNParameters) -> nn.Module:
         if self._gdl_architecture == GDLArchitecture.GATV1:
-            return GATv1(**gnn_parameters_dto.dict())
+            return GATv1(**gnn_parameters.dict())
         if self._gdl_architecture == GDLArchitecture.GATV2:
-            return GATv2(**gnn_parameters_dto.dict())
+            return GATv2(**gnn_parameters.dict())
         else:
             raise ValueError(f"Unsupported GNN type: {self._gdl_architecture}")

@@ -12,24 +12,24 @@ import warnings
 warnings.simplefilter('ignore', PDBConstructionWarning)
 
 from src.models.esmfold import predict_structures
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 from src.utils.pdb import save_pdb, open_pdb
 
 
-class PredictTertiaryStructuresDTO(DTO):
+class PredictTertiaryStructures(BaseDataTransferObject):
     pdb_path: Path
     amino_acid_representation: str
     data: pd.DataFrame
 
 
-class LoadTertiaryStructuresDTO(DTO):
+class LoadTertiaryStructures(BaseDataTransferObject):
     pdb_path: Path
     amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
     data: pd.DataFrame
 
 
-def load_tertiary_structures(load_tertiary_structures_dto: LoadTertiaryStructuresDTO):
+def load_tertiary_structures(load_tertiary_structures_dto: LoadTertiaryStructures):
     if load_tertiary_structures_dto.pdb_path is None:
         return [None] * len(load_tertiary_structures_dto.data)
 
@@ -72,7 +72,7 @@ def load_tertiary_structures(load_tertiary_structures_dto: LoadTertiaryStructure
         return atom_coordinates_matrices
 
 
-def predict_tertiary_structures(predict_tertiary_structures_dto: PredictTertiaryStructuresDTO):
+def predict_tertiary_structures(predict_tertiary_structures_dto: PredictTertiaryStructures):
     pdbs = predict_structures(predict_tertiary_structures_dto.data)
     pdb_names = [str(row.id) for (index, row) in predict_tertiary_structures_dto.data.iterrows()]
     atom_coordinates_matrices = []

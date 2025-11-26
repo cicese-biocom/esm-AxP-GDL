@@ -12,10 +12,10 @@ from tqdm import tqdm
 
 from src.config.types import ESM2Representation
 from src.models.esm2 import get_models, get_representations
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class FeatureDTO(DTO):
+class Feature(BaseDataTransferObject):
     features_to_calculate: List
     data: pd.DataFrame
     graphs: List
@@ -145,7 +145,7 @@ class AminoAcidDescriptorDecorator(FeatureDecorator):
             numeric_descriptors = sequence_descriptors.select_dtypes(include=['float64', 'int64'])
             mean_descriptors = numeric_descriptors.mean(axis=0)
 
-            # Create feature dictionary for the current sequence
+            # Create a feature dictionary for the current sequence
             features = {f"{self.feature_id}_{col}": val for col, val in mean_descriptors.items()}
             features['sequence'] = sequence  # Include sequence identifier
             features_list.append(features)

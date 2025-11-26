@@ -1,10 +1,10 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import Any, Generator
 import pandas as pd
 from pydantic.v1 import FilePath, PositiveInt
 
 
-class DataLoader:
+class DataLoader(ABC):
     @abstractmethod
     def read_file(self, dataset: FilePath) -> Generator[Any, Any, None]:
         pass

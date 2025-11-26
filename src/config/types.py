@@ -32,7 +32,7 @@ class DistanceFunction(Enum):
     CLARK = 'clark'
     SOERGEL = 'soergel'
     BHATTACHARYYA = 'bhattacharyya'
-    ANGULAR_SEPARATION = 'angular_separation'
+    COSINE = 'cosine'
 
 
 class EdgeConstructionFunction(Enum):

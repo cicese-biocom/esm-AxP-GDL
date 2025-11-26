@@ -16,7 +16,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 from torch_geometric.data import Data
 
-from src.architecture.gnn import GNNParametersDTO
+from src.architecture.gnn import GNNParameters
 from src.config.types import (
     ValidationMode,
     ESM2ModelForContactMap,
@@ -28,25 +28,25 @@ from src.config.types import (
 
 from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import to_partition
-from src.feature_extraction.features import filter_features, FeaturesContext, FeatureDTO
-from src.graph_construction.graphs import construct_graphs, ConstructGraphDTO
+from src.feature_extraction.features import filter_features, FeaturesContext, Feature
+from src.graph_construction.graphs import construct_graphs, ConstructGraph
 from src.modeling.evaluator import (
     TrainingModeEvaluator,
     ValidationModeEvaluator,
     TestModeEvaluator,
-    EvaluationOutputDTO,
+    EvaluationOutput,
     Evaluator,
     InferenceModeEvaluator
 )
-from src.modeling.prediction import PredictionDTO
-from src.modeling.selector import ModelDTO
-from src.utils.dto import DTO
+from src.modeling.prediction import Prediction
+from src.modeling.selector import Model
+from src.utils.base_dto import BaseDataTransferObject
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
 from src.workflow.params_setup import ExecutionParameters
 
 
-class ModelParametersDTO(DTO):
+class ModelParameters(BaseDataTransferObject):
     esm2_representation: ESM2Representation
     edge_construction_functions: List[EdgeConstructionFunction]
     distance_function: Optional[DistanceFunction]
@@ -74,14 +74,14 @@ class GDLWorkflow(ABC):
     def __init__(self, execution_mode: ExecutionMode):
         self._parameters = ExecutionParameters(execution_mode).get_parameters()
         self._context = ApplicationContext(**self._parameters.dict())
-        self._eval_output: Optional[List[EvaluationOutputDTO]] = []
+        self._eval_output: Optional[List[EvaluationOutput]] = []
         self._path: Dict = self._parameters.output_dir
 
     def run(self):
         # Step 0: Init logging
         self.init_logging()
 
-        # Step 1: Build applicability domain model
+        # Step 1: Build an applicability domain model
         ad_models = self.build_applicability_domain_model()
 
         # Step 2: load data
@@ -94,7 +94,7 @@ class GDLWorkflow(ABC):
             # Step 4: validate dataset
             batch = self.validate_dataset(batch)
 
-            # Skip iteration if batch is empty
+            # Skip iteration if the batch is empty
             if batch.empty:
                 continue
 
@@ -122,7 +122,7 @@ class GDLWorkflow(ABC):
         # Step 10: Compute the evaluation metrics and save both the predictions and the metrics
         self.save_evaluation_outputs()
 
-    def save_prediction(self, eval_output: EvaluationOutputDTO):
+    def save_prediction(self, eval_output: EvaluationOutput):
         pass
 
     def init_logging(self):
@@ -132,7 +132,7 @@ class GDLWorkflow(ABC):
         )
 
     @abstractmethod
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutputDTO:
+    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
         pass
 
     def build_applicability_domain_model(self):
@@ -154,7 +154,7 @@ class GDLWorkflow(ABC):
 
     def computing_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
         features = FeaturesContext().compute_features(
-            **FeatureDTO(
+            **Feature(
                 features_to_calculate=self._parameters.feature_types_for_ad,
                 data=data,
                 graphs=graphs,
@@ -178,7 +178,7 @@ class GDLWorkflow(ABC):
 
     def construct_graphs(self, data):
         return construct_graphs(
-            ConstructGraphDTO(
+            ConstructGraph(
                 **self._parameters.dict(),
                 non_pdb_bound_sequences_file=self._path.get('non_pdb_bound_sequences_file'),
                 data=data
@@ -285,7 +285,7 @@ class TrainingWorkflow(GDLWorkflow):
         train_graphs, val_graphs = graphs
 
         return self._context.gnn_factory.create(
-            GNNParametersDTO(
+            GNNParameters(
                 **self._parameters.dict(),
                 node_feature_dim=train_graphs[0].x.shape[1]
             )
@@ -322,8 +322,8 @@ class TrainingWorkflow(GDLWorkflow):
 
         # Step: init variables
         checkpoints_path = self._path['checkpoints_path']
-        best_model = ModelDTO()
-        current_model = ModelDTO()
+        best_model = Model()
+        current_model = Model()
         metrics = []
 
         # Step: training and validation
@@ -341,11 +341,11 @@ class TrainingWorkflow(GDLWorkflow):
                 )
 
             # Step: save current model (save in disk if save_model_per_epoch=True)
-            current_model = ModelDTO(
+            current_model = Model(
                 epoch=epoch,
                 model=train_output.model,
                 model_state_dict=train_output.model.state_dict(),
-                parameters=ModelParametersDTO(**self._parameters.dict()).dict(),
+                parameters=ModelParameters(**self._parameters.dict()).dict(),
                 metrics=val_metrics,
                 train_loss=train_output.loss,
                 val_loss=val_output.loss,
@@ -423,7 +423,7 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.to(self._parameters.device)
         return model
 
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutputDTO:
+    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
         data = DataLoader(dataset=graphs, batch_size=self._parameters.batch_size)
         return model_evaluator.eval(data)
 
@@ -479,7 +479,7 @@ class TestWorkflow(PredictionWorkflow):
         # df = pd.DataFrame.from_records(self._eval_output)
 
         # compute metrics
-        prediction = PredictionDTO()
+        prediction = Prediction()
         y_true = []
         sequence_info = {}
 
@@ -575,26 +575,26 @@ def save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
                 tb_writer.add_scalar(key, value, global_step=epoch)
 
 
-def save_checkpoints(model: ModelDTO, checkpoints_path: Path):
+def save_checkpoints(model: Model, checkpoints_path: Path):
     filename = get_checkpoint_name(model, checkpoints_path)
     torch.save(model.dict(), filename)
     return filename
 
 
-def save_best_model(model: ModelDTO, checkpoints_path: Path):
+def save_best_model(model: Model, checkpoints_path: Path):
     filename = get_checkpoint_name(model, checkpoints_path)
     filename = filename.with_name(filename.stem + "_(best).pt")
     torch.save(model.dict(), filename)
     return filename
 
 
-def get_checkpoint_name(model: ModelDTO, checkpoints_path: Path):
+def get_checkpoint_name(model: Model, checkpoints_path: Path):
     return checkpoints_path.joinpath(
         f"epoch={model.epoch}_train-loss={model.train_loss:.2f}_val-loss={model.val_loss:.2f}.pt"
     )
 
 
-def mark_best_model(best_model: ModelDTO, checkpoints_path: Path) -> Path:
+def mark_best_model(best_model: Model, checkpoints_path: Path) -> Path:
     original_name = f"epoch={best_model.epoch}_train-loss={best_model.train_loss:.2f}_val-loss={best_model.val_loss:.2f}.pt"
     original_path = checkpoints_path.joinpath(original_name)
 

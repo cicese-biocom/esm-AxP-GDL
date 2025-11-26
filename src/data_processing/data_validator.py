@@ -15,7 +15,7 @@ class ClassValidator(ABC):
 
 class ClassificationClassValidator(ClassValidator):
     def validate(self, data: pd.DataFrame, classes: List[int] = None) -> pd.DataFrame:
-        # Return rows where 'activity' is not a classes
+        # Return rows where 'activity' is not a class
         return data[~data['activity'].isin(classes)]
 
 

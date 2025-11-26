@@ -3,14 +3,14 @@ from typing import Optional, List
 
 from torch.nn.functional import softmax
 
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class PredictionDTO(DTO):
+class Prediction(BaseDataTransferObject):
     y_pred: Optional[List] = None
     y_score: Optional[List] = None
 
-    def extend(self, prediction_dto: "PredictionDTO"):
+    def extend(self, prediction_dto: "Prediction"):
         # y_pred
         if prediction_dto.y_pred:
             if self.y_pred is None:
@@ -57,27 +57,27 @@ class MulticlassClassificationYScore(YScoreProcessor):
 
 class PredictionProcessor(ABC):
     @abstractmethod
-    def process(self, model_output) -> PredictionDTO:
+    def process(self, model_output) -> Prediction:
         pass
 
 class BinaryClassificationPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> PredictionDTO:
-        return PredictionDTO(
+    def process(self, model_output) -> Prediction:
+        return Prediction(
             y_pred=ClassificationYPred().process(model_output),
             y_score=BinaryClassificationYScore().process(model_output)
         )
 
 
 class MulticlassClassificationPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> PredictionDTO:
-        return PredictionDTO(
+    def process(self, model_output) -> Prediction:
+        return Prediction(
             y_pred=ClassificationYPred().process(model_output),
             y_score=MulticlassClassificationYScore().process(model_output)
         )
 
 
 class RegressionPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> PredictionDTO:
-        return PredictionDTO(
+    def process(self, model_output) -> Prediction:
+        return Prediction(
             y_pred=RegressionYPred().process(model_output)
         )

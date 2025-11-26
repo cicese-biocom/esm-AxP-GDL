@@ -8,10 +8,10 @@ from pydantic.v1 import PositiveFloat
 
 from src.config.types import ExecutionMode, ValidationMode, ESM2Representation
 from src.models.esm2 import get_models, get_representations
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class RandomEmbeddingDTO(DTO):
+class RandomEmbedding(BaseDataTransferObject):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
@@ -19,14 +19,14 @@ class RandomEmbeddingDTO(DTO):
     data: pd.DataFrame
 
 
-class ESM2DerivedFeaturesDTO(DTO):
+class ESM2DerivedFeatures(BaseDataTransferObject):
     execution_mode: ExecutionMode
     esm2_representation: ESM2Representation
     data: pd.DataFrame
     device: torch.device
 
 
-def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeaturesDTO):
+def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeatures):
     models = get_models(
         esm2_derived_features_dto.esm2_representation
     )
@@ -51,7 +51,7 @@ def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeaturesDTO):
 
             # Apply embeddings perturbation (optional)
             embeddings = _apply_random_embeddings(
-                RandomEmbeddingDTO(**esm2_derived_features_dto.dict(), embeddings=embeddings)
+                RandomEmbedding(**esm2_derived_features_dto.dict(), embeddings=embeddings)
             )
 
             if not node_features:
@@ -82,7 +82,7 @@ def _get_range_for_embeddings(data_tuples):
     return coordinate_min, coordinate_max
 
 
-def _apply_random_embeddings(random_embedding_dto: RandomEmbeddingDTO):
+def _apply_random_embeddings(random_embedding_dto: RandomEmbedding):
     if random_embedding_dto.validation_mode == ValidationMode.RANDOM_EMBEDDINGS and random_embedding_dto.execution_mode == ExecutionMode.TRAIN:
         partitions = random_embedding_dto.data['partition']
         min_val, max_val = _get_range_for_embeddings(random_embedding_dto.embeddings)

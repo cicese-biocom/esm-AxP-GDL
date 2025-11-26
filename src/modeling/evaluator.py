@@ -9,16 +9,16 @@ from torch.nn.modules.loss import _Loss
 from torch_geometric.loader import DataLoader
 from torch import nn
 
-from src.modeling.batch import BatchProcessor, ProcessedBatchDTO, TrainingBatchProcessor, ValidationBatchProcessor, \
+from src.modeling.batch import BatchProcessor, ProcessedBatch, TrainingBatchProcessor, ValidationBatchProcessor, \
     TestBatchProcessor, InferenceBatchProcessor
-from src.modeling.prediction import PredictionDTO, PredictionProcessor
-from src.utils.dto import DTO
+from src.modeling.prediction import Prediction, PredictionProcessor
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class EvaluationOutputDTO(DTO):
+class EvaluationOutput(BaseDataTransferObject):
     loss: Optional[PositiveFloat]
     y_true: Optional[List]
-    prediction: Optional[PredictionDTO]
+    prediction: Optional[Prediction]
     optimizer_state_dict: Optional[Dict] = None
     scheduler_state_dict: Optional[Dict] = None
     model: nn.Module = None
@@ -27,11 +27,11 @@ class EvaluationOutputDTO(DTO):
 
 class BatchesData:
     @staticmethod    
-    def get_mean_loss(batches: List[ProcessedBatchDTO]) -> PositiveFloat:
+    def get_mean_loss(batches: List[ProcessedBatch]) -> PositiveFloat:
         return np.mean([batch.loss for batch in batches if batch.loss is not None])
 
     @staticmethod
-    def get_y_true(batches: List[ProcessedBatchDTO]) -> List:
+    def get_y_true(batches: List[ProcessedBatch]) -> List:
         y_true = []
         for batch in batches:
             if batch.y_true is not None:
@@ -39,14 +39,14 @@ class BatchesData:
         return y_true
 
     @staticmethod
-    def get_prediction(batches: List[ProcessedBatchDTO]) -> PredictionDTO:
-        predictions = PredictionDTO(y_pred=[], y_score=[])
+    def get_prediction(batches: List[ProcessedBatch]) -> Prediction:
+        predictions = Prediction(y_pred=[], y_score=[])
         for batch in batches:
             predictions.extend(batch.prediction)
         return predictions
 
     @staticmethod
-    def get_sequence_info(batches: List[ProcessedBatchDTO]) -> dict:
+    def get_sequence_info(batches: List[ProcessedBatch]) -> dict:
         merged_info = defaultdict(list)
         for batch in batches:
             for key, value_list in batch.sequence_info.items():
@@ -64,7 +64,7 @@ class Evaluator:
     def model(self) -> nn.Module:
         return self._model
 
-    def eval(self, data_loader: DataLoader) -> List[ProcessedBatchDTO]:
+    def eval(self, data_loader: DataLoader) -> List[ProcessedBatch]:
         processed_batches = []
         for batch in data_loader:
             processed_batches.append(
@@ -108,11 +108,11 @@ class TrainingModeEvaluator(Evaluator):
         )
 
 
-    def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
+    def eval(self, data_loader: DataLoader) -> EvaluationOutput:
         self._model.train()
         processed_batches = super().eval(data_loader)
 
-        return EvaluationOutputDTO(
+        return EvaluationOutput(
             loss=BatchesData().get_mean_loss(processed_batches),
             model=self._batch_processor.model,
             optimizer_state_dict=self._optimizer.state_dict(),
@@ -132,11 +132,11 @@ class ValidationModeEvaluator(Evaluator):
         self._batch_processor = ValidationBatchProcessor(model, device, loss_fn, prediction)
 
 
-    def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
+    def eval(self, data_loader: DataLoader) -> EvaluationOutput:
         self._model.eval()
         processed_batches = super().eval(data_loader)
 
-        return EvaluationOutputDTO(
+        return EvaluationOutput(
             loss=BatchesData().get_mean_loss(processed_batches),
             prediction=BatchesData().get_prediction(processed_batches),
             y_true=BatchesData().get_y_true(processed_batches)
@@ -153,11 +153,11 @@ class TestModeEvaluator(Evaluator):
         super(TestModeEvaluator, self).__init__(model, device)
         self._batch_processor = TestBatchProcessor(model, device, prediction)
 
-    def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
+    def eval(self, data_loader: DataLoader) -> EvaluationOutput:
         self._model.eval()
         processed_batches = super().eval(data_loader)
 
-        return EvaluationOutputDTO(
+        return EvaluationOutput(
             prediction=BatchesData().get_prediction(processed_batches),
             y_true=BatchesData().get_y_true(processed_batches),
             sequence_info=BatchesData().get_sequence_info(processed_batches),
@@ -174,11 +174,11 @@ class InferenceModeEvaluator(Evaluator):
         super(InferenceModeEvaluator, self).__init__(model, device)
         self._batch_processor = InferenceBatchProcessor(model, device, prediction)
 
-    def eval(self, data_loader: DataLoader) -> EvaluationOutputDTO:
+    def eval(self, data_loader: DataLoader) -> EvaluationOutput:
         self._model.eval()
         processed_batches = super().eval(data_loader)
 
-        return EvaluationOutputDTO(
+        return EvaluationOutput(
             prediction=BatchesData().get_prediction(processed_batches),
             sequence_info=BatchesData().get_sequence_info(processed_batches),
         )

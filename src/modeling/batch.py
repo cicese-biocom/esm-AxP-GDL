@@ -5,15 +5,15 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch_geometric.data import Data
 
-from src.modeling.prediction import PredictionProcessor, PredictionDTO
-from src.utils.dto import DTO
+from src.modeling.prediction import PredictionProcessor, Prediction
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class ProcessedBatchDTO(DTO):
+class ProcessedBatch(BaseDataTransferObject):
     loss: Optional[float] = None
     y_true: Optional[List] = None
     sequence_info: Optional[Dict] = None
-    prediction: Optional[PredictionDTO] = None
+    prediction: Optional[Prediction] = None
 
 
 class BatchProcessor:
@@ -25,7 +25,7 @@ class BatchProcessor:
     def model(self) -> nn.Module:
         return self._model
         
-    def process(self, batch: Data) -> ProcessedBatchDTO:
+    def process(self, batch: Data) -> ProcessedBatch:
         batch = batch.to(device=self._device)
 
         output = self._model(
@@ -54,7 +54,7 @@ class TrainingBatchProcessor(BatchProcessor):
     def optimizer(self):
         return self._optimizer
 
-    def process(self, batch: Data) -> ProcessedBatchDTO:
+    def process(self, batch: Data) -> ProcessedBatch:
         self._optimizer.zero_grad()
 
         output = super().process(batch)
@@ -63,7 +63,7 @@ class TrainingBatchProcessor(BatchProcessor):
         loss.backward()
         self._optimizer.step()
 
-        return ProcessedBatchDTO(
+        return ProcessedBatch(
             loss=loss.item()
         )
 
@@ -80,10 +80,10 @@ class ValidationBatchProcessor(BatchProcessor):
         self._loss_fn = loss_fn
         self._prediction = prediction
 
-    def process(self, batch: Data) -> ProcessedBatchDTO:
+    def process(self, batch: Data) -> ProcessedBatch:
         output = super().process(batch)
 
-        return ProcessedBatchDTO(
+        return ProcessedBatch(
             loss=self._loss_fn(output, batch.y).item(),
             y_true=batch.y.tolist(),
             prediction=self._prediction.process(output)
@@ -99,10 +99,10 @@ class TestBatchProcessor(BatchProcessor):
         super(TestBatchProcessor, self).__init__(model, device)
         self._prediction = prediction
 
-    def process(self, batch: Data) -> ProcessedBatchDTO:
+    def process(self, batch: Data) -> ProcessedBatch:
         output = super().process(batch)
 
-        return ProcessedBatchDTO(
+        return ProcessedBatch(
             y_true=batch.y.tolist(),
             sequence_info=batch.sequence_info,
             prediction=self._prediction.process(output)
@@ -118,10 +118,10 @@ class InferenceBatchProcessor(BatchProcessor):
         super(InferenceBatchProcessor, self).__init__(model, device)
         self._prediction = prediction
 
-    def process(self, batch: Data) -> ProcessedBatchDTO:
+    def process(self, batch: Data) -> ProcessedBatch:
         output = super().process(batch)
 
-        return ProcessedBatchDTO(
+        return ProcessedBatch(
             sequence_info=batch.sequence_info,
             prediction=self._prediction.process(output)
         )

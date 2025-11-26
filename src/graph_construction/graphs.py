@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from pydantic.v1 import PositiveFloat
 
-from src.graph_construction.edges import get_edges, GetEdgesDTO
-from src.graph_construction.nodes import esm2_derived_features, ESM2DerivedFeaturesDTO
+from src.graph_construction.edges import get_edges, GetEdges
+from src.graph_construction.nodes import esm2_derived_features, ESM2DerivedFeatures
 from src.models.esm2 import get_models, get_representations
 from src.config.types import (
     ValidationMode,
@@ -19,10 +19,10 @@ from src.config.types import (
     EdgeConstructionFunction,
     DistanceFunction
 )
-from src.utils.dto import DTO
+from src.utils.base_dto import BaseDataTransferObject
 
 
-class ConstructGraphDTO(DTO):
+class ConstructGraph(BaseDataTransferObject):
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     esm2_representation: ESM2Representation
     execution_mode: ExecutionMode
@@ -42,10 +42,10 @@ class ConstructGraphDTO(DTO):
     use_edge_attr: bool
 
 
-def construct_graphs(construct_graph_dto: ConstructGraphDTO):
+def construct_graphs(construct_graph_dto: ConstructGraph):
     # nodes
     nodes_features, esm2_contact_maps, perplexities_1 = esm2_derived_features(
-        ESM2DerivedFeaturesDTO(
+        ESM2DerivedFeatures(
             **construct_graph_dto.dict()
         )
     )
@@ -78,7 +78,7 @@ def construct_graphs(construct_graph_dto: ConstructGraphDTO):
     # If the ESM-2 model specified to build the graphs and to build the edges is the contact maps returned by the
     # function esm2_derived_features are used.
     adjacency_matrices, weights_matrices = get_edges(
-        GetEdgesDTO(
+        GetEdges(
             **construct_graph_dto.dict(),
             esm2_contact_maps=esm2_contact_maps
         )

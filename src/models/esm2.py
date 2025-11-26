@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from pandas import DataFrame
 from torcheval import metrics
@@ -37,7 +37,7 @@ def get_models(esm2_representation: ESM2Representation):
     return models
 
 
-def get_representations(data, model_name, device, show_pbar=False) -> Optional[tuple[list[Any], list[Any], DataFrame]]:
+def get_representations(data: DataFrame, model_name, device, show_pbar=False):
     try:
         no_gpu = False
         model, alphabet = esm.pretrained.load_model_and_alphabet_hub(model_name)
