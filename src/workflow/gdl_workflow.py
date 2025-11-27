@@ -336,13 +336,13 @@ class TrainingWorkflow(GDLWorkflow):
             # Step: eval model
             val_output = validation_evaluator.eval(val_data)
 
-            # Step compute validation metrics
+            # Step computes validation metrics
             val_metrics = self._context.metrics.calculate(
                     prediction=val_output.prediction,
                     y_true=val_output.y_true
                 )
 
-            # Step: save current model (save in disk if save_model_per_epoch=True)
+            # Step: save the current model (save in disk if save_model_per_epoch=True)
             current_model = Model(
                 epoch=epoch,
                 model=train_output.model,
@@ -358,7 +358,7 @@ class TrainingWorkflow(GDLWorkflow):
             if self._parameters.save_ckpt_per_epoch:
                 save_checkpoints(current_model, checkpoints_path)
 
-            # Step: update best model
+            # Step: update the best model
             best_model = self._context.best_model_selector.select(best_model, current_model)
 
             # Step: save validation metrics
@@ -381,13 +381,13 @@ class TrainingWorkflow(GDLWorkflow):
             filename = save_checkpoints(current_model, checkpoints_path)
             logging.getLogger('workflow_logger').info(f"Saved model of the last epoch at {filename}")
 
-            # save best model
+            # save the best model
             filename = save_best_model(best_model, checkpoints_path)
             logging.getLogger('workflow_logger').info(f"Saved best model at {filename}")
         else:
             logging.getLogger('workflow_logger').info(f"Saved models per epoch in directory {checkpoints_path}")
 
-            # Mark best model
+            # Mark the best model
             filename = mark_best_model(best_model, checkpoints_path)
             logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {filename}")
 
