@@ -25,6 +25,9 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
             col_data = features_to_build_domain[column].dropna()
 
             if col_data.empty:
+                logging.getLogger('workflow_logger').warning(
+                    f"Feature '{column}' was excluded from applicability domain construction because all its values are NaN."
+                )
                 continue
 
             q1 = col_data.quantile(q=0.25)
@@ -42,36 +45,64 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
                 "PercentileBasedMethod could not be created because all input features were empty or contained only NaNs."
             )
 
+    # Evaluation rules:
+    # - NaN values are not considered outliers.
+    # - NaN values are logged and ignored during domain evaluation.
+    # - Majority voting is computed only over valid (non-NaN) features.
+    # - The outlier score reports the number of outlier features out of the valid features used.
     def eval_model(
             self,
             features_to_eval: pd.DataFrame
     ):
+
+        logger = logging.getLogger('workflow_logger')
+
         # If the model was not built, return None and log a warning
         if self.model is None:
-            logging.getLogger('workflow_logger').warning(
+            logger.warning(
                 "Evaluation skipped in PercentileBasedMethod because the model was not properly initialized."
             )
             return None, None
 
-        # build domain
+        # DataFrame to store outlier flags
         outliers = pd.DataFrame(index=features_to_eval.index)
 
         for column, (lower_bound, upper_bound) in self.model.items():
             col_values = features_to_eval[column]
 
-            # is considered NaN outside the domain
-            is_outlier = (col_values < lower_bound) | (col_values > upper_bound) | (col_values.isna())
+            # Detect NaN values for this feature
+            nan_mask = col_values.isna()
+            if nan_mask.any():
+                ignored_instances = nan_mask[nan_mask].index.tolist()
+                logger.info(
+                    f"Feature '{column}' contains NaN values for instances. "
+                    f"These values will be ignored when evaluating the domain."
+                )
+
+            # Outlier = only values outside bounds (NaN is not outlier)
+            is_outlier = (col_values < lower_bound) | (col_values > upper_bound)
+
+            # Assign, NaN appears as False (not an outlier)
             outliers[column] = is_outlier
 
-            outliers[column] = (features_to_eval[column] < lower_bound) | (features_to_eval[column] > upper_bound)
-
-        # eval
+        # Count the number of outlier features per instance
         number_of_outliers = outliers.sum(axis=1)
-        outlier_score = [f'{out} (out of {len(self.model)})' for out in number_of_outliers]
-        outliter_by_majority_vote = (number_of_outliers > (0.5 * len(self.model))).apply(
-            lambda out: -1 if out else 1)
 
-        return outliter_by_majority_vote, outlier_score
+        # Count usable (non-NaN) features for each instance
+        valid_features = (~features_to_eval.isna()).sum(axis=1)
+
+        # Majority rule based only on evaluated (non-NaN) features
+        outlier_by_majority_vote = (
+                number_of_outliers > (0.5 * valid_features)
+        ).apply(lambda out: -1 if out else 1)
+
+        # Human-readable scores
+        outlier_score = [
+            f"{out} (out of {valid})"
+            for out, valid in zip(number_of_outliers, valid_features)
+        ]
+
+        return outlier_by_majority_vote, outlier_score
 
 
 class IsolationForestMethod(ApplicabilityDomainMethod):
