@@ -75,7 +75,7 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
             if nan_mask.any():
                 ignored_instances = nan_mask[nan_mask].index.tolist()
                 logger.info(
-                    f"Feature '{column}' contains NaN values for instances {ignored_instances}. "
+                    f"Feature '{column}' contains NaN values for instances. "
                     f"These values will be ignored when evaluating the domain."
                 )
 
