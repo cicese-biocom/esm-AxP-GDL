@@ -25,8 +25,8 @@ class RegressionClassValidator(ClassValidator):
         return data[~data['activity'].apply(lambda x: isinstance(x, float))]
     
 
-class DatasetValidator(ABC):       
-    def processing_dataset(
+class DatasetProcessor(ABC):       
+    def process(
             self,
             dataset: pd.DataFrame,
             output_dir: Dict,
@@ -112,7 +112,7 @@ class DatasetValidator(ABC):
         return sequence_df
 
 
-class LabeledDatasetValidator(DatasetValidator):
+class LabeledDatasetProcessor(DatasetProcessor):
     def check_sequences_with_erroneous_activity(
             self, dataset: pd.DataFrame,
             output_dir: Dict,
@@ -139,9 +139,9 @@ class LabeledDatasetValidator(DatasetValidator):
 
 
 
-class DatasetValidatorContext:
-    def __init__(self, dataset_validator: DatasetValidator) -> None:
+class DatasetProcessorContext:
+    def __init__(self, dataset_validator: DatasetProcessor) -> None:
         self._dataset_validator = dataset_validator
 
-    def processing_dataset(self, dataset: pd.DataFrame, output_dir: Dict):
-        return self._dataset_validator.processing_dataset(dataset, output_dir)
+    def process(self, dataset: pd.DataFrame, output_dir: Dict):
+        return self._dataset_validator.process(dataset, output_dir)

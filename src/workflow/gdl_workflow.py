@@ -29,7 +29,7 @@ from src.config.types import (
 from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import to_partition
 from src.feature_extraction.features import filter_features, FeaturesContext, Feature
-from src.graph_construction.graphs import construct_graphs, ConstructGraph
+from src.graph_construction.graphs import build_graphs, BuildGraphsParams
 from src.modeling.evaluator import (
     TrainingModeEvaluator,
     ValidationModeEvaluator,
@@ -66,10 +66,6 @@ class ModelParameters(BaseDataTransferObject):
     gdl_architecture: GDLArchitecture
 
 
-def format_metric_keys(metrics: dict, suffix: str) -> dict:
-    return {f"{key}{suffix}": value for key, value in metrics.items()}
-
-
 class GDLWorkflow(ABC):
     def __init__(self, execution_mode: ExecutionMode):
         self._parameters = ExecutionParameters(execution_mode).get_parameters()
@@ -78,84 +74,107 @@ class GDLWorkflow(ABC):
         self._path: Dict = self._parameters.output_dir
 
     def run(self):
-        # Step 0: Init logging
-        self.init_logging()
+        # Step 0: Init logger
+        self.init_logger()
 
         # Step 1: Build an applicability domain model
-        ad_models = self.build_applicability_domain_model()
+        ad_models = self.build_models_for_applicability_domain()
 
-        # Step 2: load data
-        data = self.load_data()
+        # Step 2: When `prediction_batch_size` is set, data loading is performed in chunked batches 
+        # rather than loading the entire dataset at once.
+        data = self.load_dataset()
 
-        features_list = []
+        calculated_features = []
+        outputs: List[EvaluationOutput] = []
+        domains: List[pd.DataFrame] = []
         for i, batch in enumerate(data):
-            # Step 3: generate files names
-            self.set_output_filename(substr=str(i + 1))
+            # Step 3: Configure the names of the output files
+            self.config_output_file_names(substr=str(i + 1))
 
-            # Step 4: validate dataset
-            batch = self.validate_dataset(batch)
+            # Step 4: # The dataset processor performs the following validation and cleaning steps:
+            # # 1. Detects and reports duplicated sequence identifiers.
+            # # 2. Detects and reports duplicated peptide sequences.
+            # # 3. Filters out sequences containing non-natural amino acids and saves the cleaned dataset.
+            # # 4. Identifies sequences with invalid activity values according to the provided class validator.
+            # # 5. Detects sequences assigned to unsupported or inconsistent partition labels.
+            batch = self.process_dataset(batch)
 
             # Skip iteration if the batch is empty
             if batch.empty:
                 continue
 
-            # Step 5: construct graphs
-            graphs, perplexities = self.construct_graphs(data=batch)
+            # Step 5: Build graphs
+            graphs, perplexities = self.build_graphs(data=batch)
 
-            # Step 6: compute feature
-            features = self.computing_features(data=batch, graphs=graphs, perplexities=perplexities)
-            features_list.append(features)
+            # Step 6: Calculate sequence and graph features for applicability domain and data partitioning
+            features = self.calculate_sequence_and_graph_features(data=batch, graphs=graphs, perplexities=perplexities)
+            calculated_features.append(features)
 
-            # Step 7: Get graphs by partition
-            graphs = self.split_data(graphs=graphs, data=batch, features=features)
+            # Step 7: Partition the graphs into training and validation sets.
+            # This step is performed exclusively in training mode.
+            partitioned_graphs = self.get_graphs_per_partition(data=batch, graphs=graphs, features=features)
 
-            # Step 8: init GNN model
-            model = self.init_gnn_model(graphs=graphs)
+            # Step 8: Initialize GNN model
+            model = self.init_gnn_model(graphs=partitioned_graphs)
 
-            # Step 9: init evaluator
-            evaluator = self.init_model_evaluator(model)
+            # Step 9: Initialize execution mode
+            evaluator = self.init_execution_mode(model)
 
-            # Step 9: execute modeling task
-            self.modeling_task(model_evaluator=evaluator, graphs=graphs)
+            # Step 10: Execute training, testing or inference mode
+            output = self.execute(model_evaluator=evaluator, graphs=partitioned_graphs)
+            outputs.append(output)
 
-        # Step 10: Compute the evaluation metrics and save both the predictions and the metrics
-        self.save_evaluation_outputs()
+            # Step 11: Calculate applicability domain
+            domain = self.calculate_applicability_domain(ad_models, features)
+            if domain is not None and not domain.empty:
+                domains.append(domain)
 
-        # Step 11: modeling_task modeling task
-        self.get_applicability_domain(ad_models, pd.concat(features_list, ignore_index=True))
+        # Step 12: Save features
+        self.save_sequence_and_graph_features(calculated_features)
 
-    def save_prediction(self, eval_output: EvaluationOutput):
-        pass
+        # Step 12: Prepare and save prediction outputs.
+        # This step is executed exclusively during testing and inference.
+        self.prepare_and_save_predictions(outputs, domains)
+        self.prepare_and_save_predictions(outputs, domains)
 
-    def init_logging(self):
+        # Step 13: Compute and save evaluation metrics.
+        # Metrics are calculated only in testing mode.
+        self.calculate_and_save_metrics(outputs)
+
+    def save_sequence_and_graph_features(self, calculated_features):
+        file_path = self._path['features_file']
+        pd.concat(calculated_features).to_csv(file_path, index=False)
+        logging.getLogger('workflow_logger').info(f"Features saved to: {file_path}")
+
+    def init_logger(self):
         Logging.init(
             config_file=Path(os.getenv("LOG_CONFIG_FILE")).resolve(),
             output_dir=self._path.get('log_file')
         )
 
     @abstractmethod
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
         pass
 
-    def build_applicability_domain_model(self):
+    def build_models_for_applicability_domain(self):
         pass
 
-    def load_data(self):
-        return self._context.data_loader.read_file(self._parameters.dataset)
+    def load_dataset(self):
+        return self._context.dataset_loader.read_file(self._parameters.dataset)
 
-    def set_output_filename(self, substr: str):
+    def config_output_file_names(self, substr: str):
         pass
 
-    def validate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        return self._context.dataset_validator.processing_dataset(
+    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        return self._context.dataset_processor.process(
             dataset=data,
             output_dir=self._path,
             class_validator=self._context.class_validator,
             classes=self._parameters.classes
         )
 
-    def computing_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
-        features = FeaturesContext().compute_features(
+    def calculate_sequence_and_graph_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
+        return FeaturesContext().compute_features(
             **Feature(
                 features_to_calculate=self._parameters.feature_types_for_ad,
                 data=data,
@@ -165,22 +184,19 @@ class GDLWorkflow(ABC):
             ).dict()
         )
 
-        features.to_csv(self._path['features_file'], index=False)
-        return features
-
-    def split_data(self, graphs, data, features):
+    def get_graphs_per_partition(self, data, graphs, features):
         return graphs
 
     @abstractmethod
     def init_gnn_model(self, graphs):
         pass
 
-    def get_applicability_domain(self, ad_models, features):
+    def calculate_applicability_domain(self, ad_models, features) -> pd.DataFrame:
         pass
 
-    def construct_graphs(self, data):
-        return construct_graphs(
-            ConstructGraph(
+    def build_graphs(self, data):
+        return build_graphs(
+            BuildGraphsParams(
                 **self._parameters.dict(),
                 non_pdb_bound_sequences_file=self._path.get('non_pdb_bound_sequences_file'),
                 data=data
@@ -191,16 +207,27 @@ class GDLWorkflow(ABC):
         pass
 
     @abstractmethod
-    def init_model_evaluator(self, model: nn.Module):
+    def init_execution_mode(self, model: nn.Module):
         pass
 
-    def save_evaluation_outputs(self):
+    def process_output(self, outputs: List[EvaluationOutput], domain: List[pd.DataFrame]) -> pd.DataFrame:
         pass
 
+    def _process_predictions(self, outputs: List[EvaluationOutput]):
+        pass
+
+    def _add_applicability_domain_to_predictions(self, domains, predictions):
+        pass
+
+    def prepare_and_save_predictions(self, outputs: List[EvaluationOutput], domains: List[pd.DataFrame]) -> None:
+        pass
+
+    def calculate_and_save_metrics(self, outputs: List[EvaluationOutput]) -> None:
+        pass
 
 class TrainingWorkflow(GDLWorkflow):
-    def validate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().validate_dataset(data)
+    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        data = super().process_dataset(data)
 
         # keeping only the instances belonging to the training and validation sets
         data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
@@ -239,48 +266,39 @@ class TrainingWorkflow(GDLWorkflow):
 
         return data
 
-    def split_data(self, graphs: List, data: pd.DataFrame, features: pd.DataFrame) -> tuple[list[Any], list[Any]]:
+    def _partition_data_training_and_validation(self, data: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+        # partitioning data in training and validation
+        data = to_partition(
+            split_method=self._parameters.split_method,
+            data=data,
+            features=features,
+            split_training_fraction=self._parameters.split_training_fraction
+        )
+
+        filtered_data = data[['id', 'sequence', 'activity', 'partition']]
+
+        # Save training and validation data to csv
+        _save_partitioned_data_to_csv(filtered_data, self._path['data_csv'])
+
+        # Save training data to fasta
+        training_data = filtered_data[filtered_data['partition'] == 1]
+        _save_partitioned_data_to_fasta(training_data, self._path['training_data_fasta'])
+
+        # Save validation data to fasta
+        validation_data = filtered_data[filtered_data['partition'] == 2]
+        _save_partitioned_data_to_fasta(validation_data, self._path['validation_data_fasta'])
+
+        return data
+
+    def get_graphs_per_partition(self, data: pd.DataFrame, graphs: List, features: pd.DataFrame) -> tuple[list[Any], list[Any]]:
         if 'partition' not in data.columns:
-            # partitioning data in training and validation
-            data = to_partition(
-                split_method=self._parameters.split_method,
-                data=data,
-                features=features,
-                split_training_fraction=self._parameters.split_training_fraction
-            )
-
-            # Save to csv
-            csv_file = self._path['data_csv']
-            filtered_data = data[['id', 'sequence', 'activity', 'partition']]
-            filtered_data.to_csv(csv_file, index=False)
-            logging.getLogger('workflow_logger'). \
-                info(f"Partitioned dataset saved to CSV file. See: {csv_file}")
-
-            # Save to fasta
-            # training data
-            train_data = filtered_data[filtered_data['partition'] == 1]
-            fasta_file = self._path['training_data_fasta']
-            save_to_fasta(train_data, fasta_file)
-            logging.getLogger('workflow_logger'). \
-                info(f"Training sequences saved to FASTA file. See: {fasta_file}")
-
-            # validation data
-            val_data = filtered_data[filtered_data['partition'] == 2]
-            fasta_file = self._path['validation_data_fasta']
-            save_to_fasta(val_data, fasta_file)
-            logging.getLogger('workflow_logger'). \
-                info(f"Validation sequences saved to FASTA file. See: {fasta_file}")
+            data = self._partition_data_training_and_validation(data, features)
 
         partitions = data['partition']
-        train_graphs = []
-        val_graphs = []
 
-        for graph, partition in zip(graphs, partitions):
-            if partition == 1:
-                train_graphs.append(graph)
-            elif partition == 2:
-                val_graphs.append(graph)
-
+        train_graphs = [g for g, p in zip(graphs, partitions) if p == 1]
+        val_graphs = [g for g, p in zip(graphs, partitions) if p == 2]
+        
         return train_graphs, val_graphs
 
     def init_gnn_model(self, graphs):
@@ -293,7 +311,22 @@ class TrainingWorkflow(GDLWorkflow):
             )
         ).to(device=self._parameters.device)
 
-    def init_model_evaluator(self, model: nn.Module) -> Union[Tuple[Evaluator, Evaluator], Evaluator]:
+    def init_execution_mode(self, model: nn.Module) -> Union[Tuple[Evaluator, Evaluator], Evaluator]:
+        training_evaluator = self._create_training_evaluator(model)
+        validation_evaluator = self._create_validation_evaluator(training_evaluator)
+
+        return training_evaluator, validation_evaluator
+
+    def _create_validation_evaluator(self, training_evaluator):
+        validation_evaluator = ValidationModeEvaluator(
+            model=training_evaluator.model,
+            device=self._parameters.device,
+            loss_fn=self._context.loss_fn,
+            prediction=self._context.prediction_processor
+        )
+        return validation_evaluator
+
+    def _create_training_evaluator(self, model):
         training_evaluator = TrainingModeEvaluator(
             model=model,
             device=self._parameters.device,
@@ -303,17 +336,9 @@ class TrainingWorkflow(GDLWorkflow):
             step_size=self._parameters.step_size,
             gamma=self._parameters.gamma
         )
+        return training_evaluator
 
-        validation_evaluator = ValidationModeEvaluator(
-            model=training_evaluator.model,
-            device=self._parameters.device,
-            loss_fn=self._context.loss_fn,
-            prediction=self._context.prediction_processor
-        )
-
-        return training_evaluator, validation_evaluator
-
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> None:
+    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> None:       
         # Step: get evaluators
         training_evaluator, validation_evaluator = model_evaluator
 
@@ -337,10 +362,7 @@ class TrainingWorkflow(GDLWorkflow):
             val_output = validation_evaluator.eval(val_data)
 
             # Step computes validation metrics
-            val_metrics = self._context.metrics.calculate(
-                    prediction=val_output.prediction,
-                    y_true=val_output.y_true
-                )
+            val_metrics = self._context.metrics.calculate(prediction=val_output.prediction, y_true=val_output.y_true)
 
             # Step: save the current model (save in disk if save_model_per_epoch=True)
             current_model = Model(
@@ -356,67 +378,82 @@ class TrainingWorkflow(GDLWorkflow):
             )
 
             if self._parameters.save_ckpt_per_epoch:
-                save_checkpoints(current_model, checkpoints_path)
+                _save_checkpoint(current_model, checkpoints_path)
 
             # Step: update the best model
             best_model = self._context.best_model_selector.select(best_model, current_model)
 
-            # Step: save validation metrics
+            # Step: format and accumulate in-memory validation metrics for the current epoch
             metrics.append(
                 {
                     "Epoch": epoch,
                     "Loss/Train": train_output.loss,
                     "Loss/Val": val_output.loss,
-                    **format_metric_keys(metrics=val_metrics, suffix="/Val")
+                    **_format_metric(metrics=val_metrics, suffix="/Val")
                 }
             )
 
-        # Step: save metrics
-        save_metrics_to_csv(metrics, self._path.get('metrics_file'))
-        save_metrics_to_tb(metrics, self._path.get('metrics_path'))
-
         # Step: save models
+        self._save_checkpoint(best_model, checkpoints_path, current_model)
+
+        # Step: save metrics
+        self._save_metrics(metrics)
+
+    def _save_metrics(self, metrics):
+        # to csv
+        _save_metrics_to_csv(metrics, self._path.get('metrics_file'))
+        
+        # to tensorboard
+        _save_metrics_to_tb(metrics, self._path.get('metrics_path'))
+
+    def _save_checkpoint(self, best_model, checkpoints_path, current_model):
+        logger = logging.getLogger('workflow_logger')
+        
         if not self._parameters.save_ckpt_per_epoch:
             # Save the model of the last epoch
-            filename = save_checkpoints(current_model, checkpoints_path)
-            logging.getLogger('workflow_logger').info(f"Saved model of the last epoch at {filename}")
+            filename = _save_checkpoint(current_model, checkpoints_path)
+            logger.info(f"Saved model of the last epoch at {filename}")
 
             # save the best model
-            filename = save_best_model(best_model, checkpoints_path)
-            logging.getLogger('workflow_logger').info(f"Saved best model at {filename}")
+            filename = _save_best_model(best_model, checkpoints_path)
+            logger.info(f"Saved best model at {filename}")
         else:
-            logging.getLogger('workflow_logger').info(f"Saved models per epoch in directory {checkpoints_path}")
+            logger.info(f"Saved models per epoch in directory {checkpoints_path}")
 
             # Mark the best model
-            filename = mark_best_model(best_model, checkpoints_path)
-            logging.getLogger('workflow_logger').info(f"Saved model with the best MCC at {filename}")
+            filename = _mark_best_model(best_model, checkpoints_path)
+            logger.info(f"Saved model with the best MCC at {filename}")
 
 
 class PredictionWorkflow(GDLWorkflow, ABC):
-    def build_applicability_domain_model(self):
-        if self._parameters.get_ad:
-            features_to_build_domain = pd.read_csv(self._parameters.feature_file_for_ad)
+    def build_models_for_applicability_domain(self):
+        if self._parameters.get_ad is None:
+            return None
+        
+        features_to_build_domain = pd.read_csv(self._parameters.feature_file_for_ad)
 
-            ad_models = []
-            with tqdm(total=len(self._parameters.methods_for_ad),
-                      desc="Building applicability domain models",
-                      disable=False) as progress:
-                for method_for_ad in self._parameters.methods_for_ad:
-                    features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
-                    model_for_ad = build_model(method_for_ad['method_name'], features_selected)
+        ad_models = []
+        with tqdm(total=len(self._parameters.methods_for_ad),
+                  desc="Building applicability domain models",
+                  disable=False) as progress:
+            for method_for_ad in self._parameters.methods_for_ad:
+                features_selected = filter_features(features_to_build_domain, method_for_ad['features'])
+                model_for_ad = build_model(method_for_ad['method_name'], features_selected)
 
-                    ad_models_dict = {
-                        'method': method_for_ad,
-                        'model': model_for_ad,
-                    }
-                    ad_models.append(ad_models_dict)
+                ad_models_dict = {
+                    'method': method_for_ad,
+                    'model': model_for_ad,
+                }
+                ad_models.append(ad_models_dict)
 
-                    progress.update()
-            return ad_models
+                progress.update()
+        return ad_models
 
-    def computing_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> Optional[DataFrame]:
-        if self._parameters.get_ad:
-            return super().computing_features(data, graphs, perplexities)
+    def calculate_sequence_and_graph_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> Optional[DataFrame]:
+        if self._parameters.get_ad is None:
+            return None
+
+        return super().calculate_sequence_and_graph_features(data, graphs, perplexities)
 
     def init_gnn_model(self, graphs: List):
         checkpoint = torch.load(self._parameters.gdl_model_path)
@@ -425,16 +462,16 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.to(self._parameters.device)
         return model
 
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
         data = DataLoader(dataset=graphs, batch_size=self._parameters.batch_size)
         return model_evaluator.eval(data)
 
-    def get_applicability_domain(self, ad_models: List[Dict], features: pd.DataFrame):
+    def calculate_applicability_domain(self, ad_models: List[Dict], features: pd.DataFrame) -> pd.DataFrame:
+        domain = pd.DataFrame()
         if self._parameters.get_ad:
             instance_id = features.iloc[:, 0]
             features_to_eval = features.iloc[:, 1:]
 
-            domain = pd.DataFrame()
             with tqdm(total=len(ad_models),
                       desc="Getting applicability domain", disable=False) as progress:
                 for ad_model in ad_models:
@@ -453,101 +490,104 @@ class PredictionWorkflow(GDLWorkflow, ABC):
                     progress.update(1)
             domain['sequence'] = instance_id
 
-            csv_path = self._path['prediction_file']
-            prediction = pd.read_csv(csv_path)
-            merged_df = pd.merge(prediction, domain, on='sequence', how='inner')
-            merged_df.to_csv(csv_path, index=False)
+        return domain
+    
+    def _add_applicability_domain_to_predictions(self, domains, predictions):
+        # merge prediction to applicability domain
+        if self._parameters.get_ad:
+            predictions = (pd.merge(
+                predictions,
+                pd.concat(domains, axis=1),
+                on='sequence',
+                how='inner'
+            ))
+        return predictions
 
+    def prepare_and_save_predictions(self, outputs: List[EvaluationOutput], domains: List[pd.DataFrame]) -> None:       
+        output_predictions = self._process_predictions(outputs)
+        output_predictions = self._add_applicability_domain_to_predictions(domains, output_predictions)
+
+        file_path = self._path.get('prediction_file')
+        output_predictions.to_csv(file_path, index=False)
+        logging.getLogger('workflow_logger').info(f"Predictions saved to: {file_path}")
+
+    @abstractmethod
+    def _process_predictions(self, outputs: List[EvaluationOutput]):
+        pass
 
 class TestWorkflow(PredictionWorkflow):
-    def validate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().validate_dataset(data)
+    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        data = super().process_dataset(data)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
-    def init_model_evaluator(self, model: nn.Module):
+    def init_execution_mode(self, model: nn.Module):
+        return self._create_testing_evaluator(model)
+
+    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+        return super().execute(model_evaluator, graphs)
+
+    def calculate_and_save_metrics(self, outputs: List[EvaluationOutput]) -> None:
+        y_true = get_y_true(outputs)
+        predictions = get_predictions(outputs)
+
+        metrics = self._context.metrics.calculate(prediction=predictions, y_true=y_true)
+        metrics = _format_metric(metrics, suffix="/Test")
+        
+        file_path = self._path.get('metrics_file')
+        _save_metrics_to_csv([metrics], file_path)        
+        logging.getLogger('workflow_logger').info(f"Metrics saved to: {file_path}")
+
+    def _create_testing_evaluator(self, model):
         return TestModeEvaluator(
             model=model,
             device=self._parameters.device,
             prediction=self._context.prediction_processor,
         )
 
-    def modeling_task(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> None:
-        # save output
-        self._eval_output.append(super().modeling_task(model_evaluator, graphs))
-
-
-    def save_evaluation_outputs(self) -> None:
-        # save predictions
-        # df = pd.DataFrame.from_records(self._eval_output)
-
-        # compute metrics
-        prediction = Prediction()
-        y_true = []
-        sequence_info = {}
-
-        for eval_output in self._eval_output:
-            prediction.extend(eval_output.prediction)
-            y_true.extend(eval_output.y_true)
-
-            for key, value in eval_output.sequence_info.items():
-                if key not in sequence_info:
-                    sequence_info[key] = []
-                sequence_info[key].extend(value)
-
-        # save predictions
-        pd.DataFrame(
+    def _process_predictions(self, outputs: List[EvaluationOutput]):
+        return pd.DataFrame(
             {
-                **sequence_info,
-                'y_true': y_true,
-                **prediction.dict()
+                **get_sequence_info(outputs),
+                'y_true': get_y_true(outputs),
+                **get_predictions(outputs).dict()
             }
-        ).to_csv(self._path['prediction_file'], index=False)
-
-
-        # compute metrics
-        test_metrics = format_metric_keys(
-            metrics=self._context.metrics.calculate(
-                prediction=prediction,
-                y_true=y_true
-            ),
-            suffix="/Test"
         )
-
-        # save metrics
-        save_metrics_to_csv([test_metrics], self._path.get('metrics_file'))
-
 
 class InferenceWorkflow(PredictionWorkflow):
 
-    def set_output_filename(self, substr: str):
+    def config_output_file_names(self, substr: str):
         path = Path(self._path['prediction_path'])
         self._path['prediction_file'] = path.joinpath(f"Prediction-batch_{substr}.csv")
 
         path = Path(self._path['features_path'])
         self._path['features_file'] = path.joinpath(f"Features-batch_{substr}.csv")
 
-    def init_model_evaluator(self, model: nn.Module):
+    def init_execution_mode(self, model: nn.Module):
         return InferenceModeEvaluator(
                 model=model,
                 device=self._parameters.device,
                 prediction=self._context.prediction_processor
             )
 
-    def modeling_task(self, model_evaluator: Union[Tuple[Evaluator, Evaluator], Evaluator], graphs: List) -> None:
-        eval_output = super().modeling_task(model_evaluator, graphs)
-
-        # save prediction
-        df = pd.DataFrame(
+    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+        return super().execute(model_evaluator, graphs)
+        
+    def _process_predictions(self, outputs: List[EvaluationOutput]):
+        return pd.DataFrame(
             {
-                **eval_output.sequence_info,
-                **eval_output.prediction.dict()
+                **get_sequence_info(outputs),
+                **get_predictions(outputs).dict()
             }
         )
-        df.to_csv(self._path['prediction_file'], index=False)
-
 
 # auxiliar methods
-def save_to_fasta(df: pd.DataFrame, fasta_file):
+def _save_partitioned_data_to_csv(data: pd.DataFrame, csv_file: Path):
+    data.to_csv(csv_file, index=False)
+    logging.getLogger('workflow_logger'). \
+        info(f"Partitioned dataset saved to CSV file. See: {csv_file}")
+    
+    
+def _save_partitioned_data_to_fasta(df: pd.DataFrame, fasta_file: Path):
     fasta_records = []
     for i, row in df.iterrows():
         sequence_id = row['id']
@@ -560,13 +600,16 @@ def save_to_fasta(df: pd.DataFrame, fasta_file):
     with open(fasta_file, 'w') as output_handle:
         SeqIO.write(fasta_records, output_handle, 'fasta')
 
+    logging.getLogger('workflow_logger'). \
+        info(f"Training sequences saved to FASTA file. See: {fasta_file}")
 
-def save_metrics_to_csv(metrics: List[dict], csv_file: Path):
+
+def _save_metrics_to_csv(metrics: List[dict], csv_file: Path):
     metrics_df = pd.DataFrame(metrics)
     metrics_df.to_csv(csv_file, index=False)
 
 
-def save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
+def _save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
     tb_writer = SummaryWriter(log_dir=str(metrics_path), filename_suffix="_metrics")
 
     # write tensorboard metrics, excluding 'epoch'
@@ -577,26 +620,26 @@ def save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
                 tb_writer.add_scalar(key, value, global_step=epoch)
 
 
-def save_checkpoints(model: Model, checkpoints_path: Path):
-    filename = get_checkpoint_name(model, checkpoints_path)
+def _save_checkpoint(model: Model, checkpoints_path: Path):
+    filename = _get_checkpoint_name(model, checkpoints_path)
     torch.save(model.dict(), filename)
     return filename
 
 
-def save_best_model(model: Model, checkpoints_path: Path):
-    filename = get_checkpoint_name(model, checkpoints_path)
+def _save_best_model(model: Model, checkpoints_path: Path):
+    filename = _get_checkpoint_name(model, checkpoints_path)
     filename = filename.with_name(filename.stem + "_(best).pt")
     torch.save(model.dict(), filename)
     return filename
 
 
-def get_checkpoint_name(model: Model, checkpoints_path: Path):
+def _get_checkpoint_name(model: Model, checkpoints_path: Path):
     return checkpoints_path.joinpath(
         f"epoch={model.epoch}_train-loss={model.train_loss:.2f}_val-loss={model.val_loss:.2f}.pt"
     )
 
 
-def mark_best_model(best_model: Model, checkpoints_path: Path) -> Path:
+def _mark_best_model(best_model: Model, checkpoints_path: Path) -> Path:
     original_name = f"epoch={best_model.epoch}_train-loss={best_model.train_loss:.2f}_val-loss={best_model.val_loss:.2f}.pt"
     original_path = checkpoints_path.joinpath(original_name)
 
@@ -607,3 +650,33 @@ def mark_best_model(best_model: Model, checkpoints_path: Path) -> Path:
         return new_path
     else:
         raise FileNotFoundError(f"Checkpoint not found: {original_path}")
+
+
+def _format_metric(metrics: dict, suffix: str) -> dict:
+    return {f"{key}{suffix}": value for key, value in metrics.items()}
+
+
+def get_y_true(outputs: List[EvaluationOutput]):
+    y_true = []
+    for eval_output in outputs:
+        y_true.extend(eval_output.y_true)
+
+    return y_true
+
+
+def get_sequence_info(outputs: List[EvaluationOutput]):
+    sequence_info = {}
+    for eval_output in outputs:
+        for key, value in eval_output.sequence_info.items():
+            if key not in sequence_info:
+                sequence_info[key] = []
+            sequence_info[key].extend(value)
+
+    return sequence_info
+
+
+def get_predictions(outputs: List[EvaluationOutput]):
+    predictions = Prediction()
+    for eval_output in outputs:
+        predictions.extend(eval_output.prediction)
+    return predictions

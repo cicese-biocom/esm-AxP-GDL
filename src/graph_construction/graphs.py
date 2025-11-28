@@ -22,7 +22,7 @@ from src.config.types import (
 from src.utils.base_dto import BaseDataTransferObject
 
 
-class ConstructGraph(BaseDataTransferObject):
+class BuildGraphsParams(BaseDataTransferObject):
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     esm2_representation: ESM2Representation
     execution_mode: ExecutionMode
@@ -42,11 +42,11 @@ class ConstructGraph(BaseDataTransferObject):
     use_edge_attr: bool
 
 
-def construct_graphs(construct_graph_dto: ConstructGraph):
+def build_graphs(params: BuildGraphsParams):
     # nodes
     nodes_features, esm2_contact_maps, perplexities_1 = esm2_derived_features(
         ESM2DerivedFeatures(
-            **construct_graph_dto.dict()
+            **params.dict()
         )
     )
 
@@ -54,32 +54,32 @@ def construct_graphs(construct_graph_dto: ConstructGraph):
     perplexities_2: pd.DataFrame = pd.DataFrame()
 
     # If you do not use the edge construction function esm2_contact_map
-    if construct_graph_dto.esm2_model_for_contact_map is None:
-        esm2_contact_maps = [None] * len(construct_graph_dto.data)
+    if params.esm2_model_for_contact_map is None:
+        esm2_contact_maps = [None] * len(params.data)
 
     # If the ESM-2 model specified for constructing the graphs and for constructing the edges is different, the following is true
-    elif construct_graph_dto.esm2_model_for_contact_map.value != construct_graph_dto.esm2_representation.value:
+    elif params.esm2_model_for_contact_map.value != params.esm2_representation.value:
         model = get_models(
-            esm2_representation=construct_graph_dto.esm2_representation
+            esm2_representation=params.esm2_representation
         )
 
         _, esm2_contact_maps, perplexities_2 = get_representations(
-            data=construct_graph_dto.data,
+            data=params.data,
             model_name=model[0]['model'],
-            device=construct_graph_dto.device
+            device=params.device
         )
 
     perplexities_output = pd.DataFrame()
-    if construct_graph_dto.esm2_representation == ESM2Representation.ESM2_T36:
+    if params.esm2_representation == ESM2Representation.ESM2_T36:
         perplexities_output = perplexities_1
-    elif construct_graph_dto.esm2_model_for_contact_map == ESM2Representation.ESM2_T36:
+    elif params.esm2_model_for_contact_map == ESM2Representation.ESM2_T36:
         perplexities_output = perplexities_2
 
     # If the ESM-2 model specified to build the graphs and to build the edges, the contact maps returned by the
     # function esm2_derived_features are used.
     adjacency_matrices, weights_matrices = get_edges(
         GetEdges(
-            **construct_graph_dto.dict(),
+            **params.dict(),
             esm2_contact_maps=esm2_contact_maps
         )
     )
@@ -88,19 +88,19 @@ def construct_graphs(construct_graph_dto: ConstructGraph):
     graphs = []
 
     for i in tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs"):
-        sequence_info = construct_graph_dto.data.iloc[i]
+        sequence_info = params.data.iloc[i]
         graphs.append(
             to_parse_matrix(
                 adjacency_matrix=adjacency_matrices[i],
                 nodes_features=np.array(nodes_features[i], dtype=np.float32),
                 weights_matrix=weights_matrices[i],
-                label=sequence_info['activity'] if 'activity' in construct_graph_dto.data.columns else None,
+                label=sequence_info['activity'] if 'activity' in params.data.columns else None,
                 sequence_info={
                     "sequence_id": sequence_info['id'],
                     "sequence": sequence_info['sequence'],
                     "sequence_length": sequence_info['length'],
                 },
-                use_edge_attr=construct_graph_dto.use_edge_attr
+                use_edge_attr=params.use_edge_attr
             )
         )
 

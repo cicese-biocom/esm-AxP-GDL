@@ -3,14 +3,13 @@ from injector import Injector
 from src.architecture.gnn import GNNFactory
 from src.config.types import ModelingTask, ExecutionMode
 from src.data_processing.data_loader import DataLoaderContext, CSVLoader, CSVByChunkLoader
-from src.data_processing.data_validator import DatasetValidatorContext, LabeledDatasetValidator, DatasetValidator
+from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor
 from src.workflow.execution_factory import (
     ExecutionFactory,
     BinaryExecutionFactory,
     MulticlassExecutionFactory,
     RegressionExecutionFactory,
 )
-
 
 
 class ApplicationContext:
@@ -43,7 +42,7 @@ class ApplicationContext:
             self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
             self.__best_model_selector = ml_factory.create_best_model_selector()
             self.__class_validator = ml_factory.create_class_validator()
-            self.__injector.binder.bind(DatasetValidatorContext, LabeledDatasetValidator)
+            self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, CSVLoader)
 
             # model
@@ -55,18 +54,18 @@ class ApplicationContext:
             self.__prediction_processor = ml_factory.create_prediction_processor()
             self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
             self.__class_validator = ml_factory.create_class_validator()
-            self.__injector.binder.bind(DatasetValidatorContext, LabeledDatasetValidator)
+            self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
             self.__prediction_processor = ml_factory.create_prediction_processor()
             self.__class_validator = ml_factory.create_class_validator()
-            self.__injector.binder.bind(DatasetValidatorContext, DatasetValidator)
+            self.__injector.binder.bind(DatasetProcessorContext, DatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
-        self.__dataset_validator = self.__injector.get(DatasetValidatorContext)
-        self.__data_loader = self.__injector.get(DataLoaderContext)
+        self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
+        self.__dataset_loader = self.__injector.get(DataLoaderContext)
 
     @property
     def metrics(self):
@@ -89,12 +88,12 @@ class ApplicationContext:
         return self.__class_validator
 
     @property
-    def dataset_validator(self):
-        return self.__dataset_validator
+    def dataset_processor(self):
+        return self.__dataset_processor
 
     @property
-    def data_loader(self):
-        return self.__data_loader
+    def dataset_loader(self):
+        return self.__dataset_loader
 
     @property
     def gnn_factory(self):
@@ -112,8 +111,8 @@ if __name__ == '__main__':
     loss = context.loss_fn
     best_model_selector = context.best_model_selector
     class_validator = context.class_validator
-    dataset_validator = context.dataset_validator
-    data_loader = context.data_loader
+    dataset_processor = context.dataset_processor
+    dataset_loader = context.dataset_loader
     gnn = context.gnn_factory
 
     print("Done!")

@@ -5,7 +5,7 @@ from typing import Optional, List
 import torch
 from torch.nn import CrossEntropyLoss, MSELoss
 
-from src.data_processing.data_validator import ClassValidator, ClassificationClassValidator, RegressionClassValidator
+from src.data_processing.data_processor import ClassValidator, ClassificationClassValidator, RegressionClassValidator
 from src.modeling.selector import BestModelSelector, MaximumMCCBestModelSelector, MinimumRMSEBestModelSelector
 from src.modeling.metrics import Metrics, BinaryClassificationMetrics, MulticlassClassificationMetrics, RegressionMetrics
 from src.modeling.prediction import PredictionProcessor, RegressionPredictionProcessor, BinaryClassificationPredictionProcessor, MulticlassClassificationPredictionProcessor
