@@ -7,11 +7,11 @@ from typing import List, Optional
 from pydantic.v1 import PositiveFloat
 
 from src.config.types import ExecutionMode, ValidationMode, ESM2Representation
-from src.models.esm2 import get_models, get_representations
-from src.utils.base_dto import BaseDataTransferObject
+from src.models.esm2 import get_models, extract_esm2_representations
+from src.utils.base_parameters import BaseParameters
 
 
-class RandomEmbedding(BaseDataTransferObject):
+class RandomEmbeddingParameters(BaseParameters):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
@@ -19,16 +19,16 @@ class RandomEmbedding(BaseDataTransferObject):
     data: pd.DataFrame
 
 
-class ESM2DerivedFeatures(BaseDataTransferObject):
+class ESM2FeatureComputationParameters(BaseParameters):
     execution_mode: ExecutionMode
     esm2_representation: ESM2Representation
     data: pd.DataFrame
     device: torch.device
 
 
-def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeatures):
+def compute_esm2_features(esm2_feature_computation_parameters: ESM2FeatureComputationParameters):
     models = get_models(
-        esm2_derived_features_dto.esm2_representation
+        esm2_feature_computation_parameters.esm2_representation
     )
 
     node_features = []
@@ -40,10 +40,10 @@ def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeatures):
             reduced_features = model_info["reduced_features"]
             reduced_features = np.array([x - 1 for x in reduced_features])
 
-            embeddings, contact_maps, perplexities = get_representations(
-                data=esm2_derived_features_dto.data,
+            embeddings, contact_maps, perplexities = extract_esm2_representations(
+                data=esm2_feature_computation_parameters.data,
                 model_name=model_name,
-                device=esm2_derived_features_dto.device
+                device=esm2_feature_computation_parameters.device
             )
 
             # Apply feature reduction (optional)
@@ -51,7 +51,7 @@ def esm2_derived_features(esm2_derived_features_dto: ESM2DerivedFeatures):
 
             # Apply embeddings perturbation (optional)
             embeddings = _apply_random_embeddings(
-                RandomEmbedding(**esm2_derived_features_dto.dict(), embeddings=embeddings)
+                RandomEmbeddingParameters(**esm2_feature_computation_parameters.dict(), embeddings=embeddings)
             )
 
             if not node_features:
@@ -82,7 +82,7 @@ def _get_range_for_embeddings(data_tuples):
     return coordinate_min, coordinate_max
 
 
-def _apply_random_embeddings(random_embedding_dto: RandomEmbedding):
+def _apply_random_embeddings(random_embedding_dto: RandomEmbeddingParameters):
     if random_embedding_dto.validation_mode == ValidationMode.RANDOM_EMBEDDINGS and random_embedding_dto.execution_mode == ExecutionMode.TRAIN:
         partitions = random_embedding_dto.data['partition']
         min_val, max_val = _get_range_for_embeddings(random_embedding_dto.embeddings)

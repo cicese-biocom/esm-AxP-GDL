@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional
 from torch import nn
 
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_entity import BaseParameters
 
 
-class Model(BaseDataTransferObject):
+class Model(BaseParameters):
     epoch: Optional[int] = None
     model: Optional[nn.Module] = None
     model_state_dict: Optional[Dict] = None

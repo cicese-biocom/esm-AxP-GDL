@@ -3,10 +3,10 @@ from typing import Optional, List
 
 from torch.nn.functional import softmax
 
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_entity import BaseParameters
 
 
-class Prediction(BaseDataTransferObject):
+class Prediction(BaseParameters):
     y_pred: Optional[List] = None
     y_score: Optional[List] = None
 

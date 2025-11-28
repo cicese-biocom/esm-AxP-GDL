@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from pydantic.v1 import PositiveFloat
 
-from src.graph_construction.edges import get_edges, GetEdges
-from src.graph_construction.nodes import esm2_derived_features, ESM2DerivedFeatures
-from src.models.esm2 import get_models, get_representations
+from src.graph_construction.edges import build_edges, BuildEdgesParameters
+from src.graph_construction.nodes import compute_esm2_features, ESM2FeatureComputationParameters
+from src.models.esm2 import get_models, extract_esm2_representations
 from src.config.types import (
     ValidationMode,
     ExecutionMode,
@@ -19,10 +19,10 @@ from src.config.types import (
     EdgeConstructionFunction,
     DistanceFunction
 )
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_parameters import BaseParameters
 
 
-class BuildGraphsParams(BaseDataTransferObject):
+class BuildGraphsParameters(BaseParameters):
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     esm2_representation: ESM2Representation
     execution_mode: ExecutionMode
@@ -42,11 +42,11 @@ class BuildGraphsParams(BaseDataTransferObject):
     use_edge_attr: bool
 
 
-def build_graphs(params: BuildGraphsParams):
+def build_graphs(build_graphs_parameters: BuildGraphsParameters):
     # nodes
-    nodes_features, esm2_contact_maps, perplexities_1 = esm2_derived_features(
-        ESM2DerivedFeatures(
-            **params.dict()
+    nodes_features, esm2_contact_maps, perplexities_1 = compute_esm2_features(
+        ESM2FeatureComputationParameters(
+            **build_graphs_parameters.dict()
         )
     )
 
@@ -54,32 +54,32 @@ def build_graphs(params: BuildGraphsParams):
     perplexities_2: pd.DataFrame = pd.DataFrame()
 
     # If you do not use the edge construction function esm2_contact_map
-    if params.esm2_model_for_contact_map is None:
-        esm2_contact_maps = [None] * len(params.data)
+    if build_graphs_parameters.esm2_model_for_contact_map is None:
+        esm2_contact_maps = [None] * len(build_graphs_parameters.data)
 
     # If the ESM-2 model specified for constructing the graphs and for constructing the edges is different, the following is true
-    elif params.esm2_model_for_contact_map.value != params.esm2_representation.value:
+    elif build_graphs_parameters.esm2_model_for_contact_map.value != build_graphs_parameters.esm2_representation.value:
         model = get_models(
-            esm2_representation=params.esm2_representation
+            esm2_representation=build_graphs_parameters.esm2_representation
         )
 
-        _, esm2_contact_maps, perplexities_2 = get_representations(
-            data=params.data,
+        _, esm2_contact_maps, perplexities_2 = extract_esm2_representations(
+            data=build_graphs_parameters.data,
             model_name=model[0]['model'],
-            device=params.device
+            device=build_graphs_parameters.device
         )
 
     perplexities_output = pd.DataFrame()
-    if params.esm2_representation == ESM2Representation.ESM2_T36:
+    if build_graphs_parameters.esm2_representation == ESM2Representation.ESM2_T36:
         perplexities_output = perplexities_1
-    elif params.esm2_model_for_contact_map == ESM2Representation.ESM2_T36:
+    elif build_graphs_parameters.esm2_model_for_contact_map == ESM2Representation.ESM2_T36:
         perplexities_output = perplexities_2
 
     # If the ESM-2 model specified to build the graphs and to build the edges, the contact maps returned by the
-    # function esm2_derived_features are used.
-    adjacency_matrices, weights_matrices = get_edges(
-        GetEdges(
-            **params.dict(),
+    # function compute_esm2_features are used.
+    adjacency_matrices, weights_matrices = build_edges(
+        BuildEdgesParameters(
+            **build_graphs_parameters.dict(),
             esm2_contact_maps=esm2_contact_maps
         )
     )
@@ -88,19 +88,19 @@ def build_graphs(params: BuildGraphsParams):
     graphs = []
 
     for i in tqdm(range(n_samples), total=len(adjacency_matrices), desc="Generating graphs"):
-        sequence_info = params.data.iloc[i]
+        sequence_info = build_graphs_parameters.data.iloc[i]
         graphs.append(
             to_parse_matrix(
                 adjacency_matrix=adjacency_matrices[i],
                 nodes_features=np.array(nodes_features[i], dtype=np.float32),
                 weights_matrix=weights_matrices[i],
-                label=sequence_info['activity'] if 'activity' in params.data.columns else None,
+                label=sequence_info['activity'] if 'activity' in build_graphs_parameters.data.columns else None,
                 sequence_info={
                     "sequence_id": sequence_info['id'],
                     "sequence": sequence_info['sequence'],
                     "sequence_length": sequence_info['length'],
                 },
-                use_edge_attr=params.use_edge_attr
+                use_edge_attr=build_graphs_parameters.use_edge_attr
             )
         )
 

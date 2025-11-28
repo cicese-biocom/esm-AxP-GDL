@@ -78,13 +78,13 @@
       "modes": ["TRAIN", "TEST", "INFERENCE"],
       "files": [
         {
-          "key": "command_line_params",
-          "name": "command_line_params.json",
+          "key": "command_line_build_graphs_parameters",
+          "name": "command_line_build_graphs_parameters.json",
           "modes": ["TRAIN", "TEST", "INFERENCE"]
         },
         {
           "key": "workflow_execution_args_file",
-          "name": "all_params.json",
+          "name": "all_build_graphs_parameters.json",
           "modes": ["TRAIN", "TEST", "INFERENCE"]
         }
       ]

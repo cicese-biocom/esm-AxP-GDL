@@ -6,10 +6,10 @@ from torch.nn.modules.loss import _Loss
 from torch_geometric.data import Data
 
 from src.modeling.prediction import PredictionProcessor, Prediction
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_parameters import BaseParameters
 
 
-class ProcessedBatch(BaseDataTransferObject):
+class ProcessedBatch(BaseParameters):
     loss: Optional[float] = None
     y_true: Optional[List] = None
     sequence_info: Optional[Dict] = None

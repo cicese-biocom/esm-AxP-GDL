@@ -101,12 +101,12 @@ class ApplicationContext:
 
 
 if __name__ == '__main__':
-    params = {
+    build_graphs_parameters = {
         'execution_mode': ExecutionMode.TRAIN,
         'modeling_task': ModelingTask.BINARY_CLASSIFICATION,
     }
 
-    context = ApplicationContext(**params)
+    context = ApplicationContext(**build_graphs_parameters)
     metrics = context.metrics
     loss = context.loss_fn
     best_model_selector = context.best_model_selector

@@ -63,7 +63,7 @@ class CommonArguments(BaseModel):
                     "loaded for test/inference mode",
     )
 
-    command_line_params: Optional[Path] = Field(
+    command_line_build_graphs_parameters: Optional[Path] = Field(
         default=None,
         description="Path to a JSON file with the parameters to be used from the command line. "
                     "Arguments provided directly via the command line take precedence over those "
@@ -71,11 +71,11 @@ class CommonArguments(BaseModel):
     )
 
     @root_validator(pre=True)
-    def check_json_params_arg(cls, values):
-        command_line_params = values.get("command_line_params")
-        if command_line_params:
+    def check_json_build_graphs_parameters_arg(cls, values):
+        command_line_build_graphs_parameters = values.get("command_line_build_graphs_parameters")
+        if command_line_build_graphs_parameters:
             try:
-                json_file_path = Path(command_line_params).resolve()
+                json_file_path = Path(command_line_build_graphs_parameters).resolve()
                 json_args = load_json(json_file_path)
 
                 argv = {}
@@ -90,7 +90,7 @@ class CommonArguments(BaseModel):
 
                 sys.argv = _dict_to_argv(sys.argv[0], {**values, **argv})
             except Exception as e:
-                raise ValueError(f"Error loading JSON parameters from '{command_line_params}': {e}")
+                raise ValueError(f"Error loading JSON parameters from '{command_line_build_graphs_parameters}': {e}")
 
         return values
 
@@ -345,12 +345,12 @@ class TrainingArguments(CommonArguments):
         return values
 
     @root_validator(skip_on_failure=True)
-    def set_optimizer_params(cls, values):
+    def set_optimizer_build_graphs_parameters(cls, values):
         values['weight_decay'] = 5e-4
         return (values)
 
     @root_validator(skip_on_failure=True)
-    def set_scheduler_params(cls, values):
+    def set_scheduler_build_graphs_parameters(cls, values):
         values['step_size'] = 5
         values['gamma'] = 0.9
         return values
@@ -518,14 +518,14 @@ class PredictionArguments(CommonArguments):
         features_collection = FeaturesCollectionLoader()
         ad_methods_collection = ADMethodCollectionLoader()
 
-        none_params = [
+        none_build_graphs_parameters = [
             param for param in [
                 'methods_for_ad',
                 'feature_file_for_ad'
             ] if values.get(param) is None
         ]
 
-        if len(none_params) == 0:
+        if len(none_build_graphs_parameters) == 0:
             values['get_ad'] = True
 
             valid_methods = ad_methods_collection.get_method_names()
@@ -535,11 +535,11 @@ class PredictionArguments(CommonArguments):
                         f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
                     )
 
-        elif len(none_params) == 2:
+        elif len(none_build_graphs_parameters) == 2:
             values['get_ad'] = False
         else:
             raise ValueError(
-                f"The following parameters must be specified: {', '.join(none_params)}"
+                f"The following parameters must be specified: {', '.join(none_build_graphs_parameters)}"
             )
 
         if values.get('get_ad'):
@@ -610,14 +610,14 @@ def _save_command_line_parameters(model, args):
     }
 
     save_json(
-        json_file=args.output_dir['command_line_params'],
+        json_file=args.output_dir['command_line_build_graphs_parameters'],
         json_data=user_provided
     )
 
 
-def _dict_to_argv(script_path, params):
+def _dict_to_argv(script_path, build_graphs_parameters):
     argv = [script_path]
-    for key, value in params.items():
+    for key, value in build_graphs_parameters.items():
         if isinstance(value, bool):
             if value:
                 argv.append(f"--{key}")

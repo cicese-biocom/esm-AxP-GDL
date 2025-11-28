@@ -198,9 +198,9 @@ class EdgeConstructionContext:
         for name in edge_construction_functions:
             for func_name, func in construction_functions:
                 if func_name == name:
-                    params = func.keywords
-                    params['edges_component'] = edges_functions
-                    edges_functions = func(**params)
+                    build_graphs_parameters = func.keywords
+                    build_graphs_parameters['edges_component'] = edges_functions
+                    edges_functions = func(**build_graphs_parameters)
                     break
 
         return edges_functions.compute_edges()

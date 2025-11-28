@@ -12,11 +12,11 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.config.types import ESM2Representation
-from src.models.esm2 import get_models, get_representations
-from src.utils.base_dto import BaseDataTransferObject
+from src.models.esm2 import get_models, extract_esm2_representations
+from src.utils.base_parameters import BaseParameters
 
 
-class Feature(BaseDataTransferObject):
+class FeatureCalculationParameters(BaseParameters):
     features_to_calculate: List
     data: pd.DataFrame
     graphs: List
@@ -25,7 +25,7 @@ class Feature(BaseDataTransferObject):
 
 
 class FeatureComponent:
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
         pass
 
 
@@ -37,7 +37,7 @@ class EmptyFeatureComponent(FeatureComponent):
     def features(self) -> pd.DataFrame:
         return self._features
 
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
         return self.features
 
 
@@ -51,8 +51,8 @@ class FeatureDecorator(FeatureComponent):
     def feature_component(self) -> FeatureComponent:
         return self._feature_component
 
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
-        return self.feature_component.compute_features(pbar)
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
+        return self.feature_component.compute(pbar)
 
 
 class GraphCentralitiesDecorator(FeatureDecorator):
@@ -79,8 +79,8 @@ class GraphCentralitiesDecorator(FeatureDecorator):
     def graphs(self) -> List[Data]:
         return self._graphs
 
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
-        features_input = self.feature_component.compute_features(pbar)
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
+        features_input = self.feature_component.compute(pbar)
 
         features_list = []  # Collect new features from all graphs
 
@@ -138,8 +138,8 @@ class AminoAcidDescriptorDecorator(FeatureDecorator):
     def sequences(self) -> List[str]:
         return self._sequences
 
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
-        features_input = self.feature_component.compute_features(pbar)
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
+        features_input = self.feature_component.compute(pbar)
 
         # Load amino acid descriptors
         descriptors = pd.read_csv(Path(os.getenv("AMINO_ACID_DESCRIPTORS_FILE")).resolve())
@@ -197,13 +197,13 @@ class PerplexityDecorator(FeatureDecorator):
     def device(self) -> torch.device:
         return self._device
 
-    def compute_features(self, pbar: tqdm) -> pd.DataFrame:
-        features_input = self.feature_component.compute_features(pbar)
+    def compute(self, pbar: tqdm) -> pd.DataFrame:
+        features_input = self.feature_component.compute(pbar)
 
         perplexities = self.perplexities
         if perplexities.empty:
             model = get_models(ESM2Representation.ESM2_T33)
-            _, _, perplexities = get_representations(self.data, model[0]['model'], device=self.device, show_pbar=True)
+            _, _, perplexities = extract_esm2_representations(self.data, model[0]['model'], device=self.device, show_pbar=True)
 
         features_output = features_input.merge(perplexities, on="sequence", how="inner")
 
@@ -219,7 +219,7 @@ class FeaturesContext:
             'perplexity': PerplexityDecorator
         }
 
-    def compute_features(self, **kwargs):
+    def compute(self, **kwargs):
         features_component = EmptyFeatureComponent(kwargs['data'])
 
         features_to_calculate = kwargs['features_to_calculate']
@@ -229,12 +229,12 @@ class FeaturesContext:
                 func = self.function_mapping[feat['feature_name']]
                 kwargs['feature_component'] = features_component
                 kwargs['feature_id'] = feat['feature_id']
-                params = {param: kwargs[param] for param in kwargs if param in func.__init__.__code__.co_varnames}
+                build_graphs_parameters = {param: kwargs[param] for param in kwargs if param in func.__init__.__code__.co_varnames}
 
-                features_component = func(**params)
+                features_component = func(**build_graphs_parameters)
 
         with tqdm(total=len(features_to_calculate), desc="Computing features") as pbar:
-            features = features_component.compute_features(pbar)
+            features = features_component.compute(pbar)
 
         return features
 

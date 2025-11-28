@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic.v1 import BaseModel, PositiveFloat, PositiveInt
+from pydantic.v1 import PositiveFloat, PositiveInt
 
 import torch
 from torch import nn
@@ -7,12 +7,10 @@ from src.architecture.gat_v1 import GATv1
 from src.architecture.gat_v2 import GATv2
 
 from src.config.types import GDLArchitecture
+from src.utils.base_parameters import BaseParameters
 
 
-class GNNParameters(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
-
+class GNNParameters(BaseParameters):
     node_feature_dim: Optional[PositiveInt]
     hidden_layer_dimension: PositiveInt
     numbers_of_class: PositiveInt

@@ -28,8 +28,8 @@ from src.config.types import (
 
 from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import to_partition
-from src.feature_extraction.features import filter_features, FeaturesContext, Feature
-from src.graph_construction.graphs import build_graphs, BuildGraphsParams
+from src.feature_extraction.features import filter_features, FeaturesContext, FeatureCalculationParameters
+from src.graph_construction.graphs import build_graphs, BuildGraphsParameters
 from src.modeling.evaluator import (
     TrainingModeEvaluator,
     ValidationModeEvaluator,
@@ -40,13 +40,13 @@ from src.modeling.evaluator import (
 )
 from src.modeling.prediction import Prediction
 from src.modeling.selector import Model
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_parameters import BaseParameters
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
-from src.workflow.params_setup import ExecutionParameters
+from src.workflow.build_graphs_parameters_setup import ExecutionParameters
 
 
-class ModelParameters(BaseDataTransferObject):
+class ModelParameters(BaseParameters):
     esm2_representation: ESM2Representation
     edge_construction_functions: List[EdgeConstructionFunction]
     distance_function: Optional[DistanceFunction]
@@ -174,8 +174,8 @@ class GDLWorkflow(ABC):
         )
 
     def calculate_sequence_and_graph_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> pd.DataFrame:
-        return FeaturesContext().compute_features(
-            **Feature(
+        return FeaturesContext().compute(
+            **FeatureCalculationParameters(
                 features_to_calculate=self._parameters.feature_types_for_ad,
                 data=data,
                 graphs=graphs,
@@ -196,7 +196,7 @@ class GDLWorkflow(ABC):
 
     def build_graphs(self, data):
         return build_graphs(
-            BuildGraphsParams(
+            BuildGraphsParameters(
                 **self._parameters.dict(),
                 non_pdb_bound_sequences_file=self._path.get('non_pdb_bound_sequences_file'),
                 data=data

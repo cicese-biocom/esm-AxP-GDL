@@ -12,10 +12,10 @@ from torch import nn
 from src.modeling.batch import BatchProcessor, ProcessedBatch, TrainingBatchProcessor, ValidationBatchProcessor, \
     TestBatchProcessor, InferenceBatchProcessor
 from src.modeling.prediction import Prediction, PredictionProcessor
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_entity import BaseParameters
 
 
-class EvaluationOutput(BaseDataTransferObject):
+class EvaluationOutput(BaseParameters):
     loss: Optional[PositiveFloat]
     y_true: Optional[List]
     prediction: Optional[Prediction]
@@ -88,7 +88,7 @@ class TrainingModeEvaluator(Evaluator):
 
         # Step: init optimizer
         self._optimizer = torch.optim.Adam(
-            params=model.parameters(),
+            build_graphs_parameters=model.parameters(),
             lr=learning_rate,
             weight_decay=weight_decay
         )

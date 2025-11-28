@@ -16,16 +16,16 @@ from src.config.types import (
 )
 
 from src.graph_construction.edge_functions import EdgeConstructionContext
-from src.utils.base_dto import BaseDataTransferObject
+from src.utils.base_parameters import BaseParameters
 from src.graph_construction.tertiary_structure import (
     predict_tertiary_structures,
     load_tertiary_structures,
-    PredictTertiaryStructures,
-    LoadTertiaryStructures
+    Predict3DStructuresParameters,
+    Load3DStructuresParameters
 )
 
 
-class RandomCoordinates(BaseDataTransferObject):
+class RandomCoordinatesParameters(BaseParameters):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
@@ -33,7 +33,7 @@ class RandomCoordinates(BaseDataTransferObject):
     data: pd.DataFrame
 
 
-class GetEdges(BaseDataTransferObject):
+class BuildEdgesParameters(BaseParameters):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
@@ -49,7 +49,7 @@ class GetEdges(BaseDataTransferObject):
     data: pd.DataFrame
     esm2_contact_maps: List
 
-class ConstructEdges(BaseDataTransferObject):
+class GenerateEdgesParameters(BaseParameters):
     edge_construction_functions: List[EdgeConstructionFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
@@ -60,22 +60,22 @@ class ConstructEdges(BaseDataTransferObject):
     esm2_contact_maps: List
 
 
-def get_edges(get_edges_dto: GetEdges):
-    if get_edges_dto.tertiary_structure_method:
-        atom_coordinates_matrices = predict_tertiary_structures(PredictTertiaryStructures(**get_edges_dto.dict()))
+def build_edges(build_edges_parameters: BuildEdgesParameters):
+    if build_edges_parameters.tertiary_structure_method:
+        atom_coordinates_matrices = predict_tertiary_structures(Predict3DStructuresParameters(**build_edges_parameters.dict()))
     else:
-        atom_coordinates_matrices = load_tertiary_structures(LoadTertiaryStructures(**get_edges_dto.dict()))
+        atom_coordinates_matrices = load_tertiary_structures(Load3DStructuresParameters(**build_edges_parameters.dict()))
 
     atom_coordinates_matrices = _apply_random_coordinates(
-        RandomCoordinates(
-            **get_edges_dto.dict(),
+        RandomCoordinatesParameters(
+            **build_edges_parameters.dict(),
             atom_coordinates_matrices=atom_coordinates_matrices,
         )
     )
 
-    adjacency_matrices, weights_matrices = _construct_edges(
-        ConstructEdges(
-            **get_edges_dto.dict(),
+    adjacency_matrices, weights_matrices = _generate_edges(
+        GenerateEdgesParameters(
+            **build_edges_parameters.dict(),
             atom_coordinates_matrices=atom_coordinates_matrices
         )
     )
@@ -90,52 +90,52 @@ def _get_range_for_every_coordinate(atom_coordinates_matrices):
     return coordinate_min, coordinate_max
 
 
-def _apply_random_coordinates(random_coordinates_dto: RandomCoordinates):
-    if (random_coordinates_dto.validation_mode == ValidationMode.RANDOM_COORDINATES
-            and random_coordinates_dto.execution_mode == ExecutionMode.TRAIN):
+def _apply_random_coordinates(random_coordinates_parameters: RandomCoordinatesParameters):
+    if (random_coordinates_parameters.validation_mode == ValidationMode.RANDOM_COORDINATES
+            and random_coordinates_parameters.execution_mode == ExecutionMode.TRAIN):
 
         logging.getLogger('workflow_logger'). \
             warning(f"The framework is running in validation mode with workflow_settings.validation_mode: "
-                    f"{random_coordinates_dto.validation_mode.value} and "
-                    f"workflow_settings.randomness_percentage: {random_coordinates_dto.randomness_percentage}")
+                    f"{random_coordinates_parameters.validation_mode.value} and "
+                    f"workflow_settings.randomness_percentage: {random_coordinates_parameters.randomness_percentage}")
 
-        partitions = random_coordinates_dto.data['partition']
-        min_values, max_values = _get_range_for_every_coordinate(random_coordinates_dto.atom_coordinates_matrices)
+        partitions = random_coordinates_parameters.data['partition']
+        min_values, max_values = _get_range_for_every_coordinate(random_coordinates_parameters.atom_coordinates_matrices)
 
-        with tqdm(range(len(random_coordinates_dto.atom_coordinates_matrices)), total=len(random_coordinates_dto.atom_coordinates_matrices),
+        with tqdm(range(len(random_coordinates_parameters.atom_coordinates_matrices)), total=len(random_coordinates_parameters.atom_coordinates_matrices),
                   desc="Random coordinates ", disable=False) as progress:
-            for i, atom_coordinates_matrix in enumerate(random_coordinates_dto.atom_coordinates_matrices):
+            for i, atom_coordinates_matrix in enumerate(random_coordinates_parameters.atom_coordinates_matrices):
                 # only the coordinates belonging to the training set will be randomly created
                 # https://dl.acm.org/doi/10.1145/3446776
                 if partitions[i] == 1:
-                    random_coordinates_dto.atom_coordinates_matrices[i] = random_coordinate_matrix(
+                    random_coordinates_parameters.atom_coordinates_matrices[i] = random_coordinate_matrix(
                         atom_coordinates_matrix,
-                        random_coordinates_dto.randomness_percentage,
+                        random_coordinates_parameters.randomness_percentage,
                         min_values,
                         max_values
                     )
                 progress.update(1)
 
-    return random_coordinates_dto.atom_coordinates_matrices
+    return random_coordinates_parameters.atom_coordinates_matrices
 
 
-def _construct_edges(construct_edges_dto: ConstructEdges):
+def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
     num_cores = multiprocessing.cpu_count()
 
-    sequences = construct_edges_dto.data['sequence']
+    sequences = generate_edges_parameters.data['sequence']
 
-    args = [(construct_edges_dto.edge_construction_functions,
-             construct_edges_dto.distance_function,
-             construct_edges_dto.distance_threshold,
+    args = [(generate_edges_parameters.edge_construction_functions,
+             generate_edges_parameters.distance_function,
+             generate_edges_parameters.distance_threshold,
              atom_coordinates,
              sequence,
              esm2_contact_map,
-             construct_edges_dto.probability_threshold,
-             construct_edges_dto.use_edge_attr
+             generate_edges_parameters.probability_threshold,
+             generate_edges_parameters.use_edge_attr
              ) for (atom_coordinates, sequence, esm2_contact_map) in
-            zip(construct_edges_dto.atom_coordinates_matrices,
+            zip(generate_edges_parameters.atom_coordinates_matrices,
                 sequences,
-                construct_edges_dto.esm2_contact_maps
+                generate_edges_parameters.esm2_contact_maps
                 )]
 
     with ProcessPoolExecutor(max_workers=num_cores) as pool:

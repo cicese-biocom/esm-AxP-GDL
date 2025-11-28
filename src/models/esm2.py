@@ -37,7 +37,7 @@ def get_models(esm2_representation: ESM2Representation):
     return models
 
 
-def get_representations(data: DataFrame, model_name, device, show_pbar=False):
+def extract_esm2_representations(data: DataFrame, model_name, device, show_pbar=False):
     try:
         no_gpu = False
         model, alphabet = esm.pretrained.load_model_and_alphabet_hub(model_name)
