@@ -2,10 +2,10 @@ from typing import Tuple
 import numpy as np
 from numpy import ndarray
 
-from src.config.types import EdgeConstructionFunction
+from src.config.types import EdgeBuildFunction
 from functools import partial
 
-from src.graph_construction.distance import DistanceContext
+from src.graph_builder.distance_functions import DistanceContext
 
 
 class EdgesComponent:
@@ -24,7 +24,7 @@ class EmptyEdgesComponent(EdgesComponent):
         return np.zeros((self._number_of_amino_acid, self._number_of_amino_acid), dtype=int), np.empty((0, 0))
 
 
-class EdgeConstructionFunctionDecorator(EdgesComponent):
+class EdgeBuildFunctionDecorator(EdgesComponent):
     _edges: EdgesComponent = None
 
     def __init__(self, edges_component: EdgesComponent) -> None:
@@ -34,7 +34,7 @@ class EdgeConstructionFunctionDecorator(EdgesComponent):
         return self._edges_component.compute_edges()
 
 
-class SequenceBasedDecorator(EdgeConstructionFunctionDecorator):
+class SequenceBasedDecorator(EdgeBuildFunctionDecorator):
     def __init__(self, edges_component: EdgesComponent, distance_context: DistanceContext, atom_coordinates: np.ndarray, sequence: str,
                  use_edge_attr: bool):
         super().__init__(edges_component)
@@ -86,7 +86,7 @@ class SequenceBasedDecorator(EdgeConstructionFunctionDecorator):
         return adjacency_matrix, weight_matrix
 
 
-class ESM2ContactMapDecorator(EdgeConstructionFunctionDecorator):
+class ESM2ContactMapDecorator(EdgeBuildFunctionDecorator):
     def __init__(self, edges_component: EdgesComponent, esm2_contact_map: Tuple[np.ndarray, np.ndarray],
                  probability_threshold: float, use_edge_attr: bool):
         super().__init__(edges_component)
@@ -120,7 +120,7 @@ class ESM2ContactMapDecorator(EdgeConstructionFunctionDecorator):
             return adjacency_matrix, weight_matrix
 
 
-class DistanceBasedThresholdDecorator(EdgeConstructionFunctionDecorator):
+class DistanceBasedThresholdDecorator(EdgeBuildFunctionDecorator):
     def __init__(self, edges_component: EdgesComponent, distance_context: DistanceContext, threshold: float, atom_coordinates: np.ndarray,
                  use_edge_attr: bool):
         super().__init__(edges_component)
@@ -158,16 +158,16 @@ class DistanceBasedThresholdDecorator(EdgeConstructionFunctionDecorator):
 
 
 
-class EdgeConstructionContext:
+class EdgeBuildContext:
     @staticmethod
     def compute_edges(args):
-        edge_construction_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
+        edge_build_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
         esm2_contact_map, probability_threshold, use_edge_attr = args
 
         distance = DistanceContext(distance_function)
 
-        construction_functions = [
-            (EdgeConstructionFunction.DISTANCE_BASED_THRESHOLD,
+        functions = [
+            (EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
              partial(DistanceBasedThresholdDecorator,
                      edges_component=None,
                      distance_context=distance,
@@ -175,14 +175,14 @@ class EdgeConstructionContext:
                      atom_coordinates=atom_coordinates,
                      use_edge_attr=use_edge_attr
                      )),
-            (EdgeConstructionFunction.ESM2_CONTACT_MAP,
+            (EdgeBuildFunction.ESM2_CONTACT_MAP,
              partial(ESM2ContactMapDecorator,
                      edges_component=None,
                      esm2_contact_map=esm2_contact_map,
                      probability_threshold=probability_threshold,
                      use_edge_attr=use_edge_attr
                      )),
-            (EdgeConstructionFunction.SEQUENCE_BASED,
+            (EdgeBuildFunction.SEQUENCE_BASED,
              partial(SequenceBasedDecorator,
                      edges_component=None,
                      distance_context=distance,
@@ -195,8 +195,8 @@ class EdgeConstructionContext:
         number_of_amino_acid = len(sequence)
         edges_functions = EmptyEdgesComponent(number_of_amino_acid)
 
-        for name in edge_construction_functions:
-            for func_name, func in construction_functions:
+        for name in edge_build_functions:
+            for func_name, func in functions:
                 if func_name == name:
                     build_graphs_parameters = func.keywords
                     build_graphs_parameters['edges_component'] = edges_functions

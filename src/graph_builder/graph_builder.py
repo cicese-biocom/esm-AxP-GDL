@@ -8,15 +8,15 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from pydantic.v1 import PositiveFloat
 
-from src.graph_construction.edges import build_edges, BuildEdgesParameters
-from src.graph_construction.nodes import compute_esm2_features, ESM2FeatureComputationParameters
+from src.graph_builder.edge_builder import build_edges, BuildEdgesParameters
+from src.graph_builder.node_feature_builder import compute_esm2_features, ESM2FeatureComputationParameters
 from src.models.esm2 import get_models, extract_esm2_representations
 from src.config.types import (
     ValidationMode,
     ExecutionMode,
     ESM2ModelForContactMap,
     ESM2Representation,
-    EdgeConstructionFunction,
+    EdgeBuildFunction,
     DistanceFunction
 )
 from src.utils.base_parameters import BaseParameters
@@ -32,7 +32,7 @@ class BuildGraphsParameters(BaseParameters):
     pdb_path: Optional[Path]
     amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
-    edge_construction_functions: List[EdgeConstructionFunction]
+    edge_build_functions: List[EdgeBuildFunction]
     distance_function: DistanceFunction
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]

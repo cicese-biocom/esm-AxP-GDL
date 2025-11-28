@@ -3,8 +3,8 @@ from pydantic.v1 import PositiveFloat, PositiveInt
 
 import torch
 from torch import nn
-from src.architecture.gat_v1 import GATv1
-from src.architecture.gat_v2 import GATv2
+from src.architectures.gat_v1 import GATv1
+from src.architectures.gat_v2 import GATv2
 
 from src.config.types import GDLArchitecture
 from src.utils.base_parameters import BaseParameters
@@ -23,12 +23,12 @@ class GNNParameters(BaseParameters):
 
 class GNNFactory:
     def __init__(self, gdl_architecture: GDLArchitecture):
-        self._gdl_architecture = gdl_architecture
+        self._gdl_architectures = gdl_architecture
 
     def create(self, gnn_parameters: GNNParameters) -> nn.Module:
-        if self._gdl_architecture == GDLArchitecture.GATV1:
+        if self._gdl_architectures == GDLArchitecture.GATV1:
             return GATv1(**gnn_parameters.dict())
-        if self._gdl_architecture == GDLArchitecture.GATV2:
+        if self._gdl_architectures == GDLArchitecture.GATV2:
             return GATv2(**gnn_parameters.dict())
         else:
-            raise ValueError(f"Unsupported GNN type: {self._gdl_architecture}")
+            raise ValueError(f"Unsupported GNN type: {self._gdl_architectures}")

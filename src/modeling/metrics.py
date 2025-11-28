@@ -12,7 +12,7 @@ from sklearn.metrics import (
     r2_score
 )
 
-from src.modeling.prediction import Prediction, PredictionMaking
+from src.modeling.prediction_maker import Prediction, PredictionMaking
 
 
 class Metrics(ABC):

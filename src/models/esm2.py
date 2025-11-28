@@ -7,7 +7,7 @@ import esm
 from esm import FastaBatchedDataset
 from torcheval import metrics
 from tqdm import tqdm
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from src.utils.json import load_json
 from src.config.types import ESM2Representation
@@ -45,7 +45,7 @@ def extract_esm2_representations(data: DataFrame, model_name, device, show_pbar=
             model = model.cuda()
 
         data_loader = DataLoader(
-            dataset=FastaBatchedDataset(data.id, data.sequence),
+            dataset=DatasetWrapper(FastaBatchedDataset(data.id, data.sequence)),
             collate_fn=alphabet.get_batch_converter(),
             batch_sampler=None
         )
@@ -95,3 +95,14 @@ def extract_esm2_representations(data: DataFrame, model_name, device, show_pbar=
 
     except Exception as e:
         print(f"Error in get_embeddings function: {e}")
+
+
+class DatasetWrapper(Dataset):
+    def __init__(self, fasta_dataset):
+        self.ds = fasta_dataset
+
+    def __len__(self):
+        return len(self.ds)
+
+    def __getitem__(self, idx):
+        return self.ds[idx]

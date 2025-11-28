@@ -5,83 +5,83 @@ from typing import Optional, List
 import torch
 from torch.nn import CrossEntropyLoss, MSELoss
 
-from src.data_processing.data_processor import ClassValidator, ClassificationClassValidator, RegressionClassValidator
-from src.modeling.selector import ModelSelector, MaxMCCModelSelector, MinRMSEModelSelector
+from src.data_processing.data_processor import TargetFeatureValidator, ClassificationTargetFeatureValidator, RegressionTargetFeatureValidator
+from src.modeling.model_selector import ModelSelector, MaxMCCModelSelector, MinRMSEModelSelector
 from src.modeling.metrics import Metrics, BinaryClassificationMetrics, MulticlassClassificationMetrics, RegressionMetrics
-from src.modeling.prediction import PredictionMaking, RegressionMaking, BinaryClassificationMaking, MulticlassClassificationMaking
+from src.modeling.prediction_maker import PredictionMaking, RegressionMaking, BinaryClassificationMaking, MulticlassClassificationMaking
 
 
 class ExecutionFactory(ABC):
     @abstractmethod
-    def create_loss(self):
+    def create_loss_fn(self):
         pass
 
     @abstractmethod
-    def create_metrics(self, prediction_calculateor: PredictionMaking, classes: Optional[List[int]]) -> Metrics:
+    def create_metrics_calculator(self, prediction_maker: PredictionMaking, classes: Optional[List[int]]) -> Metrics:
         pass
 
     @abstractmethod
-    def create_best_model_selector(self) -> ModelSelector:
+    def create_model_selector(self) -> ModelSelector:
         pass
 
     @abstractmethod
-    def create_prediction_calculateor(self) -> PredictionMaking:
+    def create_prediction_maker(self) -> PredictionMaking:
         pass
 
     @abstractmethod
-    def create_class_validator(self) -> ClassValidator:
+    def create_target_feature_validator(self) -> TargetFeatureValidator:
         pass
 
 
 class BinaryExecutionFactory(ExecutionFactory):
 
-    def create_prediction_calculateor(self) -> BinaryClassificationMaking:
+    def create_prediction_maker(self) -> BinaryClassificationMaking:
         return BinaryClassificationMaking()
 
-    def create_loss(self) -> CrossEntropyLoss:
+    def create_loss_fn(self) -> CrossEntropyLoss:
         return torch.nn.CrossEntropyLoss()
 
-    def create_metrics(self, prediction_calculateor: PredictionMaking, classes: Optional[List[int]])-> BinaryClassificationMetrics:
-        return BinaryClassificationMetrics(prediction_calculateor, classes)
+    def create_metrics_calculator(self, prediction_maker: PredictionMaking, classes: Optional[List[int]])-> BinaryClassificationMetrics:
+        return BinaryClassificationMetrics(prediction_maker, classes)
 
-    def create_best_model_selector(self) -> MaxMCCModelSelector:
+    def create_model_selector(self) -> MaxMCCModelSelector:
         return MaxMCCModelSelector()
 
-    def create_class_validator(self) -> ClassificationClassValidator:
-        return ClassificationClassValidator()
+    def create_target_feature_validator(self) -> ClassificationTargetFeatureValidator:
+        return ClassificationTargetFeatureValidator()
 
 
 class MulticlassExecutionFactory(ExecutionFactory):
 
-    def create_prediction_calculateor(self) -> MulticlassClassificationMaking:
+    def create_prediction_maker(self) -> MulticlassClassificationMaking:
         return MulticlassClassificationMaking()
 
-    def create_loss(self) -> CrossEntropyLoss:
+    def create_loss_fn(self) -> CrossEntropyLoss:
         return torch.nn.CrossEntropyLoss()
 
-    def create_metrics(self, prediction_calculateor: PredictionMaking, classes: Optional[List[int]]) -> MulticlassClassificationMetrics:
-        return MulticlassClassificationMetrics(prediction_calculateor, classes)
+    def create_metrics_calculator(self, prediction_maker: PredictionMaking, classes: Optional[List[int]]) -> MulticlassClassificationMetrics:
+        return MulticlassClassificationMetrics(prediction_maker, classes)
 
-    def create_best_model_selector(self) -> MaxMCCModelSelector:
+    def create_model_selector(self) -> MaxMCCModelSelector:
         return MaxMCCModelSelector()
 
-    def create_class_validator(self) -> ClassificationClassValidator:
-        return ClassificationClassValidator()
+    def create_target_feature_validator(self) -> ClassificationTargetFeatureValidator:
+        return ClassificationTargetFeatureValidator()
 
 
 class RegressionExecutionFactory(ExecutionFactory):
 
-    def create_prediction_calculateor(self) -> RegressionMaking:
+    def create_prediction_maker(self) -> RegressionMaking:
         return RegressionMaking()
 
-    def create_loss(self) -> MSELoss:
+    def create_loss_fn(self) -> MSELoss:
         return torch.nn.MSELoss()
 
-    def create_metrics(self, prediction_calculateor: PredictionMaking, classes: Optional[List[int]])-> RegressionMetrics:
-        return RegressionMetrics(prediction_calculateor)
+    def create_metrics_calculator(self, prediction_maker: PredictionMaking, classes: Optional[List[int]])-> RegressionMetrics:
+        return RegressionMetrics(prediction_maker)
 
-    def create_best_model_selector(self) -> MinRMSEModelSelector:
+    def create_model_selector(self) -> MinRMSEModelSelector:
         return MinRMSEModelSelector()
 
-    def create_class_validator(self) -> RegressionClassValidator:
-        return RegressionClassValidator()
+    def create_target_feature_validator(self) -> RegressionTargetFeatureValidator:
+        return RegressionTargetFeatureValidator()

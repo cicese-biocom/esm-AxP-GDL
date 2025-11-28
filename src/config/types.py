@@ -35,7 +35,7 @@ class DistanceFunction(Enum):
     COSINE = 'cosine'
 
 
-class EdgeConstructionFunction(Enum):
+class EdgeBuildFunction(Enum):
     DISTANCE_BASED_THRESHOLD = 'distance_based_threshold'
     SEQUENCE_BASED = 'sequence_based'
     ESM2_CONTACT_MAP = 'esm2_contact_map'

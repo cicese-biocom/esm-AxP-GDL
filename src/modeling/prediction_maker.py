@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
 
-from torch.nn.functional import softmax
-
+from src.modeling.prediction_stats import ClassificationYPred, RegressionYPred, BinaryClassificationYScore, \
+    MulticlassClassificationYScore
 from src.utils.base_parameters import BaseParameters
 
 
@@ -24,35 +24,6 @@ class Prediction(BaseParameters):
                 self.y_score = prediction.y_score.copy()
             else:
                 self.y_score.extend(prediction.y_score)
-
-# YPred
-class YPredPredictionStats(ABC):
-    @abstractmethod
-    def calculate(self, model_output):
-        pass
-
-class ClassificationYPred(YPredPredictionStats):
-    def calculate(self, model_output):
-        return model_output.argmax(dim=1).cpu().detach().numpy().tolist()
-
-class RegressionYPred(YPredPredictionStats):
-    def calculate(self, model_output):
-        return model_output.cpu().detach().numpy().tolist()
-
-
-# YScore
-class YScorePredictionStats(ABC):
-    @abstractmethod
-    def calculate(self, model_output):
-        pass
-
-class BinaryClassificationYScore(YScorePredictionStats):
-    def calculate(self, model_output):
-        return softmax(model_output, dim=1)[:, 1].cpu().detach().numpy().tolist() # Probability class 1
-
-class MulticlassClassificationYScore(YScorePredictionStats):
-    def calculate(self, model_output):
-        return softmax(model_output, dim=1).cpu().detach().numpy().tolist()
 
 
 # prediction making

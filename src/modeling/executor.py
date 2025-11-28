@@ -9,9 +9,9 @@ from torch.nn.modules.loss import _Loss
 from torch_geometric.loader import DataLoader
 from torch import nn
 
-from src.modeling.batch import OutputProcessor, ProcessOutput, TrainingOutputProcessor, ValidationOutputProcessor, \
+from src.modeling.output_processor import OutputProcessor, ProcessOutput, TrainingOutputProcessor, ValidationOutputProcessor, \
     TestOutputProcessor, InferenceOutputProcessor
-from src.modeling.prediction import Prediction, PredictionMaking
+from src.modeling.prediction_maker import Prediction, PredictionMaking
 from src.utils.base_parameters import BaseParameters
 
 
@@ -44,7 +44,7 @@ class ModeExecutor:
         return processed_output
 
 
-class TrainingExecutor(ModeExecutor):
+class ModelTrainer(ModeExecutor):
     def __init__(
             self,
             model: nn.Module,
@@ -55,7 +55,7 @@ class TrainingExecutor(ModeExecutor):
             step_size: PositiveInt,
             gamma: float
     ):
-        super(TrainingExecutor, self).__init__(model, device)
+        super(ModelTrainer, self).__init__(model, device)
 
         # Step: init optimizer
         self._optimizer = torch.optim.Adam(
@@ -91,7 +91,7 @@ class TrainingExecutor(ModeExecutor):
         )
 
 
-class ValidationExecutor(ModeExecutor):
+class ModelValidator(ModeExecutor):
     def __init__(
             self,
             model: nn.Module,
@@ -99,7 +99,7 @@ class ValidationExecutor(ModeExecutor):
             loss_fn: _Loss,
             prediction: PredictionMaking,
     ):
-        super(ValidationExecutor, self).__init__(model, device)
+        super(ModelValidator, self).__init__(model, device)
         self._output_processor = ValidationOutputProcessor(model, device, loss_fn, prediction)
 
 
@@ -114,14 +114,14 @@ class ValidationExecutor(ModeExecutor):
         )
 
 
-class TestExecutor(ModeExecutor):
+class ModelTester(ModeExecutor):
     def __init__(
             self,
             model: nn.Module,
             device: torch.device,
             prediction: PredictionMaking,
     ):
-        super(TestExecutor, self).__init__(model, device)
+        super(ModelTester, self).__init__(model, device)
         self._output_processor = TestOutputProcessor(model, device, prediction)
 
     def execute(self, data_loader: DataLoader) -> Output:
@@ -135,14 +135,14 @@ class TestExecutor(ModeExecutor):
         )
 
 
-class InferenceExecutor(ModeExecutor):
+class ModelInference(ModeExecutor):
     def __init__(
             self,
             model: nn.Module,
             device: torch.device,
             prediction: PredictionMaking
     ):
-        super(InferenceExecutor, self).__init__(model, device)
+        super(ModelInference, self).__init__(model, device)
         self._output_processor = InferenceOutputProcessor(model, device, prediction)
 
     def execute(self, data_loader: DataLoader) -> Output:

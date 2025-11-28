@@ -26,18 +26,18 @@ class RegressionTargetFeatureValidator(TargetFeatureValidator):
     
 
 class DatasetProcessor(ABC):       
-    def calculate(
+    def process(
             self,
             dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: TargetFeatureValidator,
+            target_feature_validator: TargetFeatureValidator,
             classes: List[int],
     ):
         try:
             valid_df = self.check_duplicated_sequence_ids(dataset, output_dir)
             valid_df = self.check_duplicated_sequences(valid_df, output_dir)
             filtered_df = self.filter_sequences_with_non_natural_amino_acids(valid_df, output_dir)
-            self.check_sequences_with_erroneous_activity(filtered_df, output_dir, class_validator, classes)
+            self.check_sequences_with_erroneous_activity(filtered_df, output_dir, target_feature_validator, classes)
             self.check_sequences_with_baseless_partitions(filtered_df, output_dir)
 
             if filtered_df.empty:
@@ -77,7 +77,7 @@ class DatasetProcessor(ABC):
     def check_sequences_with_erroneous_activity(
             self, dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: TargetFeatureValidator,
+            target_feature_validator: TargetFeatureValidator,
             classes: List
     ) -> None:
         return None
@@ -116,12 +116,12 @@ class LabeledDatasetProcessor(DatasetProcessor):
     def check_sequences_with_erroneous_activity(
             self, dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: TargetFeatureValidator,
+            target_feature_validator: TargetFeatureValidator,
             classes: List = None
     ) -> None:
         csv_file = output_dir['sequences_with_erroneous_activity_file']
         sequence_df = dataset.copy()
-        sequences_to_exclude = class_validator.validate(sequence_df, classes)
+        sequences_to_exclude = target_feature_validator.validate(sequence_df, classes)
 
         if not sequences_to_exclude.empty:
             sequences_to_exclude.to_csv(csv_file, index=False)
@@ -140,8 +140,8 @@ class LabeledDatasetProcessor(DatasetProcessor):
 
 
 class DatasetProcessorContext:
-    def __init__(self, dataset_validator: DatasetProcessor) -> None:
-        self._dataset_validator = dataset_validator
+    def __init__(self, dataset_processor: DatasetProcessor) -> None:
+        self._dataset_processor = dataset_processor
 
-    def calculate(self, dataset: pd.DataFrame, output_dir: Dict):
-        return self._dataset_validator.calculate(dataset, output_dir)
+    def process(self, dataset: pd.DataFrame, output_dir: Dict, target_feature_validator: TargetFeatureValidator, classes: List = None):
+        return self._dataset_processor.process(dataset, output_dir, target_feature_validator, classes)

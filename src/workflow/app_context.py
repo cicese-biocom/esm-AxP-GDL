@@ -1,6 +1,6 @@
 from injector import Injector
 
-from src.architecture.gnn import GNNFactory
+from src.architectures.gnn import GNNFactory
 from src.config.types import ModelingTask, ExecutionMode
 from src.data_processing.data_loader import DataLoaderContext, CSVLoader, CSVByChunkLoader
 from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor
@@ -37,11 +37,11 @@ class ApplicationContext:
         self.__gnn_factory = None
         # TRAIN
         if execution_mode == ExecutionMode.TRAIN:
-            self.__loss_fn = ml_factory.create_loss()
-            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
-            self.__metrics = ml_factory.create_metrics(prediction_calculateor=self.__prediction_calculateor, classes=classes)
-            self.__best_model_selector = ml_factory.create_best_model_selector()
-            self.__class_validator = ml_factory.create_class_validator()
+            self.__loss_fn = ml_factory.create_loss_fn()
+            self.__prediction_maker = ml_factory.create_prediction_maker()
+            self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
+            self.__model_selector = ml_factory.create_model_selector()
+            self.__target_feature_validator = ml_factory.create_target_feature_validator()
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, CSVLoader)
 
@@ -51,45 +51,45 @@ class ApplicationContext:
 
         # TEST
         elif execution_mode == ExecutionMode.TEST:
-            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
-            self.__metrics = ml_factory.create_metrics(prediction_calculateor=self.__prediction_calculateor, classes=classes)
-            self.__class_validator = ml_factory.create_class_validator()
+            self.__prediction_maker = ml_factory.create_prediction_maker()
+            self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
+            self.__target_feature_validator = ml_factory.create_target_feature_validator()
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
-            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
-            self.__class_validator = ml_factory.create_class_validator()
+            self.__prediction_maker = ml_factory.create_prediction_maker()
+            self.__target_feature_validator = ml_factory.create_target_feature_validator()
             self.__injector.binder.bind(DatasetProcessorContext, DatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
-        self.__dataset_calculateor = self.__injector.get(DatasetProcessorContext)
+        self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
         self.__dataset_loader = self.__injector.get(DataLoaderContext)
 
     @property
-    def metrics(self):
-        return self.__metrics
+    def metrics_calculator(self):
+        return self.__metrics_calculator
 
     @property
     def loss_fn(self):
         return self.__loss_fn
 
     @property
-    def prediction_calculateor(self):
-        return self.__prediction_calculateor
+    def prediction_maker(self):
+        return self.__prediction_maker
 
     @property
-    def best_model_selector(self):
-        return self.__best_model_selector
+    def model_selector(self):
+        return self.__model_selector
 
     @property
-    def class_validator(self):
-        return self.__class_validator
+    def target_feature_validator(self):
+        return self.__target_feature_validator
 
     @property
-    def dataset_calculateor(self):
-        return self.__dataset_calculateor
+    def dataset_processor(self):
+        return self.__dataset_processor
 
     @property
     def dataset_loader(self):
@@ -109,8 +109,8 @@ if __name__ == '__main__':
     context = ApplicationContext(**build_graphs_parameters)
     metrics = context.metrics
     loss = context.loss_fn
-    best_model_selector = context.best_model_selector
-    class_validator = context.class_validator
+    model_selector = context.model_selector
+    target_feature_validator = context.target_feature_validator
     dataset_calculateor = context.dataset_calculateor
     dataset_loader = context.dataset_loader
     gnn = context.gnn_factory

@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch_geometric.data import Data
 
-from src.modeling.prediction import PredictionMaking, Prediction
+from src.modeling.prediction_maker import PredictionMaking, Prediction
 from src.utils.base_parameters import BaseParameters
 
 

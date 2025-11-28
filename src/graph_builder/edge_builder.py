@@ -12,12 +12,12 @@ from concurrent.futures import ProcessPoolExecutor
 from src.config.types import (
     ValidationMode,
     ExecutionMode,
-    EdgeConstructionFunction, DistanceFunction,
+    EdgeBuildFunction, DistanceFunction,
 )
 
-from src.graph_construction.edge_functions import EdgeConstructionContext
+from src.graph_builder.edge_build_functions import EdgeBuildContext
 from src.utils.base_parameters import BaseParameters
-from src.graph_construction.tertiary_structure import (
+from src.graph_builder.tertiary_structure import (
     predict_tertiary_structures,
     load_tertiary_structures,
     Predict3DStructuresParameters,
@@ -41,7 +41,7 @@ class BuildEdgesParameters(BaseParameters):
     pdb_path: Optional[Path]
     amino_acid_representation: str
     non_pdb_bound_sequences_file: Path
-    edge_construction_functions: List[EdgeConstructionFunction]
+    edge_build_functions: List[EdgeBuildFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
@@ -50,7 +50,7 @@ class BuildEdgesParameters(BaseParameters):
     esm2_contact_maps: List
 
 class GenerateEdgesParameters(BaseParameters):
-    edge_construction_functions: List[EdgeConstructionFunction]
+    edge_build_functions: List[EdgeBuildFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
@@ -124,7 +124,7 @@ def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
 
     sequences = generate_edges_parameters.data['sequence']
 
-    args = [(generate_edges_parameters.edge_construction_functions,
+    args = [(generate_edges_parameters.edge_build_functions,
              generate_edges_parameters.distance_function,
              generate_edges_parameters.distance_threshold,
              atom_coordinates,
@@ -142,7 +142,7 @@ def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
         with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
             futures = []
             for arg in args:
-                future = pool.submit(EdgeConstructionContext.compute_edges, arg)
+                future = pool.submit(EdgeBuildContext.compute_edges, arg)
                 future.add_done_callback(lambda p: progress.update())
                 futures.append(future)
 
