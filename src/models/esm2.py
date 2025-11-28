@@ -1,13 +1,11 @@
 import os
 from pathlib import Path
-from typing import Any, Optional, Tuple
-
 from pandas import DataFrame
-from torcheval import metrics
 import pandas as pd
 import torch
 import esm
 from esm import FastaBatchedDataset
+from torcheval import metrics
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 

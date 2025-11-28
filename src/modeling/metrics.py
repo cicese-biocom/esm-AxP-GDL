@@ -12,7 +12,7 @@ from sklearn.metrics import (
     r2_score
 )
 
-from src.modeling.prediction import Prediction, PredictionProcessor
+from src.modeling.prediction import Prediction, PredictionMaking
 
 
 class Metrics(ABC):
@@ -20,7 +20,7 @@ class Metrics(ABC):
     Abstract base class for metric calculation.
     """
 
-    def __init__(self, prediction_processor: PredictionProcessor, classes: Optional[List[int]] = None):
+    def __init__(self, prediction_calculateor: PredictionMaking, classes: Optional[List[int]] = None):
         """
         Initializes the Metrics object.
 
@@ -29,7 +29,7 @@ class Metrics(ABC):
                 Useful for multi-class classification tasks to specify which classes to include.
         """
         self._classes = classes
-        self._prediction_processor = prediction_processor
+        self._prediction_calculateor = prediction_calculateor
 
     @abstractmethod
     def calculate(self, prediction: Prediction, y_true: List) -> dict:
@@ -87,7 +87,7 @@ class MulticlassClassificationMetrics(Metrics):
 
     def calculate(self, prediction: Prediction, y_true: List) -> dict:
         """
-        Computes multi-class classification metrics from processed model model_output.
+        Computes multi-class classification metrics from calculateed model model_output.
 
         Args:
             y_true:

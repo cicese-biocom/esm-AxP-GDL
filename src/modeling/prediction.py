@@ -3,81 +3,80 @@ from typing import Optional, List
 
 from torch.nn.functional import softmax
 
-from src.utils.base_entity import BaseParameters
+from src.utils.base_parameters import BaseParameters
 
 
 class Prediction(BaseParameters):
     y_pred: Optional[List] = None
     y_score: Optional[List] = None
 
-    def extend(self, prediction_dto: "Prediction"):
+    def add_new_predictions(self, prediction: "Prediction"):
         # y_pred
-        if prediction_dto.y_pred:
+        if prediction.y_pred:
             if self.y_pred is None:
-                self.y_pred = prediction_dto.y_pred.copy()
+                self.y_pred = prediction.y_pred.copy()
             else:
-                self.y_pred.extend(prediction_dto.y_pred)
+                self.y_pred.extend(prediction.y_pred)
 
         # y_score
-        if prediction_dto.y_score:
+        if prediction.y_score:
             if self.y_score is None:
-                self.y_score = prediction_dto.y_score.copy()
+                self.y_score = prediction.y_score.copy()
             else:
-                self.y_score.extend(prediction_dto.y_score)
+                self.y_score.extend(prediction.y_score)
 
 # YPred
-class YPredProcessor(ABC):
+class YPredPredictionStats(ABC):
     @abstractmethod
-    def process(self, model_output):
+    def calculate(self, model_output):
         pass
 
-class ClassificationYPred(YPredProcessor):
-    def process(self, model_output):
+class ClassificationYPred(YPredPredictionStats):
+    def calculate(self, model_output):
         return model_output.argmax(dim=1).cpu().detach().numpy().tolist()
 
-class RegressionYPred(YPredProcessor):
-    def process(self, model_output):
+class RegressionYPred(YPredPredictionStats):
+    def calculate(self, model_output):
         return model_output.cpu().detach().numpy().tolist()
 
 
 # YScore
-class YScoreProcessor(ABC):
+class YScorePredictionStats(ABC):
     @abstractmethod
-    def process(self, model_output):
+    def calculate(self, model_output):
         pass
 
-class BinaryClassificationYScore(YScoreProcessor):
-    def process(self, model_output):
+class BinaryClassificationYScore(YScorePredictionStats):
+    def calculate(self, model_output):
         return softmax(model_output, dim=1)[:, 1].cpu().detach().numpy().tolist() # Probability class 1
 
-class MulticlassClassificationYScore(YScoreProcessor):
-    def process(self, model_output):
+class MulticlassClassificationYScore(YScorePredictionStats):
+    def calculate(self, model_output):
         return softmax(model_output, dim=1).cpu().detach().numpy().tolist()
 
 
-class PredictionProcessor(ABC):
+# prediction making
+class PredictionMaking(ABC):
     @abstractmethod
-    def process(self, model_output) -> Prediction:
+    def prediction_making(self, model_output) -> Prediction:
         pass
 
-class BinaryClassificationPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> Prediction:
+class BinaryClassificationMaking(PredictionMaking):
+    def prediction_making(self, model_output) -> Prediction:
         return Prediction(
-            y_pred=ClassificationYPred().process(model_output),
-            y_score=BinaryClassificationYScore().process(model_output)
+            y_pred=ClassificationYPred().calculate(model_output),
+            y_score=BinaryClassificationYScore().calculate(model_output)
         )
 
-
-class MulticlassClassificationPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> Prediction:
+class MulticlassClassificationMaking(PredictionMaking):
+    def prediction_making(self, model_output) -> Prediction:
         return Prediction(
-            y_pred=ClassificationYPred().process(model_output),
-            y_score=MulticlassClassificationYScore().process(model_output)
+            y_pred=ClassificationYPred().calculate(model_output),
+            y_score=MulticlassClassificationYScore().calculate(model_output)
         )
 
-
-class RegressionPredictionProcessor(PredictionProcessor):
-    def process(self, model_output) -> Prediction:
+class RegressionMaking(PredictionMaking):
+    def prediction_making(self, model_output) -> Prediction:
         return Prediction(
-            y_pred=RegressionYPred().process(model_output)
+            y_pred=RegressionYPred().calculate(model_output)
         )

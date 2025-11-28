@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional
 from torch import nn
 
-from src.utils.base_entity import BaseParameters
+from src.utils.base_parameters import BaseParameters
 
 
 class Model(BaseParameters):
@@ -17,13 +17,13 @@ class Model(BaseParameters):
     val_loss: Optional[float] = None
 
 
-class BestModelSelector(ABC):
+class ModelSelector(ABC):
     @abstractmethod
     def select(self, best_model: Model, current_model: Model) -> Model:
         pass
 
 
-class MaximumMCCBestModelSelector(BestModelSelector):
+class MaxMCCModelSelector(ModelSelector):
     def select(self, best_model: Model, current_model: Model) -> Model:
         if best_model.metrics is None:
             return current_model
@@ -33,7 +33,7 @@ class MaximumMCCBestModelSelector(BestModelSelector):
         return current_model if current_mcc > best_mcc else best_model
 
 
-class MinimumRMSEBestModelSelector(BestModelSelector):
+class MinRMSEModelSelector(ModelSelector):
     def select(self, best_model: Model, current_model: Model) -> Model:
         if best_model.metrics is None:
             return current_model

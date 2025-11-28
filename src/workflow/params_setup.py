@@ -486,7 +486,7 @@ class PredictionArguments(CommonArguments):
     prediction_batch_size: Optional[PositiveInt] = Field(
         default=20000,
         description="As the test/inference data are unlimited, this parameters contains the number of instances to "
-                    "be processed in a specific chunk (batch) at a time."
+                    "be calculateed in a specific chunk (batch) at a time."
     )
 
     @root_validator(skip_on_failure=True)

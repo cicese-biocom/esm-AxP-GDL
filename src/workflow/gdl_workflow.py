@@ -30,20 +30,20 @@ from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import to_partition
 from src.feature_extraction.features import filter_features, FeaturesContext, FeatureCalculationParameters
 from src.graph_construction.graphs import build_graphs, BuildGraphsParameters
-from src.modeling.evaluator import (
-    TrainingModeEvaluator,
-    ValidationModeEvaluator,
-    TestModeEvaluator,
-    EvaluationOutput,
-    Evaluator,
-    InferenceModeEvaluator
+from src.modeling.executor import (
+    TrainingExecutor,
+    ValidationExecutor,
+    TestExecutor,
+    Output,
+    ModeExecutor,
+    InferenceExecutor
 )
 from src.modeling.prediction import Prediction
 from src.modeling.selector import Model
 from src.utils.base_parameters import BaseParameters
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
-from src.workflow.build_graphs_parameters_setup import ExecutionParameters
+from src.workflow.params_setup import ExecutionParameters
 
 
 class ModelParameters(BaseParameters):
@@ -70,7 +70,7 @@ class GDLWorkflow(ABC):
     def __init__(self, execution_mode: ExecutionMode):
         self._parameters = ExecutionParameters(execution_mode).get_parameters()
         self._context = ApplicationContext(**self._parameters.dict())
-        self._eval_output: Optional[List[EvaluationOutput]] = []
+        self._execute_output: Optional[List[Output]] = []
         self._path: Dict = self._parameters.output_dir
 
     def run(self):
@@ -85,19 +85,19 @@ class GDLWorkflow(ABC):
         data = self.load_dataset()
 
         calculated_features = []
-        outputs: List[EvaluationOutput] = []
+        outputs: List[Output] = []
         domains: List[pd.DataFrame] = []
         for i, batch in enumerate(data):
             # Step 3: Configure the names of the output files
             self.config_output_file_names(substr=str(i + 1))
 
-            # Step 4: # The dataset processor performs the following validation and cleaning steps:
+            # Step 4: # The dataset calculateor performs the following validation and cleaning steps:
             # # 1. Detects and reports duplicated sequence identifiers.
             # # 2. Detects and reports duplicated peptide sequences.
             # # 3. Filters out sequences containing non-natural amino acids and saves the cleaned dataset.
             # # 4. Identifies sequences with invalid activity values according to the provided class validator.
             # # 5. Detects sequences assigned to unsupported or inconsistent partition labels.
-            batch = self.process_dataset(batch)
+            batch = self.calculate_dataset(batch)
 
             # Skip iteration if the batch is empty
             if batch.empty:
@@ -118,10 +118,10 @@ class GDLWorkflow(ABC):
             model = self.init_gnn_model(graphs=partitioned_graphs)
 
             # Step 9: Initialize execution mode
-            evaluator = self.init_execution_mode(model)
+            executor = self.init_execution_mode(model)
 
             # Step 10: Execute training, testing or inference mode
-            output = self.execute(model_evaluator=evaluator, graphs=partitioned_graphs)
+            output = self.execute(model_executor=executor, graphs=partitioned_graphs)
             outputs.append(output)
 
             # Step 11: Calculate applicability domain
@@ -137,7 +137,7 @@ class GDLWorkflow(ABC):
         self.prepare_and_save_predictions(outputs, domains)
         self.prepare_and_save_predictions(outputs, domains)
 
-        # Step 13: Compute and save evaluation metrics.
+        # Step 13: Compute and save executeuation metrics.
         # Metrics are calculated only in testing mode.
         self.calculate_and_save_metrics(outputs)
 
@@ -153,7 +153,7 @@ class GDLWorkflow(ABC):
         )
 
     @abstractmethod
-    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+    def execute(self, model_executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
         pass
 
     def build_models_for_applicability_domain(self):
@@ -165,8 +165,8 @@ class GDLWorkflow(ABC):
     def config_output_file_names(self, substr: str):
         pass
 
-    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        return self._context.dataset_processor.process(
+    def calculate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        return self._context.dataset_calculateor.calculate(
             dataset=data,
             output_dir=self._path,
             class_validator=self._context.class_validator,
@@ -210,24 +210,24 @@ class GDLWorkflow(ABC):
     def init_execution_mode(self, model: nn.Module):
         pass
 
-    def process_output(self, outputs: List[EvaluationOutput], domain: List[pd.DataFrame]) -> pd.DataFrame:
+    def calculate_output(self, outputs: List[Output], domain: List[pd.DataFrame]) -> pd.DataFrame:
         pass
 
-    def _process_predictions(self, outputs: List[EvaluationOutput]):
+    def _calculate_predictions(self, outputs: List[Output]):
         pass
 
     def _add_applicability_domain_to_predictions(self, domains, predictions):
         pass
 
-    def prepare_and_save_predictions(self, outputs: List[EvaluationOutput], domains: List[pd.DataFrame]) -> None:
+    def prepare_and_save_predictions(self, outputs: List[Output], domains: List[pd.DataFrame]) -> None:
         pass
 
-    def calculate_and_save_metrics(self, outputs: List[EvaluationOutput]) -> None:
+    def calculate_and_save_metrics(self, outputs: List[Output]) -> None:
         pass
 
 class TrainingWorkflow(GDLWorkflow):
-    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().process_dataset(data)
+    def calculate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        data = super().calculate_dataset(data)
 
         # keeping only the instances belonging to the training and validation sets
         data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
@@ -311,23 +311,23 @@ class TrainingWorkflow(GDLWorkflow):
             )
         ).to(device=self._parameters.device)
 
-    def init_execution_mode(self, model: nn.Module) -> Union[Tuple[Evaluator, Evaluator], Evaluator]:
-        training_evaluator = self._create_training_evaluator(model)
-        validation_evaluator = self._create_validation_evaluator(training_evaluator)
+    def init_execution_mode(self, model: nn.Module) -> Union[Tuple[ModeExecutor, ModeExecutor], ModeExecutor]:
+        training_executor = self._create_training_executor(model)
+        validation_executor = self._create_validation_executor(training_executor)
 
-        return training_evaluator, validation_evaluator
+        return training_executor, validation_executor
 
-    def _create_validation_evaluator(self, training_evaluator):
-        validation_evaluator = ValidationModeEvaluator(
-            model=training_evaluator.model,
+    def _create_validation_executor(self, training_executor):
+        validation_executor = ValidationExecutor(
+            model=training_executor.model,
             device=self._parameters.device,
             loss_fn=self._context.loss_fn,
-            prediction=self._context.prediction_processor
+            prediction=self._context.prediction_calculateor
         )
-        return validation_evaluator
+        return validation_executor
 
-    def _create_training_evaluator(self, model):
-        training_evaluator = TrainingModeEvaluator(
+    def _create_training_executor(self, model):
+        training_executor = TrainingExecutor(
             model=model,
             device=self._parameters.device,
             loss_fn=self._context.loss_fn,
@@ -336,11 +336,11 @@ class TrainingWorkflow(GDLWorkflow):
             step_size=self._parameters.step_size,
             gamma=self._parameters.gamma
         )
-        return training_evaluator
+        return training_executor
 
-    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> None:       
-        # Step: get evaluators
-        training_evaluator, validation_evaluator = model_evaluator
+    def execute(self, model_executor: Union[Tuple[Any, Any], Any], graphs: List) -> None:       
+        # Step: get executors
+        training_executor, validation_executor = model_executor
 
         # Step: create training y validation dataloader
         train_graphs, val_graphs = graphs
@@ -356,10 +356,10 @@ class TrainingWorkflow(GDLWorkflow):
         # Step: training and validation
         for epoch in tqdm(range(1, self._parameters.number_of_epochs + 1), desc="Training model"):
             # Step: training model
-            train_output = training_evaluator.eval(train_data)
+            train_output = training_executor.execute(train_data)
 
-            # Step: eval model
-            val_output = validation_evaluator.eval(val_data)
+            # Step: execute model
+            val_output = validation_executor.execute(val_data)
 
             # Step computes validation metrics
             val_metrics = self._context.metrics.calculate(prediction=val_output.prediction, y_true=val_output.y_true)
@@ -462,15 +462,15 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.to(self._parameters.device)
         return model
 
-    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
+    def execute(self, model_executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
         data = DataLoader(dataset=graphs, batch_size=self._parameters.batch_size)
-        return model_evaluator.eval(data)
+        return model_executor.execute(data)
 
     def calculate_applicability_domain(self, ad_models: List[Dict], features: pd.DataFrame) -> pd.DataFrame:
         domain = pd.DataFrame()
         if self._parameters.get_ad:
             instance_id = features.iloc[:, 0]
-            features_to_eval = features.iloc[:, 1:]
+            features_to_execute = features.iloc[:, 1:]
 
             with tqdm(total=len(ad_models),
                       desc="Getting applicability domain", disable=False) as progress:
@@ -478,8 +478,8 @@ class PredictionWorkflow(GDLWorkflow, ABC):
                     method_for_ad = ad_model['method']
                     model_for_ad = ad_model['model']
 
-                    features_to_eval_selected = filter_features(features_to_eval, method_for_ad['features'])
-                    outlier, outlier_score = model_for_ad.eval_model(features_to_eval_selected)
+                    features_to_execute_selected = filter_features(features_to_execute, method_for_ad['features'])
+                    outlier, outlier_score = model_for_ad.execute_model(features_to_execute_selected)
 
                     temp_domain = pd.DataFrame({
                         f"{method_for_ad['method_id']}": ['out' if x == -1 else 'in' for x in outlier],
@@ -503,8 +503,8 @@ class PredictionWorkflow(GDLWorkflow, ABC):
             ))
         return predictions
 
-    def prepare_and_save_predictions(self, outputs: List[EvaluationOutput], domains: List[pd.DataFrame]) -> None:       
-        output_predictions = self._process_predictions(outputs)
+    def prepare_and_save_predictions(self, outputs: List[Output], domains: List[pd.DataFrame]) -> None:       
+        output_predictions = self._calculate_predictions(outputs)
         output_predictions = self._add_applicability_domain_to_predictions(domains, output_predictions)
 
         file_path = self._path.get('prediction_file')
@@ -512,21 +512,21 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         logging.getLogger('workflow_logger').info(f"Predictions saved to: {file_path}")
 
     @abstractmethod
-    def _process_predictions(self, outputs: List[EvaluationOutput]):
+    def _calculate_predictions(self, outputs: List[Output]):
         pass
 
 class TestWorkflow(PredictionWorkflow):
-    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().process_dataset(data)
+    def calculate_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
+        data = super().calculate_dataset(data)
         return data[data['partition'].isin([3])].reset_index(drop=True)
 
     def init_execution_mode(self, model: nn.Module):
-        return self._create_testing_evaluator(model)
+        return self._create_testing_executor(model)
 
-    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
-        return super().execute(model_evaluator, graphs)
+    def execute(self, model_executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+        return super().execute(model_executor, graphs)
 
-    def calculate_and_save_metrics(self, outputs: List[EvaluationOutput]) -> None:
+    def calculate_and_save_metrics(self, outputs: List[Output]) -> None:
         y_true = get_y_true(outputs)
         predictions = get_predictions(outputs)
 
@@ -537,14 +537,14 @@ class TestWorkflow(PredictionWorkflow):
         _save_metrics_to_csv([metrics], file_path)        
         logging.getLogger('workflow_logger').info(f"Metrics saved to: {file_path}")
 
-    def _create_testing_evaluator(self, model):
-        return TestModeEvaluator(
+    def _create_testing_executor(self, model):
+        return TestExecutor(
             model=model,
             device=self._parameters.device,
-            prediction=self._context.prediction_processor,
+            prediction=self._context.prediction_calculateor,
         )
 
-    def _process_predictions(self, outputs: List[EvaluationOutput]):
+    def _calculate_predictions(self, outputs: List[Output]):
         return pd.DataFrame(
             {
                 **get_sequence_info(outputs),
@@ -563,16 +563,16 @@ class InferenceWorkflow(PredictionWorkflow):
         self._path['features_file'] = path.joinpath(f"Features-batch_{substr}.csv")
 
     def init_execution_mode(self, model: nn.Module):
-        return InferenceModeEvaluator(
+        return InferenceExecutor(
                 model=model,
                 device=self._parameters.device,
-                prediction=self._context.prediction_processor
+                prediction=self._context.prediction_calculateor
             )
 
-    def execute(self, model_evaluator: Union[Tuple[Any, Any], Any], graphs: List) -> EvaluationOutput:
-        return super().execute(model_evaluator, graphs)
+    def execute(self, model_executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+        return super().execute(model_executor, graphs)
         
-    def _process_predictions(self, outputs: List[EvaluationOutput]):
+    def _calculate_predictions(self, outputs: List[Output]):
         return pd.DataFrame(
             {
                 **get_sequence_info(outputs),
@@ -656,18 +656,18 @@ def _format_metric(metrics: dict, suffix: str) -> dict:
     return {f"{key}{suffix}": value for key, value in metrics.items()}
 
 
-def get_y_true(outputs: List[EvaluationOutput]):
+def get_y_true(outputs: List[Output]):
     y_true = []
-    for eval_output in outputs:
-        y_true.extend(eval_output.y_true)
+    for execute_output in outputs:
+        y_true.extend(execute_output.y_true)
 
     return y_true
 
 
-def get_sequence_info(outputs: List[EvaluationOutput]):
+def get_sequence_info(outputs: List[Output]):
     sequence_info = {}
-    for eval_output in outputs:
-        for key, value in eval_output.sequence_info.items():
+    for execute_output in outputs:
+        for key, value in execute_output.sequence_info.items():
             if key not in sequence_info:
                 sequence_info[key] = []
             sequence_info[key].extend(value)
@@ -675,8 +675,8 @@ def get_sequence_info(outputs: List[EvaluationOutput]):
     return sequence_info
 
 
-def get_predictions(outputs: List[EvaluationOutput]):
+def get_predictions(outputs: List[Output]):
     predictions = Prediction()
-    for eval_output in outputs:
-        predictions.extend(eval_output.prediction)
+    for execute_output in outputs:
+        predictions.add_new_predictions(execute_output.prediction)
     return predictions

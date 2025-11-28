@@ -26,7 +26,7 @@ class RegressionClassValidator(ClassValidator):
     
 
 class DatasetProcessor(ABC):       
-    def process(
+    def calculate(
             self,
             dataset: pd.DataFrame,
             output_dir: Dict,
@@ -143,5 +143,5 @@ class DatasetProcessorContext:
     def __init__(self, dataset_validator: DatasetProcessor) -> None:
         self._dataset_validator = dataset_validator
 
-    def process(self, dataset: pd.DataFrame, output_dir: Dict):
-        return self._dataset_validator.process(dataset, output_dir)
+    def calculate(self, dataset: pd.DataFrame, output_dir: Dict):
+        return self._dataset_validator.calculate(dataset, output_dir)

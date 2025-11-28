@@ -38,8 +38,8 @@ class ApplicationContext:
         # TRAIN
         if execution_mode == ExecutionMode.TRAIN:
             self.__loss_fn = ml_factory.create_loss()
-            self.__prediction_processor = ml_factory.create_prediction_processor()
-            self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
+            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
+            self.__metrics = ml_factory.create_metrics(prediction_calculateor=self.__prediction_calculateor, classes=classes)
             self.__best_model_selector = ml_factory.create_best_model_selector()
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
@@ -51,20 +51,20 @@ class ApplicationContext:
 
         # TEST
         elif execution_mode == ExecutionMode.TEST:
-            self.__prediction_processor = ml_factory.create_prediction_processor()
-            self.__metrics = ml_factory.create_metrics(prediction_processor=self.__prediction_processor, classes=classes)
+            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
+            self.__metrics = ml_factory.create_metrics(prediction_calculateor=self.__prediction_calculateor, classes=classes)
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
-            self.__prediction_processor = ml_factory.create_prediction_processor()
+            self.__prediction_calculateor = ml_factory.create_prediction_calculateor()
             self.__class_validator = ml_factory.create_class_validator()
             self.__injector.binder.bind(DatasetProcessorContext, DatasetProcessor)
             self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
-        self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
+        self.__dataset_calculateor = self.__injector.get(DatasetProcessorContext)
         self.__dataset_loader = self.__injector.get(DataLoaderContext)
 
     @property
@@ -76,8 +76,8 @@ class ApplicationContext:
         return self.__loss_fn
 
     @property
-    def prediction_processor(self):
-        return self.__prediction_processor
+    def prediction_calculateor(self):
+        return self.__prediction_calculateor
 
     @property
     def best_model_selector(self):
@@ -88,8 +88,8 @@ class ApplicationContext:
         return self.__class_validator
 
     @property
-    def dataset_processor(self):
-        return self.__dataset_processor
+    def dataset_calculateor(self):
+        return self.__dataset_calculateor
 
     @property
     def dataset_loader(self):
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     loss = context.loss_fn
     best_model_selector = context.best_model_selector
     class_validator = context.class_validator
-    dataset_processor = context.dataset_processor
+    dataset_calculateor = context.dataset_calculateor
     dataset_loader = context.dataset_loader
     gnn = context.gnn_factory
 

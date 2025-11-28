@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from pathlib import Path
 from typing import Optional, List
 
@@ -6,7 +7,6 @@ import numpy as np
 import pandas as pd
 from pydantic.v1 import PositiveFloat
 from tqdm import tqdm
-import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
 from src.config.types import (

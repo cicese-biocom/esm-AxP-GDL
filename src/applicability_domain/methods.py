@@ -10,9 +10,9 @@ from sklearn.ensemble import IsolationForest
 
 class ApplicabilityDomainMethod(ABC):
     @abstractmethod
-    def eval_model(
+    def execute_model(
             self,
-            features_to_eval: pd.DataFrame
+            features_to_execute: pd.DataFrame
     ):
         pass
 
@@ -47,12 +47,12 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
 
     # Evaluation rules:
     # - NaN values are not considered outliers.
-    # - NaN values are logged and ignored during domain evaluation.
+    # - NaN values are logged and ignored during domain executeuation.
     # - Majority voting is computed only over valid (non-NaN) features.
     # - The outlier score reports the number of outlier features out of the valid features used.
-    def eval_model(
+    def execute_model(
             self,
-            features_to_eval: pd.DataFrame
+            features_to_execute: pd.DataFrame
     ):
 
         logger = logging.getLogger('workflow_logger')
@@ -65,10 +65,10 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
             return None, None
 
         # DataFrame to store outlier flags
-        outliers = pd.DataFrame(index=features_to_eval.index)
+        outliers = pd.DataFrame(index=features_to_execute.index)
 
         for column, (lower_bound, upper_bound) in self.model.items():
-            col_values = features_to_eval[column]
+            col_values = features_to_execute[column]
 
             # Detect NaN values for this feature
             nan_mask = col_values.isna()
@@ -76,7 +76,7 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
                 ignored_instances = nan_mask[nan_mask].index.tolist()
                 logger.info(
                     f"Feature '{column}' contains NaN values for instances. "
-                    f"These values will be ignored when evaluating the domain."
+                    f"These values will be ignored when executeuating the domain."
                 )
 
             # Outlier = only values outside bounds (NaN is not outlier)
@@ -89,9 +89,9 @@ class PercentileBasedMethod(ApplicabilityDomainMethod):
         number_of_outliers = outliers.sum(axis=1)
 
         # Count usable (non-NaN) features for each instance
-        valid_features = (~features_to_eval.isna()).sum(axis=1)
+        valid_features = (~features_to_execute.isna()).sum(axis=1)
 
-        # Majority rule based only on evaluated (non-NaN) features
+        # Majority rule based only on executeuated (non-NaN) features
         outlier_by_majority_vote = (
                 number_of_outliers > (0.5 * valid_features)
         ).apply(lambda out: -1 if out else 1)
@@ -139,31 +139,31 @@ class IsolationForestMethod(ApplicabilityDomainMethod):
             logging.exception("Failed to train IsolationForest model due to: %s", e)
             self.model = None
 
-    def eval_model(
+    def execute_model(
             self,
-            features_to_eval: pd.DataFrame
+            features_to_execute: pd.DataFrame
     ):
         if self.model is None:
             return None, None
 
         # Keep only columns used during training
-        eval_data = features_to_eval[self.columns]
+        execute_data = features_to_execute[self.columns]
 
         # Identify rows with any NaN values in the required features
-        nan_mask = eval_data.isna().any(axis=1)
+        nan_mask = execute_data.isna().any(axis=1)
 
         # Prepare DataFrame without NaNs for prediction
-        clean_eval_data = eval_data[~nan_mask]
+        clean_execute_data = execute_data[~nan_mask]
 
-        preds = pd.Series(index=features_to_eval.index, dtype=int)
+        preds = pd.Series(index=features_to_execute.index, dtype=int)
         preds[nan_mask] = -1  # Mark rows with NaNs as out-of-domain
 
-        outlier_scores = pd.Series(index=features_to_eval.index, dtype=float)
+        outlier_scores = pd.Series(index=features_to_execute.index, dtype=float)
         outlier_scores[nan_mask] = np.nan  # Assign NaN score to instances with NaNs
 
-        if not clean_eval_data.empty:
-            preds[~nan_mask] = self.model.predict(clean_eval_data)
-            outlier_scores[~nan_mask] = self.model.decision_function(clean_eval_data)
+        if not clean_execute_data.empty:
+            preds[~nan_mask] = self.model.predict(clean_execute_data)
+            outlier_scores[~nan_mask] = self.model.decision_function(clean_execute_data)
 
         return preds, outlier_scores
 
