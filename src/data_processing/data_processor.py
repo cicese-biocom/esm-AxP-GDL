@@ -7,19 +7,19 @@ partitions = [1, 2, 3]
 pattern = re.compile('[^ARNDCQEGHILKMFPSTWYV]')
 
 
-class ClassValidator(ABC):
+class TargetFeatureValidator(ABC):
     @abstractmethod
     def validate(self, data: pd.DataFrame, classes: List[int] = None) -> pd.DataFrame:
         pass
 
 
-class ClassificationClassValidator(ClassValidator):
+class ClassificationTargetFeatureValidator(TargetFeatureValidator):
     def validate(self, data: pd.DataFrame, classes: List[int] = None) -> pd.DataFrame:
         # Return rows where 'activity' is not a class
         return data[~data['activity'].isin(classes)]
 
 
-class RegressionClassValidator(ClassValidator):
+class RegressionTargetFeatureValidator(TargetFeatureValidator):
     def validate(self, data: pd.DataFrame, classes: List[int] = None) -> pd.DataFrame:
         # Return rows where 'activity' is not a float
         return data[~data['activity'].apply(lambda x: isinstance(x, float))]
@@ -30,7 +30,7 @@ class DatasetProcessor(ABC):
             self,
             dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: ClassValidator,
+            class_validator: TargetFeatureValidator,
             classes: List[int],
     ):
         try:
@@ -77,7 +77,7 @@ class DatasetProcessor(ABC):
     def check_sequences_with_erroneous_activity(
             self, dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: ClassValidator,
+            class_validator: TargetFeatureValidator,
             classes: List
     ) -> None:
         return None
@@ -116,7 +116,7 @@ class LabeledDatasetProcessor(DatasetProcessor):
     def check_sequences_with_erroneous_activity(
             self, dataset: pd.DataFrame,
             output_dir: Dict,
-            class_validator: ClassValidator,
+            class_validator: TargetFeatureValidator,
             classes: List = None
     ) -> None:
         csv_file = output_dir['sequences_with_erroneous_activity_file']
