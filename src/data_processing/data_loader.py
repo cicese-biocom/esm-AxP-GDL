@@ -6,28 +6,18 @@ from pydantic.v1 import FilePath, PositiveInt
 
 class DataLoader(ABC):
     @abstractmethod
-    def read_file(self, dataset: FilePath) -> Generator[Any, Any, None]:
+    def read_file(self, dataset: FilePath) -> pd.DataFrame:
         pass
 
 
 class CSVLoader(DataLoader):
-    def read_file(self, dataset: FilePath) -> Generator[Any, Any, None]:
-        dataset_df = pd.read_csv(dataset)
-        yield dataset_df
-
-
-class CSVByChunkLoader(DataLoader):
-    def __init__(self, prediction_batch_size: PositiveInt):
-        self._prediction_batch_size = prediction_batch_size
-
-    def read_file(self, dataset: FilePath) -> Generator[Any, Any, None]:
-        for data_chunk in pd.read_csv(dataset, chunksize=self._prediction_batch_size):
-            yield data_chunk
+    def read_file(self, dataset: FilePath) -> pd.DataFrame:
+        return pd.read_csv(dataset)
 
 
 class DataLoaderContext:
     def __init__(self, data_loader: DataLoader) -> None:
         self._data_loader = data_loader
 
-    def read_file(self, dataset: FilePath) -> Generator[Any, Any, None]:
+    def read_file(self, dataset: FilePath) -> pd.DataFrame:
         return self._data_loader.read_file(dataset)
