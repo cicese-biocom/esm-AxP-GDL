@@ -3,7 +3,8 @@ from injector import Injector
 from src.architectures.gnn import GNNFactory
 from src.config.types import ModelingTask, ExecutionMode
 from src.data_processing.data_loader import DataLoaderContext, CSVLoader
-from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor
+from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor, \
+    TrainingDatasetProcessor, TestDatasetProcessor
 from src.workflow.execution_factory import (
     ExecutionFactory,
     BinaryExecutionFactory,
@@ -42,7 +43,7 @@ class ApplicationContext:
             self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
             self.__model_selector = ml_factory.create_model_selector()
             self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
-            self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
+            self.__injector.binder.bind(DatasetProcessorContext, TrainingDatasetProcessor)
 
             # model
             self.__injector.binder.bind(GNNFactory, to=GNNFactory(kwargs.get("gdl_architecture")))
@@ -53,7 +54,7 @@ class ApplicationContext:
             self.__prediction_maker = ml_factory.create_prediction_maker()
             self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
             self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
-            self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
+            self.__injector.binder.bind(DatasetProcessorContext, TestDatasetProcessor)
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
