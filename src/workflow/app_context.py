@@ -2,7 +2,7 @@ from injector import Injector
 
 from src.architectures.gnn import GNNFactory
 from src.config.types import ModelingTask, ExecutionMode
-from src.data_processing.data_loader import DataLoaderContext, CSVLoader, CSVByChunkLoader
+from src.data_processing.data_loader import DataLoaderContext, CSVLoader
 from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor
 from src.workflow.execution_factory import (
     ExecutionFactory,
@@ -41,9 +41,8 @@ class ApplicationContext:
             self.__prediction_maker = ml_factory.create_prediction_maker()
             self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
             self.__model_selector = ml_factory.create_model_selector()
-            self.__target_feature_validator = ml_factory.create_target_feature_validator()
+            self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
-            self.__injector.binder.bind(DataLoaderContext, CSVLoader)
 
             # model
             self.__injector.binder.bind(GNNFactory, to=GNNFactory(kwargs.get("gdl_architecture")))
@@ -53,16 +52,16 @@ class ApplicationContext:
         elif execution_mode == ExecutionMode.TEST:
             self.__prediction_maker = ml_factory.create_prediction_maker()
             self.__metrics_calculator = ml_factory.create_metrics_calculator(prediction_maker=self.__prediction_maker, classes=classes)
-            self.__target_feature_validator = ml_factory.create_target_feature_validator()
+            self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
             self.__injector.binder.bind(DatasetProcessorContext, LabeledDatasetProcessor)
-            self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
 
         # INFERENCE
         elif execution_mode == ExecutionMode.INFERENCE:
             self.__prediction_maker = ml_factory.create_prediction_maker()
-            self.__target_feature_validator = ml_factory.create_target_feature_validator()
+            self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
             self.__injector.binder.bind(DatasetProcessorContext, DatasetProcessor)
-            self.__injector.binder.bind(DataLoaderContext, to=lambda: CSVByChunkLoader(kwargs.get("prediction_batch_size")))
+
+        self.__injector.binder.bind(DataLoaderContext, CSVLoader)
 
         self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
         self.__dataset_loader = self.__injector.get(DataLoaderContext)

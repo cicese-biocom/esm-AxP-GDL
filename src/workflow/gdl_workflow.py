@@ -27,7 +27,7 @@ from src.config.types import (
 )
 
 from src.applicability_domain.methods import build_model
-from src.data_processing.data_partitioner import to_partition
+from src.data_processing.data_partitioner import split
 from src.feature_extraction.features import filter_features, FeaturesContext, FeatureCalculationParameters
 from src.graph_builder.graph_builder import build_graphs, BuildGraphsParameters
 from src.modeling.executor import (
@@ -84,24 +84,23 @@ class GDLWorkflow(ABC):
         # rather than loading the entire dataset at once.
         data = self.load_dataset()
 
+        # Step 3: The dataset processor performs the following validation and cleaning steps:
+        # # 1. Detects and reports duplicated sequence identifiers.
+        # # 2. Detects and reports duplicated peptide sequences.
+        # # 3. Filters out sequences containing non-natural amino acids and saves the cleaned dataset.
+        # # 4. Identifies sequences with invalid activity values according to the provided class validator.
+        # # 5. Detects sequences assigned to unsupported or inconsistent partition labels.
+        data = self.process_dataset(data)
+
+        # Step 4: Split into batches
+        batches = self.split_into_batches(data)
+
         calculated_features = []
         outputs: List[Output] = []
         domains: List[pd.DataFrame] = []
-        for i, batch in enumerate(data):
+        for i, batch in enumerate(batches):
             # Step 3: Configure the names of the output files
             self.config_output_file_names(substr=str(i + 1))
-
-            # Step 4: # The dataset processor performs the following validation and cleaning steps:
-            # # 1. Detects and reports duplicated sequence identifiers.
-            # # 2. Detects and reports duplicated peptide sequences.
-            # # 3. Filters out sequences containing non-natural amino acids and saves the cleaned dataset.
-            # # 4. Identifies sequences with invalid activity values according to the provided class validator.
-            # # 5. Detects sequences assigned to unsupported or inconsistent partition labels.
-            batch = self.process_dataset(batch)
-
-            # Skip iteration if the batch is empty
-            if batch.empty:
-                continue
 
             # Step 5: Build graphs
             graphs, perplexities = self.build_graphs(data=batch)
@@ -137,7 +136,7 @@ class GDLWorkflow(ABC):
         self.prepare_and_save_predictions(outputs, domains)
         self.prepare_and_save_predictions(outputs, domains)
 
-        # Step 13: Compute and save executeuation metrics.
+        # Step 13: Compute and save metrics.
         # Metrics are calculated only in testing mode.
         self.calculate_and_save_metrics(outputs)
 
@@ -225,50 +224,18 @@ class GDLWorkflow(ABC):
     def calculate_and_save_metrics(self, outputs: List[Output]) -> None:
         pass
 
+    @abstractmethod
+    def split_into_batches(self, data):
+        pass
+
 class TrainingWorkflow(GDLWorkflow):
-    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().process_dataset(data)
-
-        # keeping only the instances belonging to the training and validation sets
-        data = data[data['partition'].isin([1, 2])].reset_index(drop=True)
-
-        if data.query('partition == 1').empty:
-            logging.getLogger('workflow_logger').critical(
-                "The dataset does not contain training set."
-            )
-            quit()
-
-        if data.query('partition == 2').empty:
-            if self._parameters.split_method and self._parameters.split_training_fraction:
-                data.drop(['partition'], axis=1, inplace=True)
-            elif not self._parameters.split_method:
-                logging.getLogger('workflow_logger').critical(
-                    "The dataset does not contain validation set; the parameter 'split_method' must be specified."
-                )
-                quit()
-            elif not self._parameters.split_training_fraction:
-                logging.getLogger('workflow_logger').critical(
-                    "The dataset does not contain validation set; the parameter 'split_training_fraction' must be specified."
-                )
-                quit()
-        # if not (data.query('partition == 1').empty and data.query('partition == 2').empty)
-        elif self._parameters.split_method or self._parameters.split_training_fraction:
-            if self._parameters.split_method:
-                logging.getLogger('workflow_logger').critical(
-                    "The dataset contains training and validation sets; the parameter split_method must not be specified."
-                )
-                quit()
-            elif self._parameters.split_training_fraction:
-                logging.getLogger('workflow_logger').critical(
-                    "The dataset contains training and validation sets; the parameter split_training_fraction must not be specified."
-                )
-                quit()
-
-        return data
+    def split_into_batches(self, data):
+        yield data
+        return
 
     def _partition_data_training_and_validation(self, data: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
         # partitioning data in training and validation
-        data = to_partition(
+        data = split(
             split_method=self._parameters.split_method,
             data=data,
             features=features,
@@ -291,9 +258,6 @@ class TrainingWorkflow(GDLWorkflow):
         return data
 
     def get_graphs_per_partition(self, data: pd.DataFrame, graphs: List, features: pd.DataFrame) -> tuple[list[Any], list[Any]]:
-        if 'partition' not in data.columns:
-            data = self._partition_data_training_and_validation(data, features)
-
         partitions = data['partition']
 
         train_graphs = [g for g, p in zip(graphs, partitions) if p == 1]
@@ -515,11 +479,34 @@ class PredictionWorkflow(GDLWorkflow, ABC):
     def _calculate_predictions(self, outputs: List[Output]):
         pass
 
-class TestWorkflow(PredictionWorkflow):
-    def process_dataset(self, data: pd.DataFrame) -> pd.DataFrame:
-        data = super().process_dataset(data)
-        return data[data['partition'].isin([3])].reset_index(drop=True)
+    def split_into_batches(self, data):
+        """
+        Lazily split a DataFrame into batches using `prediction_batch_size`.
 
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            The dataset to split.
+
+        Yields
+        ------
+        pandas.DataFrame
+            A batch of rows from the original dataset.
+        """
+        batch_size = self._parameters.prediction_batch_size
+
+        # If no batching is requested, yield the full DataFrame as a single batch.
+        if batch_size is None or batch_size <= 0:
+            yield data
+            return
+
+        total = len(data)
+
+        for start in range(0, total, batch_size):
+            end = start + batch_size
+            yield data.iloc[start:end]
+
+class TestWorkflow(PredictionWorkflow):
     def build_executors(self, model: nn.Module):
         return ModelTester(
             model=model,
@@ -613,7 +600,7 @@ def _save_metrics_to_tb(metrics: List[dict], metrics_path: Path):
     for entry in metrics:
         epoch = entry.get("epoch")
         for key, value in entry.items():
-            if key != "epoch":
+            if value and key != "epoch":
                 tb_writer.add_scalar(key, value, global_step=epoch)
 
 
