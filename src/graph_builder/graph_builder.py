@@ -98,6 +98,8 @@ def build_graphs(build_graphs_parameters: BuildGraphsParameters):
                 sequence_info={
                     "sequence_id": sequence_info['id'],
                     "sequence": sequence_info['sequence'],
+                    "activity": sequence_info['activity'] if 'activity' in build_graphs_parameters.data.columns else None,
+                    "partition": sequence_info['partition'] if 'partition' in build_graphs_parameters.data.columns else None,
                     "sequence_length": sequence_info['length'],
                 },
                 use_edge_attr=build_graphs_parameters.use_edge_attr
