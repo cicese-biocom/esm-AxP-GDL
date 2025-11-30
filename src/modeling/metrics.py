@@ -69,19 +69,19 @@ class BinaryClassificationMetrics(Metrics):
                 - "Recall_Neg": Sensitivity (recall for class 1)
         """
 
-        recall_per_class = recall_score(y_true, prediction.y_pred, average=None, labels=self._classes)
-        recall_dict = {f"Recall_class_{c}": r for c, r in zip(self._classes, recall_per_class)}
+        recall_per_class = recall_score(y_true=y_true, y_pred=prediction.y_pred, average=None, labels=self._classes)
 
         if len(set(y_true)) == len(self._classes):
-            auc = roc_auc_score(y_true, prediction.y_score)
+            auc = roc_auc_score(y_true=y_true, y_score=prediction.y_score)
         else:
             auc = None
 
         return {
-            "MCC": matthews_corrcoef(y_true, prediction.y_pred),
-            "ACC": accuracy_score(y_true, prediction.y_pred),
+            "MCC": matthews_corrcoef(y_true=y_true, y_pred=prediction.y_pred),
+            "ACC": accuracy_score(y_true=y_true, y_pred=prediction.y_pred),
             "AUC": auc,
-            **recall_dict
+            "Specificity": recall_per_class[0],
+            "Sensitivity": recall_per_class[1]
         }
 
 class MulticlassClassificationMetrics(Metrics):
@@ -106,17 +106,17 @@ class MulticlassClassificationMetrics(Metrics):
                 - Recall_class_{class_label}: Recall per each class
         """
 
-        recall_per_class = recall_score(y_true, prediction.y_pred, average=None, labels=self._classes, zero_division=0)
+        recall_per_class = recall_score(y_true=y_true, y_pred=prediction.y_pred, average=None, labels=self._classes, zero_division=0)
         recall_dict = {f"Recall_class_{c}": r for c, r in zip(self._classes, recall_per_class)}
 
         if len(set(y_true)) == len(self._classes):
-            auc = roc_auc_score(y_true, prediction.y_score, average="macro", multi_class="ovr", labels=self._classes)
+            auc = roc_auc_score(y_true=y_true, y_score=prediction.y_score, average="macro", multi_class="ovr", labels=self._classes)
         else:
             auc = None
 
         return {
-            "MCC": matthews_corrcoef(y_true, prediction.y_pred),
-            "ACC": accuracy_score(y_true, prediction.y_pred),
+            "MCC": matthews_corrcoef(y_true=y_true, y_pred=prediction.y_pred),
+            "ACC": accuracy_score(y_true=y_true, y_pred=prediction.y_pred),
             "AUC": auc,
             **recall_dict
         }
@@ -144,7 +144,7 @@ class RegressionMetrics(Metrics):
         """
 
         return {
-            "RMSE": np.sqrt(mean_squared_error(y_true, prediction.y_pred)),
-            "MAE": mean_absolute_error(y_true, prediction.y_pred),
-            "R2": r2_score(y_true, prediction.y_pred)
+            "RMSE": np.sqrt(mean_squared_error(y_true=y_true, y_pred=prediction.y_pred)),
+            "MAE": mean_absolute_error(y_true=y_true, y_pred=prediction.y_pred),
+            "R2": r2_score(y_true=y_true, y_pred=prediction.y_pred)
         }
