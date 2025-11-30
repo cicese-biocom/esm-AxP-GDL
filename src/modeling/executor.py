@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Optional, List, Dict
 
 import torch
-from pydantic.v1 import PositiveFloat, PositiveInt
+from pydantic.v1 import PositiveFloat, PositiveInt, confloat
 
 import numpy as np
 from torch.nn.modules.loss import _Loss
@@ -16,7 +16,7 @@ from src.utils.base_parameters import BaseParameters
 
 
 class Output(BaseParameters):
-    loss: Optional[PositiveFloat]
+    loss: Optional[confloat(ge=0)]
     y_true: Optional[List]
     prediction: Optional[Prediction]
     optimizer_state_dict: Optional[Dict] = None
