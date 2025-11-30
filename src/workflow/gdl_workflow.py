@@ -102,33 +102,29 @@ class GDLWorkflow(ABC):
             # Step 3: Configure the names of the output files
             self.config_output_file_names(substr=str(i + 1))
 
-            # Step 5: Build graphs
+            # Step 4: Build graphs
             graphs, perplexities = self.build_graphs(data=batch)
 
-            # Step 6: Calculate sequence and graph features for applicability domain and data partitioning
+            # Step 5: Calculate sequence and graph features for applicability domain and data partitioning
             features = self.calculate_sequence_and_graph_features(data=batch, graphs=graphs, perplexities=perplexities)
             calculated_features.append(features)
 
-            # Step 7: Partition the graphs into training and validation sets.
-            # This step is performed exclusively in training mode.
-            partitioned_graphs = self.get_graphs_per_partition(data=batch, graphs=graphs, features=features)
+            # Step 7: Initialize GNN model
+            model = self.init_gnn_model(graphs=graphs)
 
-            # Step 8: Initialize GNN model
-            model = self.init_gnn_model(graphs=partitioned_graphs)
-
-            # Step 9: Build the executor objects required for the current execution mode (e.g., trainer, validator)
+            # Step 8: Build the executor objects required for the current execution mode (e.g., trainer, validator)
             executors = self.build_executors(model)
 
-            # Step 10: Execute training, testing or inference mode
-            output = self.execute(executor=executors, graphs=partitioned_graphs)
+            # Step 9: Execute training, testing or inference mode
+            output = self.execute(executor=executors, graphs=graphs)
             outputs.append(output)
 
-            # Step 11: Calculate applicability domain
+            # Step 10: Calculate applicability domain
             domain = self.calculate_applicability_domain(ad_models, features)
             if domain is not None and not domain.empty:
                 domains.append(domain)
 
-        # Step 12: Save features
+        # Step 11: Save features
         self.save_sequence_and_graph_features(calculated_features)
 
         # Step 12: Prepare and save prediction outputs.
@@ -152,7 +148,7 @@ class GDLWorkflow(ABC):
         )
 
     @abstractmethod
-    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List[Data]) -> Output:
         pass
 
     def build_models_for_applicability_domain(self):
@@ -183,7 +179,7 @@ class GDLWorkflow(ABC):
             ).dict()
         )
 
-    def get_graphs_per_partition(self, data, graphs, features):
+    def _get_graphs_per_partition(self, graphs: List[Data]) -> tuple[List[Data], List[Data]]:
         return graphs
 
     @abstractmethod
@@ -257,21 +253,22 @@ class TrainingWorkflow(GDLWorkflow):
 
         return data
 
-    def get_graphs_per_partition(self, data: pd.DataFrame, graphs: List, features: pd.DataFrame) -> tuple[list[Any], list[Any]]:
-        partitions = data['partition']
+    def _get_graphs_per_partition(self, graphs: List[Data]) -> tuple[List[Data], List[Data]]:
+        """
+        Splits graphs into training and validation lists based on the 'partition' field
+        inside each graph's sequence_info dictionary.
+        """
 
-        train_graphs = [g for g, p in zip(graphs, partitions) if p == 1]
-        val_graphs = [g for g, p in zip(graphs, partitions) if p == 2]
-        
+        train_graphs = [g for g in graphs if g.sequence_info.get('partition') == 1]
+        val_graphs = [g for g in graphs if g.sequence_info.get('partition') == 2]
+
         return train_graphs, val_graphs
 
     def init_gnn_model(self, graphs):
-        train_graphs, val_graphs = graphs
-
         return self._context.gnn_factory.create(
             GNNParameters(
                 **self._parameters.dict(),
-                node_feature_dim=train_graphs[0].x.shape[1]
+                node_feature_dim=graphs[0].x.shape[1]
             )
         ).to(device=self._parameters.device)
 
@@ -302,16 +299,18 @@ class TrainingWorkflow(GDLWorkflow):
         )
         return model_trainer
 
-    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List) -> None:       
-        # Step: get executors
+    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List[Data]) -> None:       
+        # Step: Get executors
         model_trainer, model_validator = executor
 
-        # Step: create training y validation dataloader
-        train_graphs, val_graphs = graphs
+        # Step: Partition the graphs into training and validation sets.
+        train_graphs, val_graphs = self._get_graphs_per_partition(graphs=graphs)
+
+        # Step: Create training y validation dataloader
         train_data = DataLoader(dataset=train_graphs, batch_size=self._parameters.batch_size)
         val_data = DataLoader(dataset=val_graphs, batch_size=self._parameters.batch_size)
 
-        # Step: init variables
+        # Step: Init variables
         checkpoints_path = self._path['checkpoints_path']
         best_model = Model()
         current_model = Model()
@@ -390,10 +389,14 @@ class TrainingWorkflow(GDLWorkflow):
 
 
 class PredictionWorkflow(GDLWorkflow, ABC):
+    def save_sequence_and_graph_features(self, calculated_features):
+        if self._parameters.get_ad:
+            super().save_sequence_and_graph_features(calculated_features)
+
     def build_models_for_applicability_domain(self):
-        if self._parameters.get_ad is None:
+        if not self._parameters.get_ad:
             return None
-        
+
         features_to_build_domain = pd.read_csv(self._parameters.feature_file_for_ad)
 
         ad_models = []
@@ -414,10 +417,8 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         return ad_models
 
     def calculate_sequence_and_graph_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> Optional[DataFrame]:
-        if self._parameters.get_ad is None:
-            return None
-
-        return super().calculate_sequence_and_graph_features(data, graphs, perplexities)
+        if self._parameters.get_ad:
+            return super().calculate_sequence_and_graph_features(data, graphs, perplexities)
 
     def init_gnn_model(self, graphs: List):
         checkpoint = torch.load(self._parameters.gdl_model_path)
@@ -426,7 +427,7 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         model.to(self._parameters.device)
         return model
 
-    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List[Data]) -> Output:
         data = DataLoader(dataset=graphs, batch_size=self._parameters.batch_size)
         return executor.execute(data)
 
@@ -514,7 +515,7 @@ class TestWorkflow(PredictionWorkflow):
             prediction=self._context.prediction_maker,
         )
 
-    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List[Data])-> Output:
         return super().execute(executor, graphs)
 
     def calculate_and_save_metrics(self, outputs: List[Output]) -> None:
@@ -553,7 +554,7 @@ class InferenceWorkflow(PredictionWorkflow):
                 prediction=self._context.prediction_maker
             )
 
-    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List) -> Output:
+    def execute(self, executor: Union[Tuple[Any, Any], Any], graphs: List[Data]) -> Output:
         return super().execute(executor, graphs)
         
     def _calculate_predictions(self, outputs: List[Output]):
