@@ -366,13 +366,13 @@ to build the graph edges, and a `hidden layer size equal to 128`.
 
 When using the Docker container, the example scripts should be used as follows:
 ```
-docker-compose run --rm esm-axp-gdl-env sh train.sh
+docker-compose run --rm esm-axp-gdl-env-py37 sh train.sh
 ```
 ```
-docker-compose run --rm esm-axp-gdl-env sh test.sh
+docker-compose run --rm esm-axp-gdl-env-py37 sh test.sh
 ```
 ```
-docker-compose run --rm esm-axp-gdl-env sh inference.sh
+docker-compose run --rm esm-axp-gdl-env-py37 sh inference.sh
 ```
 
 ### **Best models**
