@@ -262,7 +262,7 @@ class TrainingWorkflow(GDLWorkflow):
 
         for epoch in range(1, workflow_settings.number_of_epochs + 1):
             model.train()
-            arr_loss = []
+            train_arr_loss = []
             for data in train_dataloader:
                 optimizer.zero_grad()
                 data = data.to(workflow_settings.device)
@@ -273,10 +273,10 @@ class TrainingWorkflow(GDLWorkflow):
                     output = model(data.x, data.edge_index, None, data.batch)
 
                 out = output[0]
-                loss = criterion(out, data.y)
-                loss.backward()
+                train_loss = criterion(out, data.y)
+                train_loss.backward()
                 optimizer.step()
-                arr_loss.append(loss.item())
+                train_arr_loss.append(train_loss.item())
 
             current_model['epoch'] = epoch
             current_model['model'] = model
@@ -292,7 +292,7 @@ class TrainingWorkflow(GDLWorkflow):
                 y_score = []
                 y_true = []
                 y_pred = []
-                arr_loss = []
+                val_arr_loss = []
                 for data in val_dataloader:
                     data = data.to(workflow_settings.device)
 
@@ -303,8 +303,8 @@ class TrainingWorkflow(GDLWorkflow):
 
                     out = output[0]
 
-                    loss = criterion(out, data.y)
-                    arr_loss.append(loss.item())
+                    val_loss = criterion(out, data.y)
+                    val_arr_loss.append(val_loss.item())
 
                     pred = out.argmax(dim=1)
                     score = F.softmax(out, dim=1)[:, 1]
@@ -315,8 +315,8 @@ class TrainingWorkflow(GDLWorkflow):
                     y_score.extend(score.cpu().detach().data.numpy())
                     y_true.extend(data.y.cpu().detach().data.numpy())
 
-                train_loss = np.mean(arr_loss)
-                val_loss = np.mean(arr_loss)
+                train_loss = np.mean(train_arr_loss)
+                val_loss = np.mean(val_arr_loss)
 
                 if workflow_settings.save_ckpt_per_epoch:
                     model_path = workflow_settings.output_setting['checkpoints_path'].joinpath(
