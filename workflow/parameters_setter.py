@@ -70,7 +70,7 @@ class ParameterSetter(BaseModel):
                                          ge=0.5, le=1.0)] = None
 
     amino_acid_representation: Annotated[Optional[Literal['CA']],
-                                         Field(description='Amino acid representations')] = 'CA'
+                                         Field(description='Amino acid representations')] = None
 
     number_of_heads: Annotated[Optional[PositiveInt],
                                Field(description='Number of heads')] = 8
