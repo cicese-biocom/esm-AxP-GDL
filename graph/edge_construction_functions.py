@@ -117,7 +117,7 @@ class ESM2ContactMap(EdgeConstructionFunction):
         for i in range(number_of_amino_acid):
             for j in range(i + 1, number_of_amino_acid):
                 adjacency_matrix[i][j] = adjacency_matrix[i][j] or (
-                    1 if self.esm2_contact_map[i][j] > self.probability_threshold else 0)
+                    1 if self.esm2_contact_map[i][j] >= self.probability_threshold else 0)
                 adjacency_matrix[j][i] = adjacency_matrix[i][j]
 
                 if self.use_edge_attr:
