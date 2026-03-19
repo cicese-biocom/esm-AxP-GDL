@@ -228,7 +228,7 @@ class TrainingArguments(CommonArguments):
     )
 
     amino_acid_representation: Optional[AminoAcidRepresentation] = Field(
-        default="CA",
+        default=None,
         description='Reference atom into an amino acid to define a relationship (e.g., distance) regarding another amino acid'
     )
 
@@ -341,6 +341,15 @@ class TrainingArguments(CommonArguments):
                 raise ValueError("The edge construction methods do not require structural parameters.")
             if values.get('validation_mode') == 'random_coordinates':
                 raise ValueError("'random_coordinates' validation mode cannot be used without 3D edge construction.")
+
+        if EdgeBuildFunction.EMPTY_GRAPH in funcs:
+            if values.get('add_self_loops'):
+                raise ValueError("The edge construction method does not require the 'add_self_loops' parameter. For this method, it is always set to False.")
+            if values.get('use_edge_attr'):
+                raise ValueError("The edge construction method does not require the 'use_edge_attr' parameter.")
+
+            values['add_self_loops']  = False
+            values['use_edge_attr']  = False
 
         return values
 

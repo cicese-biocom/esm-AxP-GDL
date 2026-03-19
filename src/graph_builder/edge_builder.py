@@ -39,7 +39,7 @@ class BuildEdgesParameters(BaseParameters):
     randomness_percentage: Optional[PositiveFloat]
     tertiary_structure_method: Optional[str]
     pdb_path: Optional[Path]
-    amino_acid_representation: str
+    amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
     edge_build_functions: List[EdgeBuildFunction]
     distance_function: Optional[DistanceFunction]
@@ -49,29 +49,34 @@ class BuildEdgesParameters(BaseParameters):
     data: pd.DataFrame
     esm2_contact_maps: List
 
+
 class GenerateEdgesParameters(BaseParameters):
     edge_build_functions: List[EdgeBuildFunction]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
     use_edge_attr: Optional[bool]
-    atom_coordinates_matrices: List
+    atom_coordinates_matrices:  Optional[List]
     data: pd.DataFrame
     esm2_contact_maps: List
 
 
 def build_edges(build_edges_parameters: BuildEdgesParameters):
-    if build_edges_parameters.tertiary_structure_method:
-        atom_coordinates_matrices = predict_tertiary_structures(Predict3DStructuresParameters(**build_edges_parameters.dict()))
-    else:
-        atom_coordinates_matrices = load_tertiary_structures(Load3DStructuresParameters(**build_edges_parameters.dict()))
 
-    atom_coordinates_matrices = _apply_random_coordinates(
-        RandomCoordinatesParameters(
-            **build_edges_parameters.dict(),
-            atom_coordinates_matrices=atom_coordinates_matrices,
+    atom_coordinates_matrices = [None] * len(build_edges_parameters.data)
+
+    if build_edges_parameters.pdb_path:
+        if build_edges_parameters.tertiary_structure_method:
+            atom_coordinates_matrices = predict_tertiary_structures(Predict3DStructuresParameters(**build_edges_parameters.dict()))
+        else:
+            atom_coordinates_matrices = load_tertiary_structures(Load3DStructuresParameters(**build_edges_parameters.dict()))
+
+        atom_coordinates_matrices = _apply_random_coordinates(
+            RandomCoordinatesParameters(
+                **build_edges_parameters.dict(),
+                atom_coordinates_matrices=atom_coordinates_matrices,
+            )
         )
-    )
 
     adjacency_matrices, weights_matrices = _generate_edges(
         GenerateEdgesParameters(

@@ -39,6 +39,7 @@ class EdgeBuildFunction(Enum):
     DISTANCE_BASED_THRESHOLD = 'distance_based_threshold'
     SEQUENCE_BASED = 'sequence_based'
     ESM2_CONTACT_MAP = 'esm2_contact_map'
+    EMPTY_GRAPH = 'empty_graph'
 
 
 class ESM2Representation(Enum):

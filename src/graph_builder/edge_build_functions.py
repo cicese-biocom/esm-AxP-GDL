@@ -34,6 +34,16 @@ class EdgeBuildFunctionDecorator(EdgesComponent):
         return self._edges_component.compute_edges()
 
 
+class EmptyGraphDecorator(EdgeBuildFunctionDecorator):
+    def __init__(self, edges_component: EdgesComponent, atom_coordinates: np.ndarray,
+                 sequence: str,
+                 use_edge_attr: bool):
+        super().__init__(edges_component)
+
+    def compute_edges(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self._edges_component.compute_edges()
+
+
 class SequenceBasedDecorator(EdgeBuildFunctionDecorator):
     def __init__(self, edges_component: EdgesComponent, distance_context: DistanceContext, atom_coordinates: np.ndarray, sequence: str,
                  use_edge_attr: bool):
@@ -103,7 +113,7 @@ class ESM2ContactMapDecorator(EdgeBuildFunctionDecorator):
         for i in range(number_of_amino_acid):
             for j in range(i + 1, number_of_amino_acid):
                 adjacency_matrix[i][j] = adjacency_matrix[i][j] or (
-                    1 if self._esm2_contact_map[i][j] > self._probability_threshold else 0)
+                    1 if self._esm2_contact_map[i][j] >= self._probability_threshold else 0)
                 adjacency_matrix[j][i] = adjacency_matrix[i][j]
 
                 if self._use_edge_attr:
@@ -164,7 +174,9 @@ class EdgeBuildContext:
         edge_build_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
         esm2_contact_map, probability_threshold, use_edge_attr = args
 
-        distance = DistanceContext(distance_function)
+        distance = None
+        if distance_function:
+            distance = DistanceContext(distance_function)
 
         functions = [
             (EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
@@ -189,6 +201,11 @@ class EdgeBuildContext:
                      atom_coordinates=atom_coordinates,
                      sequence=sequence,
                      use_edge_attr=use_edge_attr
+                     ))
+            ,
+            (EdgeBuildFunction.EMPTY_GRAPH,
+             partial(EdgeBuildFunctionDecorator,
+                     edges_component=None,
                      ))
         ]
 

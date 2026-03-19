@@ -53,7 +53,7 @@ class ModelParameters(BaseParameters):
     distance_threshold: Optional[PositiveFloat]
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     probability_threshold: Optional[PositiveFloat]
-    amino_acid_representation: str
+    amino_acid_representation: Optional[str]
     hidden_layer_dimension: PositiveInt
     add_self_loops: bool
     use_edge_attr: bool

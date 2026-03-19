@@ -30,10 +30,10 @@ class BuildGraphsParameters(BaseParameters):
     randomness_percentage: Optional[PositiveFloat]
     tertiary_structure_method: Optional[str]
     pdb_path: Optional[Path]
-    amino_acid_representation: str
+    amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
     edge_build_functions: List[EdgeBuildFunction]
-    distance_function: DistanceFunction
+    distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
     use_edge_attr: Optional[bool]
