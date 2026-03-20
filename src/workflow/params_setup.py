@@ -318,38 +318,93 @@ class TrainingArguments(CommonArguments):
 
     @root_validator(skip_on_failure=True)
     def resolve_gdl_model_path(cls, values):
+        """
+        Resolves the 'gdl_model_path' to an absolute Path object.
+
+        Converts the provided 'gdl_model_path' to its resolved form,
+        ensuring it points to a valid absolute path in the filesystem.
+        """
         values['gdl_model_path'] = values['gdl_model_path'].resolve()
         return values
 
     @root_validator(skip_on_failure=True)
+    def validate_edge_build_functions(cls, values):
+        """
+        Validates the 'edge_build_functions' parameter.
+
+        Rules enforced:
+        - At least one-edge construction method must be specified.
+        - If EMPTY_GRAPH is selected, no other edge construction methods can be combined with it.
+        """
+        funcs = values.get('edge_build_functions') or []
+
+        if not funcs:
+            raise ValueError("'edge_build_functions' must contain at least one method.")
+
+        if EdgeBuildFunction.EMPTY_GRAPH in funcs and len(funcs) > 1:
+            raise ValueError(
+                "EMPTY_GRAPH cannot be combined with other edge construction methods."
+            )
+
+        return values
+
+
+
+    @root_validator(skip_on_failure=True)
     def validate_edge_construction_requirements(cls, values):
-        funcs = values.get('edge_build_functions')
+        funcs = values.get('edge_build_functions') or []
 
-        if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs or \
-                (EdgeBuildFunction.SEQUENCE_BASED in funcs and values['distance_function']):
+        if not funcs:
+            raise ValueError("'edge_build_functions' must contain at least one method.")
 
+        is_distance_based = EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs
+        is_non_3d_method = any(f in funcs for f in {
+            EdgeBuildFunction.EMPTY_GRAPH,
+            EdgeBuildFunction.ESM2_CONTACT_MAP,
+            EdgeBuildFunction.SEQUENCE_BASED
+        })
+
+        # --- Distance-based methods (require 3D information) ---
+        if is_distance_based:
+            # Default value
             if not values.get('amino_acid_representation'):
                 values['amino_acid_representation'] = 'CA'
 
-            if values.get('pdb_path'):
-                values['pdb_path'] = check_file_exists(values['pdb_path'])
-            else:
-                raise ValueError("The parameter 'pdb_path' is required.")
-        else:
-            if values.get('pdb_path') or values.get('tertiary_structure_method') or values.get(
-                    'amino_acid_representation'):
-                raise ValueError("The edge construction methods do not require structural parameters.")
+            pdb_path = values.get('pdb_path')
+            if not pdb_path:
+                raise ValueError(
+                    "'pdb_path' is required when using distance-based edge construction methods."
+                )
+
+            values['pdb_path'] = check_file_exists(pdb_path)
+
+        # --- Non-3D methods (must NOT use 3D-related params) ---
+        if is_non_3d_method:
+            forbidden_params = {
+                'pdb_path': values.get('pdb_path'),
+                'tertiary_structure_method': values.get('tertiary_structure_method'),
+                'amino_acid_representation': values.get('amino_acid_representation'),
+            }
+
+            for param, val in forbidden_params.items():
+                if val is not None:
+                    raise ValueError(
+                        f"'{param}' is not applicable for the selected edge construction method(s): {funcs}."
+                    )
+
             if values.get('validation_mode') == 'random_coordinates':
-                raise ValueError("'random_coordinates' validation mode cannot be used without 3D edge construction.")
+                raise ValueError(
+                    "'validation_mode=\"random_coordinates\"' requires a 3D-based edge construction method."
+                )
 
-        if EdgeBuildFunction.EMPTY_GRAPH in funcs:
+        # --- EMPTY_GRAPH specific rules ---
+        if EdgeBuildFunction.EMPTY_GRAPH in funcs and len(funcs) == 1:
             if values.get('add_self_loops'):
-                raise ValueError("The edge construction method does not require the 'add_self_loops' parameter. For this method, it is always set to False.")
-            if values.get('use_edge_attr'):
-                raise ValueError("The edge construction method does not require the 'use_edge_attr' parameter.")
+                raise ValueError(
+                    "'add_self_loops=True' is not allowed with 'EMPTY_GRAPH'; it is always set to False."
+                )
 
-            values['add_self_loops']  = False
-            values['use_edge_attr']  = False
+            values['add_self_loops'] = False
 
         return values
 
@@ -366,49 +421,95 @@ class TrainingArguments(CommonArguments):
 
     @root_validator(skip_on_failure=True)
     def validate_distance_parameters(cls, values):
-        funcs = values['edge_build_functions']
-        if values.get('distance_function') is None:
-            if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs:
-                raise ValueError("The parameter 'distance_function' is required.")
-        else:
-            if not {EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
-                    EdgeBuildFunction.SEQUENCE_BASED}.intersection(funcs):
-                raise ValueError("'distance_function' is not required for the selected edge construction methods.")
+        funcs = values.get('edge_build_functions') or []
 
-        if values.get('distance_threshold') is None:
-            if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs:
-                raise ValueError("The parameter 'distance_threshold' is required.")
+        if not funcs:
+            raise ValueError("'edge_build_functions' must contain at least one method.")
+
+        is_distance_based = EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs
+
+        distance_function = values.get('distance_function')
+        distance_threshold = values.get('distance_threshold')
+
+        if is_distance_based:
+            if distance_function is None:
+                raise ValueError(
+                    "'distance_function' is required when using distance-based edge construction methods."
+                )
+
+            if distance_threshold is None:
+                raise ValueError(
+                    "'distance_threshold' is required when using distance-based edge construction methods."
+                )
+
         else:
-            if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD not in funcs:
-                raise ValueError("'distance_threshold' is not required for the selected edge construction methods.")
+            if distance_function is not None:
+                raise ValueError(
+                    "'distance_function' is not applicable for the selected edge construction methods."
+                )
+
+            if distance_threshold is not None:
+                raise ValueError(
+                    "'distance_threshold' is not applicable for the selected edge construction methods."
+                )
 
         return values
 
     @root_validator(skip_on_failure=True)
     def validate_esm2_contact_map_parameters(cls, values):
-        funcs = values['edge_build_functions']
+        funcs = values.get('edge_build_functions') or []
 
-        if not values.get('esm2_model_for_contact_map') and EdgeBuildFunction.ESM2_CONTACT_MAP in funcs:
-            raise ValueError("The parameter 'esm2_model_for_contact_map' is required.")
-        elif values.get('esm2_model_for_contact_map') and EdgeBuildFunction.ESM2_CONTACT_MAP not in funcs:
-            raise ValueError("'esm2_model_for_contact_map' is not required for the selected edge construction methods.")
+        if not funcs:
+            raise ValueError("'edge_build_functions' must contain at least one method.")
 
-        if not values.get('probability_threshold') and EdgeBuildFunction.ESM2_CONTACT_MAP in funcs:
-            raise ValueError("The parameter 'probability_threshold' is required.")
-        elif values.get('probability_threshold') and EdgeBuildFunction.ESM2_CONTACT_MAP not in funcs:
-            raise ValueError("'probability_threshold' is not required for the selected edge construction methods.")
+        is_esm2 = EdgeBuildFunction.ESM2_CONTACT_MAP in funcs
+
+        esm2_model = values.get('esm2_model_for_contact_map')
+        probability_threshold = values.get('probability_threshold')
+
+        required_params = {
+            'esm2_model_for_contact_map': esm2_model,
+            'probability_threshold': probability_threshold,
+        }
+
+        if is_esm2:
+            for param, val in required_params.items():
+                if val is None:
+                    raise ValueError(
+                        f"'{param}' is required when using the ESM2_CONTACT_MAP edge construction method."
+                    )
+        else:
+            for param, val in required_params.items():
+                if val is not None:
+                    raise ValueError(
+                        f"'{param}' is not applicable for the selected edge construction methods."
+                    )
 
         return values
 
     @root_validator(skip_on_failure=True)
     def validate_use_edge_attr(cls, values):
-        funcs = values['edge_build_functions']
-        if values.get('use_edge_attr'):
-            if not {EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
-                    EdgeBuildFunction.ESM2_CONTACT_MAP}.intersection(funcs) \
-                    and EdgeBuildFunction.SEQUENCE_BASED in funcs and values.get('distance_function') is None:
+        funcs = values.get('edge_build_functions') or []
+
+        if not funcs:
+            raise ValueError("'edge_build_functions' must contain at least one method.")
+
+        use_edge_attr = values.get('use_edge_attr')
+
+        # Methods that do NOT support use_edge_attr
+        unsupported_methods = {
+            EdgeBuildFunction.EMPTY_GRAPH,
+            EdgeBuildFunction.SEQUENCE_BASED,
+        }
+
+        # If ALL the selected methods are unsupported, raise error
+        if use_edge_attr:
+            if all(f in unsupported_methods for f in funcs):
                 raise ValueError(
-                    "The parameter 'use_edge_attr' is not required for the selected edge construction methods.")
+                    "'use_edge_attr=True' is not supported when using only edge construction methods "
+                    "that do not support edge attributes (e.g., EMPTY_GRAPH, SEQUENCE_BASED)."
+                )
+
         return values
 
     @root_validator(skip_on_failure=True)
