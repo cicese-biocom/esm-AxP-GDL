@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 import numpy as np
 from numpy import ndarray
 
@@ -45,25 +45,9 @@ class EmptyGraphDecorator(EdgeBuildFunctionDecorator):
 
 
 class SequenceBasedDecorator(EdgeBuildFunctionDecorator):
-    def __init__(self, edges_component: EdgesComponent, distance_context: DistanceContext, atom_coordinates: np.ndarray, sequence: str,
-                 use_edge_attr: bool):
+    def __init__(self, edges_component: EdgesComponent, sequence: str):
         super().__init__(edges_component)
-        self._distance_context = distance_context
-        self._atom_coordinates = atom_coordinates
         self._sequence = sequence
-        self._use_edge_attr = use_edge_attr
-
-    @property
-    def distance_context(self) -> DistanceContext:
-        return self._distance_context
-
-    @property
-    def use_edge_attr(self) -> bool:
-        return self._use_edge_attr
-    
-    @property
-    def atom_coordinates(self) -> ndarray:
-        return self._atom_coordinates
 
     @property
     def sequence(self) -> str:
@@ -73,25 +57,8 @@ class SequenceBasedDecorator(EdgeBuildFunctionDecorator):
         adjacency_matrix, weight_matrix = self._edges_component.compute_edges()
         number_of_amino_acid = len(self.sequence)
 
-        use_weights = self.use_edge_attr and self.distance_context
-        new_weights_matrix = None
-
-        if use_weights:
-            new_weights_matrix = np.zeros((number_of_amino_acid, number_of_amino_acid), dtype=np.float64)
-
         for i in range(number_of_amino_acid - 1):
             adjacency_matrix[i][i + 1] = 1
-
-            if use_weights:
-                dist = self.distance_context.compute(self.atom_coordinates[i], self.atom_coordinates[i + 1])
-                new_weights_matrix[i][i + 1] = dist
-
-        if use_weights:
-            new_weights_matrix = np.expand_dims(new_weights_matrix, -1)
-            if weight_matrix.size > 0:
-                weight_matrix = np.concatenate((weight_matrix, new_weights_matrix), axis=-1)
-            else:
-                weight_matrix = new_weights_matrix
 
         return adjacency_matrix, weight_matrix
 
@@ -170,46 +137,73 @@ class DistanceBasedThresholdDecorator(EdgeBuildFunctionDecorator):
 
 class EdgeBuildContext:
     @staticmethod
-    def compute_edges(args):
-        edge_build_functions, distance_function, distance_threshold, atom_coordinates, sequence, \
-        esm2_contact_map, probability_threshold, use_edge_attr = args
+    def compute_edges(args: Dict):
+        """
+        Constructs the list of edge-building functions based on the selected methods
+        and only the parameters provided in 'args'.
 
-        distance = None
-        if distance_function:
-            distance = DistanceContext(distance_function)
+        'Args' should be a dictionary with keys for the selected parameters.
+        Only the parameters relevant for each method are passed to its decorator.
+        """
+        edge_build_functions = args.get('edge_build_functions', [])
+        functions = []
 
-        functions = [
-            (EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
-             partial(DistanceBasedThresholdDecorator,
-                     edges_component=None,
-                     distance_context=distance,
-                     threshold=distance_threshold,
-                     atom_coordinates=atom_coordinates,
-                     use_edge_attr=use_edge_attr
-                     )),
-            (EdgeBuildFunction.ESM2_CONTACT_MAP,
-             partial(ESM2ContactMapDecorator,
-                     edges_component=None,
-                     esm2_contact_map=esm2_contact_map,
-                     probability_threshold=probability_threshold,
-                     use_edge_attr=use_edge_attr
-                     )),
-            (EdgeBuildFunction.SEQUENCE_BASED,
-             partial(SequenceBasedDecorator,
-                     edges_component=None,
-                     distance_context=distance,
-                     atom_coordinates=atom_coordinates,
-                     sequence=sequence,
-                     use_edge_attr=use_edge_attr
-                     ))
-            ,
-            (EdgeBuildFunction.EMPTY_GRAPH,
-             partial(EdgeBuildFunctionDecorator,
-                     edges_component=None,
-                     ))
-        ]
+        # Prepare distance context if distance_function is provided
+        distance_context = DistanceContext(args['distance_function']) if 'distance_function' in args else None
 
-        number_of_amino_acid = len(sequence)
+        if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in edge_build_functions:
+            functions.append(
+                (
+                    EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
+                    partial(
+                        DistanceBasedThresholdDecorator,
+                        edges_component=None,
+                        distance_context=distance_context,
+                        threshold=args.get('distance_threshold'),
+                        atom_coordinates=args.get('atom_coordinates'),
+                        use_edge_attr=args.get('use_edge_attr')
+                    )
+                )
+            )
+
+        if EdgeBuildFunction.ESM2_CONTACT_MAP in edge_build_functions:
+            functions.append(
+                (
+                    EdgeBuildFunction.ESM2_CONTACT_MAP,
+                    partial(
+                        ESM2ContactMapDecorator,
+                        edges_component=None,
+                        esm2_contact_map=args.get('esm2_contact_map'),
+                        probability_threshold=args.get('probability_threshold'),
+                        use_edge_attr=args.get('use_edge_attr')
+                    )
+                )
+            )
+
+        if EdgeBuildFunction.SEQUENCE_BASED in edge_build_functions:
+            functions.append(
+                (
+                    EdgeBuildFunction.SEQUENCE_BASED,
+                    partial(
+                        SequenceBasedDecorator,
+                        edges_component=None,
+                        sequence=args.get('sequence'),
+                    )
+                )
+            )
+
+        if EdgeBuildFunction.EMPTY_GRAPH in edge_build_functions:
+            functions.append(
+                (
+                    EdgeBuildFunction.EMPTY_GRAPH,
+                    partial(
+                        EdgeBuildFunctionDecorator,
+                        edges_component=None
+                    )
+                )
+            )
+
+        number_of_amino_acid = len(args.get('sequence'))
         edges_functions = EmptyEdgesComponent(number_of_amino_acid)
 
         for name in edge_build_functions:
