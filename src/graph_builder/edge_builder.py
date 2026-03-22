@@ -37,7 +37,7 @@ class BuildEdgesParameters(BaseParameters):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
-    tertiary_structure_method: Optional[str]
+    load_tertiary_structure: Optional[bool]
     pdb_path: Optional[Path]
     amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
@@ -47,7 +47,7 @@ class BuildEdgesParameters(BaseParameters):
     probability_threshold: Optional[PositiveFloat]
     use_edge_attr: Optional[bool]
     data: pd.DataFrame
-    esm2_contact_maps: List
+    esm2_contact_maps: Optional[List]
 
 
 class GenerateEdgesParameters(BaseParameters):
@@ -58,32 +58,50 @@ class GenerateEdgesParameters(BaseParameters):
     use_edge_attr: Optional[bool]
     atom_coordinates_matrices:  Optional[List]
     data: pd.DataFrame
-    esm2_contact_maps: List
+    esm2_contact_maps: Optional[List]
 
 
 def build_edges(build_edges_parameters: BuildEdgesParameters):
+    """
+    Builds adjacency and weight matrices for the given sequences and edge construction methods.
 
-    atom_coordinates_matrices = [None] * len(build_edges_parameters.data)
+    - Loads or predicts tertiary structures only if DISTANCE_BASED_THRESHOLD is selected.
+    - Applies random coordinates if requested.
+    - Calls _generate_edges with only the parameters required by the selected methods.
+    """
+    edge_methods = build_edges_parameters.edge_build_functions
 
-    if build_edges_parameters.pdb_path:
-        if build_edges_parameters.tertiary_structure_method:
-            atom_coordinates_matrices = predict_tertiary_structures(Predict3DStructuresParameters(**build_edges_parameters.dict()))
+    # Prepare atom coordinates only if DISTANCE_BASED_THRESHOLD is required
+    if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in edge_methods:
+        if build_edges_parameters.load_tertiary_structure:
+            atom_coordinates_matrices = load_tertiary_structures(
+                Load3DStructuresParameters(**build_edges_parameters.dict())
+            )
         else:
-            atom_coordinates_matrices = load_tertiary_structures(Load3DStructuresParameters(**build_edges_parameters.dict()))
+            atom_coordinates_matrices = predict_tertiary_structures(
+                Predict3DStructuresParameters(**build_edges_parameters.dict())
+            )
 
+        # Apply random coordinates; the function internally checks if it should modify anything
         atom_coordinates_matrices = _apply_random_coordinates(
             RandomCoordinatesParameters(
                 **build_edges_parameters.dict(),
-                atom_coordinates_matrices=atom_coordinates_matrices,
+                atom_coordinates_matrices=atom_coordinates_matrices
             )
         )
 
-    adjacency_matrices, weights_matrices = _generate_edges(
-        GenerateEdgesParameters(
+        generate_edges_params = GenerateEdgesParameters(
             **build_edges_parameters.dict(),
             atom_coordinates_matrices=atom_coordinates_matrices
         )
-    )
+    else:
+        # DISTANCE_BASED_THRESHOLD not selected → no atom coordinates
+        generate_edges_params = GenerateEdgesParameters(
+            **build_edges_parameters.dict()
+        )
+
+    # Generate edges passing only the parameters required per method
+    adjacency_matrices, weights_matrices = _generate_edges(generate_edges_params)
 
     return adjacency_matrices, weights_matrices
 
@@ -125,34 +143,72 @@ def _apply_random_coordinates(random_coordinates_parameters: RandomCoordinatesPa
 
 
 def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
+    """
+    Generates adjacency and weight matrices for all sequences in parallel,
+    constructing per-sequence argument dictionaries that include only
+    the parameters required by the selected edge_build_functions.
+    """
+
+    edge_methods = generate_edges_parameters.edge_build_functions
+    sequences = generate_edges_parameters.data['sequence']
     num_cores = multiprocessing.cpu_count()
 
-    sequences = generate_edges_parameters.data['sequence']
+    # Build iterables dynamically
+    iterables = [sequences]
+    keys = ['sequence']
 
-    args = [(generate_edges_parameters.edge_build_functions,
-             generate_edges_parameters.distance_function,
-             generate_edges_parameters.distance_threshold,
-             atom_coordinates,
-             sequence,
-             esm2_contact_map,
-             generate_edges_parameters.probability_threshold,
-             generate_edges_parameters.use_edge_attr
-             ) for (atom_coordinates, sequence, esm2_contact_map) in
-            zip(generate_edges_parameters.atom_coordinates_matrices,
-                sequences,
-                generate_edges_parameters.esm2_contact_maps
-                )]
+    if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in edge_methods:
+        iterables.append(generate_edges_parameters.atom_coordinates_matrices)
+        keys.append('atom_coordinates')
+
+    if EdgeBuildFunction.ESM2_CONTACT_MAP in edge_methods:
+        iterables.append(generate_edges_parameters.esm2_contact_maps)
+        keys.append('esm2_contact_map')
+
+    args_list = []
+
+    for values in zip(*iterables):
+        arg_dict = dict(zip(keys, values))
+        arg_dict['edge_build_functions'] = edge_methods
+
+        # DISTANCE_BASED_THRESHOLD parameters
+        if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in edge_methods:
+            arg_dict.update({
+                'distance_function': generate_edges_parameters.distance_function,
+                'distance_threshold': generate_edges_parameters.distance_threshold,
+                'use_edge_attr': generate_edges_parameters.use_edge_attr,
+            })
+
+        # ESM2_CONTACT_MAP parameters
+        if EdgeBuildFunction.ESM2_CONTACT_MAP in edge_methods:
+            arg_dict.update({
+                'esm2_contact_map': arg_dict['esm2_contact_map'],  # already mapped but explicit
+                'probability_threshold': generate_edges_parameters.probability_threshold,
+                'use_edge_attr': generate_edges_parameters.use_edge_attr,
+            })
+
+        # SEQUENCE_BASED → only sequence (already included)
+
+        # EMPTY_GRAPH → only sequence (already included)
+
+        args_list.append(arg_dict)
+
+    # Parallel execution
+    adjacency_matrices = []
+    weights_matrices = []
 
     with ProcessPoolExecutor(max_workers=num_cores) as pool:
-        with tqdm(range(len(args)), total=len(args), desc="Generating adjacency matrices", disable=False) as progress:
+        with tqdm(range(len(args_list)), total=len(args_list), desc="Generating adjacency matrices") as progress:
             futures = []
-            for arg in args:
-                future = pool.submit(EdgeBuildContext.compute_edges, arg)
+            for arg_dict in args_list:
+                future = pool.submit(EdgeBuildContext.compute_edges, arg_dict)
                 future.add_done_callback(lambda p: progress.update())
                 futures.append(future)
 
-            adjacency_matrices = [future.result()[0] for future in futures]
-            weights_matrices = [future.result()[1] for future in futures]
+            for future in futures:
+                adjacency, weights = future.result()
+                adjacency_matrices.append(adjacency)
+                weights_matrices.append(weights)
 
     return adjacency_matrices, weights_matrices
 

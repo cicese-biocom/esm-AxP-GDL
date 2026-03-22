@@ -28,7 +28,7 @@ class BuildGraphsParameters(BaseParameters):
     execution_mode: ExecutionMode
     validation_mode: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
-    tertiary_structure_method: Optional[str]
+    load_tertiary_structure: Optional[bool]
     pdb_path: Optional[Path]
     amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
@@ -55,7 +55,8 @@ def build_graphs(build_graphs_parameters: BuildGraphsParameters):
 
     # If you do not use the edge construction function esm2_contact_map
     if build_graphs_parameters.esm2_model_for_contact_map is None:
-        esm2_contact_maps = [None] * len(build_graphs_parameters.data)
+        # esm2_contact_maps = [None] * len(build_graphs_parameters.data)
+        esm2_contact_maps = None
 
     # If the ESM-2 model specified for constructing the graphs and for constructing the edges is different, the following is true
     elif build_graphs_parameters.esm2_model_for_contact_map.value != build_graphs_parameters.esm2_representation.value:

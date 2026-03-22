@@ -40,10 +40,12 @@ from src.modeling.executor import (
 )
 from src.modeling.prediction_maker import Prediction
 from src.modeling.model_selector import Model
+from src.params.execution import ExecutionParameters
 from src.utils.base_parameters import BaseParameters
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
-from src.workflow.params_setup import ExecutionParameters
+
+# from src.workflow.params_setup import ExecutionParameters
 
 
 class ModelParameters(BaseParameters):
