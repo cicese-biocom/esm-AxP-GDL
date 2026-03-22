@@ -6,7 +6,6 @@ import torch
 from pydantic.v1 import BaseModel, Field, root_validator, FilePath, DirectoryPath
 from dotenv import load_dotenv
 from src.utils.json import load_json
-from src.utils.path import check_file_exists
 from torch import hub
 
 

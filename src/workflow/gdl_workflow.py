@@ -122,7 +122,7 @@ class GDLWorkflow(ABC):
             outputs.append(output)
 
             # Step 10: Calculate applicability domain
-            domain = self.calculate_applicability_domain(ad_models, features)
+            domain = self.calculate_ad(ad_models, features)
             if domain is not None and not domain.empty:
                 domains.append(domain)
 
@@ -188,7 +188,7 @@ class GDLWorkflow(ABC):
     def init_gnn_model(self, graphs):
         pass
 
-    def calculate_applicability_domain(self, ad_models, features) -> pd.DataFrame:
+    def calculate_ad(self, ad_models, features) -> pd.DataFrame:
         pass
 
     def build_graphs(self, data):
@@ -392,11 +392,11 @@ class TrainingWorkflow(GDLWorkflow):
 
 class PredictionWorkflow(GDLWorkflow, ABC):
     def save_sequence_and_graph_features(self, calculated_features):
-        if self._parameters.get_ad:
+        if self._parameters.calculate_ad:
             super().save_sequence_and_graph_features(calculated_features)
 
     def build_models_for_applicability_domain(self):
-        if not self._parameters.get_ad:
+        if not self._parameters.calculate_ad:
             return None
 
         features_to_build_domain = pd.read_csv(self._parameters.feature_file_for_ad)
@@ -419,8 +419,9 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         return ad_models
 
     def calculate_sequence_and_graph_features(self, data: pd.DataFrame, graphs: List[Data], perplexities: pd.DataFrame) -> Optional[DataFrame]:
-        if self._parameters.get_ad:
+        if self._parameters.calculate_ad:
             return super().calculate_sequence_and_graph_features(data, graphs, perplexities)
+        return None
 
     def init_gnn_model(self, graphs: List):
         checkpoint = torch.load(self._parameters.gdl_model_path)
@@ -433,9 +434,9 @@ class PredictionWorkflow(GDLWorkflow, ABC):
         data = DataLoader(dataset=graphs, batch_size=self._parameters.batch_size)
         return executor.execute(data)
 
-    def calculate_applicability_domain(self, ad_models: List[Dict], features: pd.DataFrame) -> pd.DataFrame:
+    def calculate_ad(self, ad_models: List[Dict], features: pd.DataFrame) -> pd.DataFrame:
         domain = pd.DataFrame()
-        if self._parameters.get_ad:
+        if self._parameters.calculate_ad:
             instance_id = features.iloc[:, 0]
             features_to_execute = features.iloc[:, 1:]
 
@@ -461,7 +462,7 @@ class PredictionWorkflow(GDLWorkflow, ABC):
     
     def _add_applicability_domain_to_predictions(self, domains, predictions):
         # merge prediction to applicability domain
-        if self._parameters.get_ad:
+        if self._parameters.calculate_ad:
             predictions = (pd.merge(
                 predictions,
                 pd.concat(domains, axis=1),

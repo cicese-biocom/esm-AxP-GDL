@@ -29,6 +29,11 @@ class PredictionArguments(CommonArguments):
         description="Seed used during test/inference mode to enable deterministic behavior."
     )
 
+    calculate_ad: Optional[bool] = Field(
+        default=False,
+        description="True if specified, otherwise, False. True indicates to calculate applicability domain"
+    )
+
     methods_for_ad: Optional[List[str]] = Field(
         default=None,
         description=f"Methods to build applicability domain model. Options: {options_methods_for_ad}",
@@ -88,40 +93,53 @@ def _configure_seed(values):
 
 
 def _configure_applicability_domain(values):
-    values['get_ad'] = False
+    calculate_ad = values.get('calculate_ad')
+
+    params = ['methods_for_ad', 'feature_file_for_ad']
+
+    if not calculate_ad:
+        specified = [
+            p for p in params
+            if values.get(p) is not None and values.get(p) != ""
+        ]
+
+        if specified:
+            raise ValueError(
+                f"Parameters {specified} should not be provided when calculate_ad is False"
+            )
+        return values
+
+    # Required parameters when calculate_ad is True
+    missing = [
+        p for p in params
+        if values.get(p) is None or values.get(p) == ""
+    ]
+
+    if missing:
+        raise ValueError(
+            f"Missing required parameters for applicability domain: {missing}"
+        )
+
     features_collection = FeaturesCollectionLoader()
     ad_methods_collection = ADMethodCollectionLoader()
 
-    none_build_graphs_parameters = [
-        param for param in [
-            'methods_for_ad',
-            'feature_file_for_ad'
-        ] if values.get(param) is None
-    ]
+    # Validate methods
+    valid_methods = ad_methods_collection.get_method_names()
+    for method in values['methods_for_ad']:
+        if method not in valid_methods:
+            raise ValueError(
+                f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
+            )
 
-    if len(none_build_graphs_parameters) == 0:
-        values['get_ad'] = True
+    # Configure methods and features
+    values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
+        methods_for_ad=values['methods_for_ad'],
+        features_for_ad=features_collection.get_all_features()
+    )
 
-        valid_methods = ad_methods_collection.get_method_names()
-        for method in values['methods_for_ad']:
-            if method not in valid_methods:
-                raise ValueError(
-                    f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
-                )
-
-    elif len(none_build_graphs_parameters) == 2:
-        values['get_ad'] = False
-    else:
-        raise ValueError(
-            f"The following parameters must be specified: {', '.join(none_build_graphs_parameters)}"
-        )
-
-    if values.get('get_ad'):
-        values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
-            methods_for_ad=values['methods_for_ad'],
-            features_for_ad=features_collection.get_all_features()
-        )
-        values['feature_types_for_ad'] = features_collection.get_features_by_name(feature_types_for_ad)
+    values['feature_types_for_ad'] = features_collection.get_features_by_name(
+        feature_types_for_ad
+    )
 
     return values
 
