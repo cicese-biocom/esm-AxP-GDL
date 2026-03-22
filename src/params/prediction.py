@@ -46,7 +46,7 @@ class PredictionArguments(CommonArguments):
     )
 
     @root_validator(skip_on_failure=True)
-    def validate_and_configure(cls, values):
+    def validate_and_configure_prediction_mode(cls, values):
         _configure_execution_mode(values)
 
         _validate_applicability_domain_configuration(values)
@@ -89,22 +89,41 @@ def _configure_seed(values):
 
 def _configure_applicability_domain(values):
     values['get_ad'] = False
+    features_collection = FeaturesCollectionLoader()
+    ad_methods_collection = ADMethodCollectionLoader()
 
-    methods = values.get('methods_for_ad')
-    feature_file = values.get('feature_file_for_ad')
+    none_build_graphs_parameters = [
+        param for param in [
+            'methods_for_ad',
+            'feature_file_for_ad'
+        ] if values.get(param) is None
+    ]
 
-    if methods and feature_file:
+    if len(none_build_graphs_parameters) == 0:
         values['get_ad'] = True
 
-        features_collection = FeaturesCollectionLoader()
-        ad_methods_collection = ADMethodCollectionLoader()
+        valid_methods = ad_methods_collection.get_method_names()
+        for method in values['methods_for_ad']:
+            if method not in valid_methods:
+                raise ValueError(
+                    f"Invalid method: {method}. Allowed methods: {', '.join(valid_methods)}"
+                )
 
-        values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
-            methods_for_ad=methods,
-            features_for_ad=features_collection.get_all_features()
+    elif len(none_build_graphs_parameters) == 2:
+        values['get_ad'] = False
+    else:
+        raise ValueError(
+            f"The following parameters must be specified: {', '.join(none_build_graphs_parameters)}"
         )
 
+    if values.get('get_ad'):
+        values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
+            methods_for_ad=values['methods_for_ad'],
+            features_for_ad=features_collection.get_all_features()
+        )
         values['feature_types_for_ad'] = features_collection.get_features_by_name(feature_types_for_ad)
+
+    return values
 
 
 def _configure_output_directory(values):

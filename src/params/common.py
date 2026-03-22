@@ -11,8 +11,8 @@ from torch import hub
 
 
 class CommonArguments(BaseModel):
-    dataset: FilePath = Field(
-        description="Path to the input dataset in csv format"
+    dataset: Path = Field(
+        description="Path to the input dataset (CSV for training/test, CSV or FASTA for inference)"
     )
 
     load_tertiary_structure: Optional[bool] = Field(
@@ -39,7 +39,7 @@ class CommonArguments(BaseModel):
     )
 
     @root_validator(skip_on_failure=True)
-    def process_common_steps(cls, values):
+    def validate_and_configure_common_params(cls, values):
         """
         Executes all steps for common arguments in a clear sequence.
         Each step is a helper that may validate or configure a value.
@@ -50,9 +50,6 @@ class CommonArguments(BaseModel):
 
         # Step 2: Parse JSON CLI overrides if provided
         cls._load_command_line_json(values)
-
-        # Step 3: Resolve and validate a dataset path
-        cls._resolve_and_validate_dataset_path(values)
 
         # Step 4: Resolve and validate a PDB path if distance-based graph is used
         cls._resolve_pdb_path_if_needed(values)
@@ -100,15 +97,6 @@ class CommonArguments(BaseModel):
                 sys.argv = cls._dict_to_argv(sys.argv[0], {**values, **argv})
             except Exception as e:
                 raise ValueError(f"Error loading JSON parameters from '{json_path}': {e}")
-
-    @classmethod
-    def _resolve_and_validate_dataset_path(cls, values):
-        """
-        Resolves dataset to an absolute path and ensures the file exists.
-        """
-        dataset = values.get("dataset")
-        if dataset:
-            values["dataset"] = check_file_exists(dataset)
 
     @classmethod
     def _resolve_pdb_path_if_needed(cls, values):

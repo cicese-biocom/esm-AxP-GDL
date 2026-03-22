@@ -18,7 +18,7 @@ from src.config.types import (
     GDLArchitecture,
 )
 from src.feature_extraction.collection import FeaturesCollectionLoader
-from src.utils.path import check_directory_empty, get_output_path_settings
+from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists
 
 options_edge_build_functions = ", ".join(f"'{e.value}'" for e in EdgeBuildFunction)
 
@@ -78,13 +78,15 @@ class TrainingArguments(CommonArguments):
     numbers_of_class: Optional[PositiveInt] = Field(default=None)
 
     @root_validator(skip_on_failure=True)
-    def validate_and_configure(cls, values):
+    def validate_and_configure_training_mode(cls, values):
         _configure_execution_mode(values)
 
         _validate_edge_build_configuration(values)
 
         _validate_validation_mode_configuration(values)
         _validate_dataset_split_configuration(values)
+
+        _validate_dataset_csv(values)
 
         _configure_modeling_task(values)
         _configure_optimizer(values)
@@ -256,3 +258,16 @@ def _validate_dataset_split_configuration(values):
         raise ValueError("split_training_fraction required")
     if not values.get('split_method') and values.get('split_training_fraction'):
         raise ValueError("split_training_fraction not required")
+
+
+def _validate_dataset_csv(values):
+    """
+    Validates that dataset exists and is a CSV file.
+    """
+    dataset = values.get("dataset")
+    dataset_path = check_file_exists(dataset)
+    if dataset_path.suffix.lower() != ".csv":
+        raise ValueError("Dataset must be a CSV file for training")
+    values["dataset"] = dataset_path
+
+    values["dataset_file_type"] = "CSV"

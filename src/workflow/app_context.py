@@ -2,7 +2,7 @@ from injector import Injector
 
 from src.architectures.gnn import GNNFactory
 from src.config.types import ModelingTask, ExecutionMode
-from src.data_processing.data_loader import DataLoaderContext, CSVLoader
+from src.data_processing.data_loader import DataLoaderContext, CSVLoader, FastaLoader
 from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor, \
     TrainingDatasetProcessor, TestDatasetProcessor
 from src.workflow.execution_factory import (
@@ -18,6 +18,7 @@ class ApplicationContext:
         execution_mode = kwargs.get('execution_mode')
         modeling_task = kwargs.get('modeling_task')
         classes = kwargs.get('classes')
+        dataset_file_type = kwargs.get('dataset_file_type')
 
         self.__injector = Injector()
 
@@ -62,10 +63,15 @@ class ApplicationContext:
             self.__target_feature_validator = ml_factory.create_target_feature_validator(execution_mode)
             self.__injector.binder.bind(DatasetProcessorContext, DatasetProcessor)
 
-        self.__injector.binder.bind(DataLoaderContext, CSVLoader)
+        if dataset_file_type == "CSV":
+            self.__injector.binder.bind(DataLoaderContext, CSVLoader)
+        else:
+            self.__injector.binder.bind(DataLoaderContext, FastaLoader)
 
-        self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
         self.__dataset_loader = self.__injector.get(DataLoaderContext)
+        self.__dataset_processor = self.__injector.get(DatasetProcessorContext)
+
+
 
     @property
     def metrics_calculator(self):

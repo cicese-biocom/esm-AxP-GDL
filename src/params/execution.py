@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from src.config.types import ExecutionMode
 from src.params.inference import InferenceArguments
-from src.params.prediction import PredictionArguments
+from src.params.test import TestArguments
 from src.params.training import TrainingArguments
 from src.utils.json import save_json
 
@@ -14,11 +14,11 @@ class ExecutionParameters:
     def __init__(self, execution_mode: ExecutionMode):
         self._model = {
             ExecutionMode.TRAIN: TrainingArguments,
-            ExecutionMode.TEST: PredictionArguments,
+            ExecutionMode.TEST: TestArguments,
             ExecutionMode.INFERENCE: InferenceArguments
         }[execution_mode]
 
-    def get_parameters(self) -> Union[TrainingArguments, PredictionArguments, InferenceArguments]:
+    def get_parameters(self) -> Union[TrainingArguments, TestArguments, InferenceArguments]:
         load_dotenv(dotenv_path='.env')
 
         parser = pydantic_argparse.ArgumentParser(model=self._model, exit_on_error=True)

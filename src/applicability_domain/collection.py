@@ -26,7 +26,7 @@ class ADMethodCollectionLoader:
         list[dict[str, Union[list[dict], Any]]], set[Any]]:
         valid_method_ids = {method['method_id'] for method in self.methods_for_ad}
 
-        provided_methods = {method.value for method in methods_for_ad}
+        provided_methods = {method for method in methods_for_ad}
         invalid_methods = provided_methods - valid_method_ids
 
         if invalid_methods:
