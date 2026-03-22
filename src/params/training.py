@@ -54,28 +54,67 @@ class TrainingArguments(CommonArguments):
         description="Probability threshold for constructing a graph based on ESM-2 contact maps"
     )
 
-    number_of_heads: Optional[PositiveInt] = Field(default=8)
-    hidden_layer_dimension: Optional[PositiveInt] = Field(default=128)
-    add_self_loops: Optional[bool] = Field(default=False)
-    use_edge_attr: Optional[bool] = Field(default=False)
+    number_of_heads: Optional[PositiveInt] = Field(default=8, description="Number of heads")
+    hidden_layer_dimension: Optional[PositiveInt] = Field(default=128, description="Hidden layer dimension")
 
-    learning_rate: Optional[PositiveFloat] = Field(default=1e-4)
-    dropout_rate: Optional[PositiveFloat] = Field(default=0.25)
-    pooling_ratio: Optional[PositiveFloat] = Field(default=10)
-    number_of_epochs: Optional[PositiveInt] = Field(default=200)
+    add_self_loops: Optional[bool] = Field(
+        default=False,
+        description="True if specified, otherwise, False. True indicates to use auto loops in attention layer"
+    )
 
-    save_ckpt_per_epoch: Optional[bool] = Field(default=False)
+    use_edge_attr: Optional[bool] = Field(
+        default=False,
+        description="True if specified, otherwise, False. True indicates to use edge attributes in graph learning"
+    )
 
-    validation_mode: Optional[ValidationMode] = Field(default=None)
-    randomness_percentage: Optional[PositiveFloat] = Field(default=None, gt=0.0, lt=1.0)
+    learning_rate: Optional[PositiveFloat] = Field(default=1e-4, description="Learning rate")
+    dropout_rate: Optional[PositiveFloat] = Field(default=0.25, description="Dropout rate")
+    pooling_ratio: Optional[PositiveFloat] = Field(default=10, description='Pooling ratio')
+    number_of_epochs: Optional[PositiveInt] = Field(default=200, description="Maximum number of epochs")
 
-    split_method: Optional[SplitMethod] = Field(default=None)
-    split_training_fraction: Optional[PositiveFloat] = Field(default=None)
+    save_ckpt_per_epoch: Optional[bool] = Field(
+        default=False,
+        description="True if specified, otherwise, False. True indicates that the models of every epoch will be saved. "
+                    "False indicates that the latest model and the best model regarding the MCC metric will be saved"
+    )
 
-    gdl_architecture: Optional[GDLArchitecture] = Field(default=GDLArchitecture.GATV1)
+    validation_mode: Optional[ValidationMode] = Field(
+        default=None,
+        description='Criteria to validator that the predictions of the models are not by chance'
+    )
 
-    modeling_task: ModelingTask
-    numbers_of_class: Optional[PositiveInt] = Field(default=None)
+    randomness_percentage: Optional[PositiveFloat] = Field(
+        default=None,
+        description="Percentage of rows to be randomly generated. This parameter and the --validation_mode parameter are used together",
+        gt=0.0,
+        lt=1.0
+    )
+
+    split_method: Optional[SplitMethod] = Field(
+        default=None,
+        description='Method to split an input dataset in training and validation sets. This parameter is used when an used-defined validation set is not given. To use this parameter, all no-test instances must be marked as training, i.e., value 1 in the input CSV file.'
+    )
+
+    split_training_fraction: Optional[PositiveFloat] = Field(
+        default=None,
+        description="If the --split_method is specified, this parameter represents the percentage of instances to be "
+                    "considered as training. The other ones will be allocated in the validation set. It takes a value "
+                    "between 0.6 and 0.9."
+    )
+
+    gdl_architecture: Optional[GDLArchitecture] = Field(
+        default=GDLArchitecture.GATV1,
+        description='GDL architectures to use'
+    )
+
+    modeling_task: ModelingTask = Field(
+        description="Type of modeling task to execute"
+    )
+
+    numbers_of_class: Optional[PositiveInt] = Field(
+        default=None,
+        description="Number of classes to predict (required if modeling_task is 'multiclass')."
+    )
 
     @root_validator(skip_on_failure=True)
     def validate_and_configure_training_mode(cls, values):
