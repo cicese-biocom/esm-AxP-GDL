@@ -18,7 +18,7 @@ def check_file_exists(file_path: Path) -> Path:
     return file_path.resolve()
 
 
-def check_file_format(file_path: Path) -> Path:
+def check_file_format(file_path: Path) -> str:
     file_extension = file_path.suffix
     if not file_extension.endswith(('.csv', '.fasta')):
         raise ValueError(f"Unsupported file format. Only csv and fasta files are supported.")
