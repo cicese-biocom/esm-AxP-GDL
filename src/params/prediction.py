@@ -156,11 +156,28 @@ def _configure_output_directory(values):
 
 
 def _load_model_parameters(values):
-    checkpoint_path: Path = values.get('gdl_model_path')
+    """
+    Loads model parameters from the checkpoint specified in 'gdl_model_path'.
+    Validates that the file exists and has a '.pt' extension.
+    """
 
-    if checkpoint_path and checkpoint_path.exists():
-        checkpoint = torch.load(checkpoint_path)
-        values.update(checkpoint.get('parameters', {}))
+    checkpoint_path: Path = Path(values['gdl_model_path'])
+
+    # Validate file extension
+    if checkpoint_path.suffix != ".pt":
+        raise ValueError(
+            f"Invalid checkpoint file: '{checkpoint_path}'. Expected a '.pt' file."
+        )
+
+    # Validate existence
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"Checkpoint file does not exist: '{checkpoint_path}'")
+
+    # Load checkpoint and update values
+    checkpoint = torch.load(checkpoint_path)
+    values.update(checkpoint.get('parameters', {}))
+
+    return values
 
 
 # =========================
