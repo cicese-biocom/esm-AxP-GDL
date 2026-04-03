@@ -214,13 +214,7 @@ def _load_feature_configuration(values):
     values['feature_types_for_ad'] = loader.get_all_features()
 
 
-def _configure_edge_build_runtime(values, funcs):
-    if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs:
-        pdb_path = values.get('pdb_path')
-        if pdb_path:
-            resolved = Path(pdb_path).resolve()
-            resolved.mkdir(parents=True, exist_ok=True)
-            values['pdb_path'] = resolved
+
 
 
 # =========================
@@ -238,8 +232,6 @@ def _validate_edge_build_configuration(values):
 
     _validate_edge_build_parameters(funcs, values)
     _validate_edge_attr_usage(funcs, values)
-
-    _configure_edge_build_runtime(values, funcs)
 
 
 def _validate_edge_build_functions_not_empty(funcs, validation_method):
@@ -284,7 +276,9 @@ def _validate_edge_build_parameters(funcs, values):
         EdgeBuildFunction.DISTANCE_BASED_THRESHOLD: [
             'distance_function',
             'distance_threshold',
-            'pdb_path'
+            'pdb_path',
+            'load_tertiary_structure'
+
         ],
         EdgeBuildFunction.ESM2_CONTACT_MAP: [
             'esm2_model_for_contact_map',

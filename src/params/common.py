@@ -5,6 +5,8 @@ from typing import Optional
 import torch
 from pydantic.v1 import BaseModel, Field, root_validator, FilePath, DirectoryPath
 from dotenv import load_dotenv
+
+from src.config.types import EdgeBuildFunction
 from src.utils.json import load_json
 from torch import hub
 
@@ -53,10 +55,13 @@ class CommonArguments(BaseModel):
         # Step 4: Resolve and validate a PDB path if distance-based graph is used
         cls._resolve_pdb_path_if_needed(values)
 
-        # Step 5: Validate environment-dependent files
+        # Step 5: Resolve and validate load_tertiary_structure if distance-based graph is used
+        cls._resolve_load_tertiary_structure_if_needed(values)
+
+        # Step 6: Validate environment-dependent files
         cls._validate_env_files()
 
-        # Step 6: Configure device
+        # Step 7: Configure device
         cls._configure_computational_device(values)
 
         return values
@@ -103,11 +108,36 @@ class CommonArguments(BaseModel):
         Resolves a PDB path if distance-based graph method is used.
         Creates the directory if it does not exist.
         """
-        pdb_path = values.get("pdb_path")
-        if pdb_path:
-            pdb_path = Path(pdb_path).resolve()
-            pdb_path.mkdir(parents=True, exist_ok=True)
-            values["pdb_path"] = pdb_path
+
+        funcs = values.get('edge_build_functions') or []
+
+        if EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in funcs:
+            pdb_path = values.get('pdb_path')
+            if pdb_path:
+                resolved = Path(pdb_path).resolve()
+                resolved.mkdir(parents=True, exist_ok=True)
+                values['pdb_path'] = resolved
+
+    @classmethod
+    def _resolve_load_tertiary_structure_if_needed(cls, values):
+        """
+        Validates and resolves the 'load_tertiary_structure' parameter based on the
+        selected edge_build_functions.
+
+        - If DISTANCE_BASED_THRESHOLD is not selected, 'load_tertiary_structure'
+          must not be provided and will be set to None.
+        """
+
+        edge_methods = values.get('edge_build_functions') or []
+        load_tertiary_structure = values.get('load_tertiary_structure')
+
+        uses_distance_based = EdgeBuildFunction.DISTANCE_BASED_THRESHOLD in edge_methods
+
+        if not uses_distance_based:
+            if load_tertiary_structure is False:
+                values['load_tertiary_structure'] = None
+
+        return values
 
     @classmethod
     def _validate_env_files(cls):
