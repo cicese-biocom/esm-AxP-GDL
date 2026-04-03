@@ -248,28 +248,28 @@ def validate_edge_build_funcs_compatibility_with_validation_method(
     funcs: List["EdgeBuildFunction"],
     validation_method: "ValidationMode"
 ):
+    if validation_method:
+        compatibility: Dict["ValidationMode", Set["EdgeBuildFunction"]] = {
+            ValidationMode.RANDOM_GRAPHS: frozenset(),
 
-    compatibility: Dict["ValidationMode", Set["EdgeBuildFunction"]] = {
-        ValidationMode.RANDOM_GRAPHS: frozenset(),
+            ValidationMode.RANDOM_COORDINATES: {
+                EdgeBuildFunction.DISTANCE_BASED_THRESHOLD
+            },
 
-        ValidationMode.RANDOM_COORDINATES: {
-            EdgeBuildFunction.DISTANCE_BASED_THRESHOLD
-        },
-
-        ValidationMode.RANDOM_EMBEDDINGS: {
-            EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
-            EdgeBuildFunction.ESM2_CONTACT_MAP,
-            EdgeBuildFunction.SEQUENCE_BASED
+            ValidationMode.RANDOM_EMBEDDINGS: {
+                EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
+                EdgeBuildFunction.ESM2_CONTACT_MAP,
+                EdgeBuildFunction.SEQUENCE_BASED
+            }
         }
-    }
 
-    incompatible_funcs = [f for f in funcs if f not in compatibility[validation_method]]
+        incompatible_funcs = [f for f in funcs if f not in compatibility[validation_method]]
 
-    if incompatible_funcs:
-        raise ValueError(
-            f"The validation method '{validation_method.value}' is not compatible "
-            f"with the following edge build functions: {[f.value for f in incompatible_funcs]}"
-        )
+        if incompatible_funcs:
+            raise ValueError(
+                f"The validation method '{validation_method.value}' is not compatible "
+                f"with the following edge build functions: {[f.value for f in incompatible_funcs]}"
+            )
 
 def _validate_edge_build_parameters(funcs, values):
     required_params_by_method = {
