@@ -171,7 +171,9 @@ def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
 
     args_list = []
 
-    for values in zip(*iterables):
+    base_seed = generate_edges_parameters.seed_for_edge_creation
+
+    for i, values in enumerate(zip(*iterables)):
         arg_dict = dict(zip(keys, values))
         arg_dict['edge_build_functions'] = edge_methods
 
@@ -191,10 +193,12 @@ def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
                 'use_edge_attr': generate_edges_parameters.use_edge_attr,
             })
         # RANDOM_GRAPHS parameters
+        seed = None if base_seed is None else base_seed + i
+
         if ValidationMode.RANDOM_GRAPHS in edge_methods:
             arg_dict.update({
                 'probability_for_edge_creation': generate_edges_parameters.probability_for_edge_creation,
-                'seed_for_edge_creation': generate_edges_parameters.seed_for_edge_creation
+                'seed_for_edge_creation': seed
             })
 
         # SEQUENCE_BASED → only sequence (already included)
