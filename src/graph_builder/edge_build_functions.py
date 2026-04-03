@@ -1,8 +1,10 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
+
+import networkx as nx
 import numpy as np
 from numpy import ndarray
 
-from src.config.types import EdgeBuildFunction
+from src.config.types import EdgeBuildFunction, ValidationMode
 from functools import partial
 
 from src.graph_builder.distance_functions import DistanceContext
@@ -60,7 +62,7 @@ class SequenceBasedDecorator(EdgeBuildFunctionDecorator):
         for i in range(number_of_amino_acid - 1):
             adjacency_matrix[i][i + 1] = 1
 
-        return adjacency_matrix, weight_matrix
+        return adjacency_matrix.astype(np.float32), weight_matrix
 
 
 class ESM2ContactMapDecorator(EdgeBuildFunctionDecorator):
@@ -94,7 +96,7 @@ class ESM2ContactMapDecorator(EdgeBuildFunctionDecorator):
             else:
                 return adjacency_matrix, new_weights_matrix
         else:
-            return adjacency_matrix, weight_matrix
+            return adjacency_matrix.astype(np.float32), weight_matrix
 
 
 class DistanceBasedThresholdDecorator(EdgeBuildFunctionDecorator):
@@ -131,8 +133,57 @@ class DistanceBasedThresholdDecorator(EdgeBuildFunctionDecorator):
             else:
                 return adjacency_matrix, new_weights_matrix
         else:
-            return adjacency_matrix, weight_matrix
+            return adjacency_matrix.astype(np.float32), weight_matrix
 
+
+class ErdosRenyiDecorator(EdgeBuildFunctionDecorator):
+    """
+    Decorator that generates edges for a sequence according to the Erdos-Rényi random graph model.
+    """
+
+    def __init__(
+        self,
+        edges_component: EdgesComponent,
+        sequence: str,
+        probability_for_edge_creation: float = 0.5,
+        seed_for_edge_creation: Optional[int] = None
+    ):
+        super().__init__(edges_component)
+        self._sequence = sequence
+        self._probability_for_edge_creation = probability_for_edge_creation
+        self._seed_for_edge_creation = seed_for_edge_creation
+
+    @property
+    def sequence(self) -> str:
+        return self._sequence
+
+    def compute_edges(self) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """
+        Returns the adjacency matrix and weight matrix for the sequence.
+        - Existing edges from the wrapped component are preserved.
+        - Additional edges are generated using an Erdős–Rényi random graph.
+        - The final adjacency matrix is the union of both edge sets.
+        - The weight matrix is delegated to the wrapped component.
+        """
+
+        # Get adjacency and weights from the wrapped component
+        adjacency_matrix, weight_matrix = self._edges_component.compute_edges()
+        n_nodes = len(self.sequence)
+
+        # Generate Erdős–Rényi random graph
+        random_graph = nx.erdos_renyi_graph(
+            n=n_nodes,
+            p=self._probability_for_edge_creation,
+            seed=self._seed_for_edge_creation
+        )
+
+        # Convert random graph to adjacency matrix
+        random_adj = nx.to_numpy_array(random_graph, dtype=np.float32)
+
+        # Combine both adjacency matrices (logical OR → union of edges)
+        combined_adj = np.maximum(adjacency_matrix, random_adj)
+
+        return combined_adj.astype(np.float32), weight_matrix
 
 
 class EdgeBuildContext:
@@ -192,7 +243,21 @@ class EdgeBuildContext:
                 )
             )
 
-        if EdgeBuildFunction.EMPTY_GRAPH in edge_build_functions:
+        if ValidationMode.RANDOM_GRAPHS in edge_build_functions:
+            functions.append(
+                (
+                    ValidationMode.RANDOM_GRAPHS,
+                    partial(
+                        ErdosRenyiDecorator,
+                        edges_component=None,
+                        sequence=args.get('sequence'),
+                        probability_for_edge_creation=args.get('probability_for_edge_creation'),
+                        seed_for_edge_creation=args.get('seed_for_edge_creation')
+                    )
+                )
+            )
+
+        if EdgeBuildFunction.EMPTY_GRAPH == edge_build_functions:
             functions.append(
                 (
                     EdgeBuildFunction.EMPTY_GRAPH,

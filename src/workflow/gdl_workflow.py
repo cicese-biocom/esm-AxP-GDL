@@ -45,12 +45,10 @@ from src.utils.base_parameters import BaseParameters
 from src.workflow.app_context import ApplicationContext
 from src.workflow.logging import Logging
 
-# from src.workflow.params_setup import ExecutionParameters
-
 
 class ModelParameters(BaseParameters):
     esm2_representation: ESM2Representation
-    edge_build_functions: List[EdgeBuildFunction]
+    edge_build_functions: Optional[List[EdgeBuildFunction]]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
@@ -60,7 +58,7 @@ class ModelParameters(BaseParameters):
     add_self_loops: bool
     use_edge_attr: bool
     dropout_rate: PositiveFloat
-    validation_mode: Optional[ValidationMode]
+    validation_method: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
     modeling_task: ModelingTask
     numbers_of_class: PositiveInt

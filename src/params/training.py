@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Set
 
 from pydantic import PositiveInt, PositiveFloat, confloat
 from pydantic.v1 import Field, root_validator
@@ -29,7 +29,7 @@ class TrainingArguments(CommonArguments):
         description='ESM-2 representation to be used'
     )
 
-    edge_build_functions: List[EdgeBuildFunction] = Field(
+    edge_build_functions: Optional[List[EdgeBuildFunction]] = Field(
         description=f"Functions to build edges. Options: {options_edge_build_functions}",
         unique_items=True
     )
@@ -78,16 +78,44 @@ class TrainingArguments(CommonArguments):
                     "False indicates that the latest model and the best model regarding the MCC metric will be saved"
     )
 
-    validation_mode: Optional[ValidationMode] = Field(
+    validation_method: Optional[ValidationMode] = Field(
         default=None,
-        description='Criteria to validator that the predictions of the models are not by chance'
+        description=(
+            "Validation strategy to assess whether model predictions are not obtained by chance. Options: "
+            "'random_coordinates' (randomizes node geometric coordinates to test structural dependence), "
+            "'random_embeddings' (shuffles node features to assess feature importance), "
+            "'random_graphs' (uses Erdős-Rényi random graphs as a baseline for graph structure relevance). "
+            "If not set, no validation is applied."
+        )
     )
 
     randomness_percentage: Optional[PositiveFloat] = Field(
         default=None,
-        description="Percentage of rows to be randomly generated. This parameter and the --validation_mode parameter are used together",
+        description=(
+            "Percentage of nodes to be perturbed during validation. For 'random_embeddings', it defines "
+            "the fraction of node features to shuffle; for 'random_coordinates', the fraction of node "
+            "geometric coordinates to randomize."
+        ),
         gt=0.0,
         lt=1.0
+    )
+
+    probability_for_edge_creation: Optional[PositiveFloat] = Field(
+        default=None,
+        description=(
+            "Probability of edge creation (p) in the Erdős-Rényi model used in 'random_graphs'. "
+            "Controls the density of the generated random graph."
+        ),
+        gt=0.0,
+        lt=1.0
+    )
+
+    seed_for_edge_creation: Optional[PositiveInt] = Field(
+        default=None,
+        description=(
+            "Random seed used for reproducible generation of edges in the Erdős-Rényi graph for "
+            "'random_graphs' validation."
+        )
     )
 
     split_method: Optional[SplitMethod] = Field(
@@ -122,7 +150,7 @@ class TrainingArguments(CommonArguments):
 
         _validate_edge_build_configuration(values)
 
-        _validate_validation_mode_configuration(values)
+        _validate_validation_method_configuration(values)
         _validate_dataset_split_configuration(values)
 
         _validate_dataset_csv(values)
@@ -201,8 +229,11 @@ def _configure_edge_build_runtime(values, funcs):
 
 def _validate_edge_build_configuration(values):
     funcs = values.get('edge_build_functions') or []
+    validation_method = values.get('validation_method')
 
-    _validate_edge_build_functions_not_empty(funcs)
+    validate_edge_build_funcs_compatibility_with_validation_method(funcs, validation_method)
+
+    _validate_edge_build_functions_not_empty(funcs, validation_method)
     _validate_edge_build_functions_compatibility(funcs)
 
     _validate_edge_build_parameters(funcs, values)
@@ -211,8 +242,8 @@ def _validate_edge_build_configuration(values):
     _configure_edge_build_runtime(values, funcs)
 
 
-def _validate_edge_build_functions_not_empty(funcs):
-    if not funcs:
+def _validate_edge_build_functions_not_empty(funcs, validation_method):
+    if not funcs and not validation_method:
         raise ValueError("'edge_build_functions' must contain at least one method.")
 
 
@@ -220,6 +251,33 @@ def _validate_edge_build_functions_compatibility(funcs):
     if EdgeBuildFunction.EMPTY_GRAPH in funcs and len(funcs) > 1:
         raise ValueError("EMPTY_GRAPH cannot be combined with other methods.")
 
+
+def validate_edge_build_funcs_compatibility_with_validation_method(
+    funcs: List["EdgeBuildFunction"],
+    validation_method: "ValidationMode"
+):
+
+    compatibility: Dict["ValidationMode", Set["EdgeBuildFunction"]] = {
+        ValidationMode.RANDOM_GRAPHS: frozenset(),
+
+        ValidationMode.RANDOM_COORDINATES: {
+            EdgeBuildFunction.DISTANCE_BASED_THRESHOLD
+        },
+
+        ValidationMode.RANDOM_EMBEDDINGS: {
+            EdgeBuildFunction.DISTANCE_BASED_THRESHOLD,
+            EdgeBuildFunction.ESM2_CONTACT_MAP,
+            EdgeBuildFunction.SEQUENCE_BASED
+        }
+    }
+
+    incompatible_funcs = [f for f in funcs if f not in compatibility[validation_method]]
+
+    if incompatible_funcs:
+        raise ValueError(
+            f"The validation method '{validation_method.value}' is not compatible "
+            f"with the following edge build functions: {[f.value for f in incompatible_funcs]}"
+        )
 
 def _validate_edge_build_parameters(funcs, values):
     required_params_by_method = {
@@ -285,11 +343,92 @@ def _validate_edge_attr_usage(funcs, values):
         values['use_edge_attr'] = False
 
 
-def _validate_validation_mode_configuration(values):
-    if values.get('validation_mode') and not values.get('randomness_percentage'):
-        raise ValueError("randomness_percentage required")
-    if not values.get('validation_mode') and values.get('randomness_percentage'):
-        raise ValueError("randomness_percentage not required")
+def _validate_validation_method_configuration(values):
+    validation_method = values.get('validation_method')
+
+    # Required params ONLY for methods that truly need them
+    required_params_by_method = {
+        ValidationMode.RANDOM_EMBEDDINGS: [
+            'randomness_percentage',
+        ],
+        ValidationMode.RANDOM_COORDINATES: [
+            'randomness_percentage'
+        ],
+        # RANDOM_GRAPHS -> no required params
+    }
+
+    # Optional params allowed per method
+    optional_params_by_method = {
+        ValidationMode.RANDOM_GRAPHS: [
+            'probability_for_edge_creation',
+            'seed_for_edge_creation'
+        ]
+    }
+
+    all_validation_params = {
+        'randomness_percentage',
+        'probability_for_edge_creation',
+        'seed_for_edge_creation'
+    }
+
+    provided_params = [
+        p for p in all_validation_params
+        if values.get(p) is not None
+    ]
+
+    # --- Case 1: No validation mode but params were provided ---
+    if validation_method is None:
+        if provided_params:
+            raise ValueError(
+                "Validation parameters were provided but 'validation_method' is not specified:\n"
+                + ", ".join(provided_params)
+            )
+        return values
+
+    # --- Case 2: Validate required params ---
+    required_params = required_params_by_method.get(validation_method, [])
+
+    missing = [
+        p for p in required_params
+        if values.get(p) is None
+    ]
+
+    # --- Case 3: Validate unsupported params ---
+    allowed_params = set(required_params)
+
+    # Add optional params if any
+    allowed_params.update(optional_params_by_method.get(validation_method, []))
+    allowed_params.add('validation_method')
+
+    invalid = [
+        p for p in provided_params
+        if p not in allowed_params
+    ]
+
+    # --- Consolidated error ---
+    if missing or invalid:
+        error_lines = []
+
+        if missing:
+            error_lines.append(
+                f"Missing required parameters for {validation_method.name}: "
+                + ", ".join(missing)
+            )
+
+        if invalid:
+            error_lines.append(
+                f"Parameters not supported by {validation_method.name}: "
+                + ", ".join(invalid)
+            )
+
+        raise ValueError("\n".join(error_lines))
+
+    # --- Defaults for RANDOM_GRAPHS ---
+    if validation_method == ValidationMode.RANDOM_GRAPHS:
+        if not values.get('probability_for_edge_creation'):
+            values['probability_for_edge_creation'] = 0.5
+
+    return values
 
 
 def _validate_dataset_split_configuration(values):

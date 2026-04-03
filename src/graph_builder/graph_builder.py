@@ -5,8 +5,8 @@ import torch
 from torch_geometric.data import Data
 
 from pathlib import Path
-from typing import List, Optional, Dict
-from pydantic.v1 import PositiveFloat
+from typing import List, Optional, Dict, Union
+from pydantic.v1 import PositiveFloat, PositiveInt
 
 from src.graph_builder.edge_builder import build_edges, BuildEdgesParameters
 from src.graph_builder.node_feature_builder import compute_esm2_features, ESM2FeatureComputationParameters
@@ -26,13 +26,13 @@ class BuildGraphsParameters(BaseParameters):
     esm2_model_for_contact_map: Optional[ESM2ModelForContactMap]
     esm2_representation: ESM2Representation
     execution_mode: ExecutionMode
-    validation_mode: Optional[ValidationMode]
+    validation_method: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
     load_tertiary_structure: Optional[bool]
     pdb_path: Optional[Path]
     amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
-    edge_build_functions: List[EdgeBuildFunction]
+    edge_build_functions: Optional[Union[List[EdgeBuildFunction], List[ValidationMode]]]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
@@ -40,10 +40,12 @@ class BuildGraphsParameters(BaseParameters):
     data: pd.DataFrame
     device: torch.device
     use_edge_attr: bool
+    probability_for_edge_creation: Optional[PositiveFloat]
+    seed_for_edge_creation: Optional[PositiveInt]
 
 
 def build_graphs(build_graphs_parameters: BuildGraphsParameters):
-    # nodes
+    # nodes (features)
     nodes_features, esm2_contact_maps, perplexities_1 = compute_esm2_features(
         ESM2FeatureComputationParameters(
             **build_graphs_parameters.dict()
@@ -51,11 +53,13 @@ def build_graphs(build_graphs_parameters: BuildGraphsParameters):
     )
 
     # edges
+    if build_graphs_parameters.validation_method == ValidationMode.RANDOM_GRAPHS:
+        build_graphs_parameters.edge_build_functions = [ValidationMode.RANDOM_GRAPHS]
+
     perplexities_2: pd.DataFrame = pd.DataFrame()
 
     # If you do not use the edge construction function esm2_contact_map
     if build_graphs_parameters.esm2_model_for_contact_map is None:
-        # esm2_contact_maps = [None] * len(build_graphs_parameters.data)
         esm2_contact_maps = None
 
     # If the ESM-2 model specified for constructing the graphs and for constructing the edges is different, the following is true

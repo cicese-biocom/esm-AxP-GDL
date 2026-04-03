@@ -68,6 +68,7 @@ class ESM2ModelForContactMap(Enum):
 class ValidationMode(Enum):
     RANDOM_COORDINATES = 'random_coordinates'
     RANDOM_EMBEDDINGS = 'random_embeddings'
+    RANDOM_GRAPHS = 'random_graphs'
 
 class SplitMethod(Enum):
     RANDOM = 'random'

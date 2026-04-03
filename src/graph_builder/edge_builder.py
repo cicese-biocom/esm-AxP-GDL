@@ -1,11 +1,11 @@
 import logging
 import multiprocessing
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import numpy as np
 import pandas as pd
-from pydantic.v1 import PositiveFloat
+from pydantic.v1 import PositiveFloat, PositiveInt
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
@@ -27,7 +27,7 @@ from src.graph_builder.tertiary_structure import (
 
 class RandomCoordinatesParameters(BaseParameters):
     execution_mode: ExecutionMode
-    validation_mode: Optional[ValidationMode]
+    validation_method: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
     atom_coordinates_matrices: List
     data: pd.DataFrame
@@ -35,23 +35,25 @@ class RandomCoordinatesParameters(BaseParameters):
 
 class BuildEdgesParameters(BaseParameters):
     execution_mode: ExecutionMode
-    validation_mode: Optional[ValidationMode]
+    validation_method: Optional[ValidationMode]
     randomness_percentage: Optional[PositiveFloat]
     load_tertiary_structure: Optional[bool]
     pdb_path: Optional[Path]
     amino_acid_representation: Optional[str]
     non_pdb_bound_sequences_file: Path
-    edge_build_functions: List[EdgeBuildFunction]
+    edge_build_functions: Optional[Union[List[EdgeBuildFunction], List[ValidationMode]]]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
     use_edge_attr: Optional[bool]
     data: pd.DataFrame
     esm2_contact_maps: Optional[List]
+    probability_for_edge_creation: Optional[PositiveFloat]
+    seed_for_edge_creation: Optional[PositiveInt]
 
 
 class GenerateEdgesParameters(BaseParameters):
-    edge_build_functions: List[EdgeBuildFunction]
+    edge_build_functions: Optional[Union[List[EdgeBuildFunction], List[ValidationMode]]]
     distance_function: Optional[DistanceFunction]
     distance_threshold: Optional[PositiveFloat]
     probability_threshold: Optional[PositiveFloat]
@@ -59,6 +61,8 @@ class GenerateEdgesParameters(BaseParameters):
     atom_coordinates_matrices:  Optional[List]
     data: pd.DataFrame
     esm2_contact_maps: Optional[List]
+    probability_for_edge_creation: Optional[PositiveFloat]
+    seed_for_edge_creation: Optional[PositiveInt]
 
 
 def build_edges(build_edges_parameters: BuildEdgesParameters):
@@ -114,12 +118,12 @@ def _get_range_for_every_coordinate(atom_coordinates_matrices):
 
 
 def _apply_random_coordinates(random_coordinates_parameters: RandomCoordinatesParameters):
-    if (random_coordinates_parameters.validation_mode == ValidationMode.RANDOM_COORDINATES
+    if (random_coordinates_parameters.validation_method == ValidationMode.RANDOM_COORDINATES
             and random_coordinates_parameters.execution_mode == ExecutionMode.TRAIN):
 
         logging.getLogger('workflow_logger'). \
-            warning(f"The framework is running in validation mode with workflow_settings.validation_mode: "
-                    f"{random_coordinates_parameters.validation_mode.value} and "
+            warning(f"The framework is running in validation mode with workflow_settings.validation_method: "
+                    f"{random_coordinates_parameters.validation_method.value} and "
                     f"workflow_settings.randomness_percentage: {random_coordinates_parameters.randomness_percentage}")
 
         partitions = random_coordinates_parameters.data['partition']
@@ -185,6 +189,12 @@ def _generate_edges(generate_edges_parameters: GenerateEdgesParameters):
                 'esm2_contact_map': arg_dict['esm2_contact_map'],  # already mapped but explicit
                 'probability_threshold': generate_edges_parameters.probability_threshold,
                 'use_edge_attr': generate_edges_parameters.use_edge_attr,
+            })
+        # RANDOM_GRAPHS parameters
+        if ValidationMode.RANDOM_GRAPHS in edge_methods:
+            arg_dict.update({
+                'probability_for_edge_creation': generate_edges_parameters.probability_for_edge_creation,
+                'seed_for_edge_creation': generate_edges_parameters.seed_for_edge_creation
             })
 
         # SEQUENCE_BASED → only sequence (already included)
