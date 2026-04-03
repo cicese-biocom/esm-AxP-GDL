@@ -130,7 +130,6 @@ class GDLWorkflow(ABC):
         # Step 12: Prepare and save prediction outputs.
         # This step is executed exclusively during testing and inference.
         self.prepare_and_save_predictions(outputs, domains)
-        self.prepare_and_save_predictions(outputs, domains)
 
         # Step 13: Compute and save metrics.
         # Metrics are calculated only in testing mode.
