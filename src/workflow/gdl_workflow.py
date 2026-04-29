@@ -64,6 +64,8 @@ class ModelParameters(BaseParameters):
     numbers_of_class: PositiveInt
     classes: Optional[List[int]]
     gdl_architecture: GDLArchitecture
+    probability_for_edge_creation: Optional[PositiveFloat]
+    seed_for_edge_creation: Optional[PositiveInt]
 
 
 class GDLWorkflow(ABC):
