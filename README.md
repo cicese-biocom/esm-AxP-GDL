@@ -15,12 +15,10 @@ The framework supports both:
 
 Graph node features are represented using **ESM-2 embeddings**, capturing rich evolutionary information.
 
-esm-AxP-GDL supports both **classification and regression tasks**, and integrates multiple validation strategies, including: embedding randomization, 
+esm-AxP-GDL supports both **classification and regression tasks**, and integrates multiple validation strategies, including embedding randomization, 
 geometric coordinate perturbation, and random graph generation.  
 
 Additionally, the framework enables comprehensive **applicability domain analysis** through one-class classification methods.
-
-The framework is designed to be **easily extensible**, allowing it to be applied to a wide range of tasks related to the prediction of **biological activities and properties of peptides and proteins**.
 
 Overall, esm-AxP-GDL provides a flexible and reproducible platform that combines **Graph Deep Learning** with established **QSAR best practices** for peptide and protein activity modeling.
 
