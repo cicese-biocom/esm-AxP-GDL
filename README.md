@@ -34,14 +34,6 @@ The directory structure of the framework is as follows:
 ```
 esm-AxP-GDL
 │
-├── best_models/                                      <- Pretrained models and their configurations.
-│   ├── AMPDiscover/                                  <- Models trained on AMPDiscover dataset.
-│   │   ├── amp_esmt36_d10_hd128_(Model3)/
-│   │   │   ├── Metrics.txt                           <- Model performance (e.g., MCC).
-│   │   │   ├── Parameters.json                       <- Training configuration.
-│   │   ├── amp_esmt33_d10_hd128_(Model2)/
-│   │   ├── amp_esmt30_d15_hd128_(Model5)/
-│
 ├── datasets/                                         <- Benchmark datasets used in experiments.
 │   ├── AMPDiscover/
 │   │   ├── AMPDiscover(Training-Validation-Test).csv
@@ -56,18 +48,17 @@ esm-AxP-GDL
 │   ├── ExampleDataset.csv
 │   ├── ExampleDatasetInference.csv
 │
+├── best_models/                                      <- Pretrained models and their configurations.
+│   ├── AMPDiscover/                                  <- Models trained on AMPDiscover dataset.
+│   │   ├── amp_esmt36_d10_hd128_(Model3)/
+│   │   │   ├── Metrics.txt                           <- Model performance (e.g., MCC).
+│   │   │   ├── Parameters.json                       <- Training configuration.
+│   │   ├── amp_esmt33_d10_hd128_(Model2)/
+│   │   ├── amp_esmt30_d15_hd128_(Model5)/
+│
 ├── src/                                              <- Core framework source code.
 │
-│   ├── applicability_domain/                         <- Applicability Domain (AD) methods.
-│   │   ├── config_loader.py                          <- Loads AD configuration.
-│   │   ├── methods.py                                <- AD strategies (percentile, isolation forest).
-│
-│   ├── architectures/                                <- GNN model architectures.
-│   │   ├── gnn.py
-│   │   ├── gat_v1.py
-│   │   ├── gat_v2.py
-│
-│   ├── config/                                       <- Configuration loaders for framework components.
+│   ├── config/                                       <- Configuration definitions for core framework components.
 │   │   ├── ad_methods_config.py
 │   │   ├── amino_acid_descriptors_config.py
 │   │   ├── esm2_representations_config.py
@@ -75,36 +66,7 @@ esm-AxP-GDL
 │   │   ├── log_config.py
 │   │   ├── outputs_config.py
 │
-│   ├── data_processing/                              <- Data loading, partitioning, and preprocessing.
-│   │   ├── data_loader.py
-│   │   ├── data_partitioner.py
-│   │   ├── data_processor.py
-│   │   ├── target_feature_validator.py
-│
-│   ├── feature_extraction/                           <- Feature extraction pipeline.
-│   │   ├── config_loader.py                          <- Feature configuration loader.
-│   │   ├── methods.py                                <- Feature extraction methods (decorator-based).
-│
-│   ├── graph_builder/                                <- Graph construction from protein structures.
-│   │   ├── distance_functions.py
-│   │   ├── edge_build_functions.py
-│   │   ├── graph_builder.py
-│   │   ├── node_feature_builder.py
-│   │   ├── tertiary_structures.py                    <- Structure prediction/loading (ESMFold).
-│
-│   ├── modeling/                                     <- Model training, evaluation, and prediction.
-│   │   ├── executor.py
-│   │   ├── metrics.py
-│   │   ├── model_selector.py
-│   │   ├── output_processor.py
-│   │   ├── prediction_maker.py
-│   │   ├── prediction_stats.py
-│
-│   ├── models/                                       <- Pretrained model interfaces (ESM2, ESMFold).
-│   │   ├── esm2.py
-│   │   ├── esmfold.py
-│
-│   ├── params/                                       <- Parameter schemas for execution modes.
+│   ├── params/                                       <- Parameter definitions and validation for execution modes.
 │   │   ├── common.py
 │   │   ├── execution.py
 │   │   ├── inference.py
@@ -118,11 +80,49 @@ esm-AxP-GDL
 │   │   ├── path.py
 │   │   ├── pdb.py
 │
-│   ├── workflow/                                     <- Execution orchestration.
-│   │   ├── application_context.py                    <- Dependency injection container.
-│   │   ├── execution_factories.py                    <- Task-specific factories.
-│   │   ├── gdl_workflow.py                           <- Main workflow logic.
-│   │   ├── logging_config.py                         <- Logging configuration.
+│   ├── data_processing/                              <- Data loading, partitioning, and preprocessing.
+│   │   ├── data_loader.py
+│   │   ├── data_partitioner.py
+│   │   ├── data_processor.py
+│   │   ├── target_feature_validator.py
+│
+│   ├── feature_extraction/                           <- Methods for extracting sequence features and graph representations of sequences, used for applicability domain and data partitioning through clustering-based strategy.
+│   │   ├── config_loader.py                          
+│   │   ├── methods.py                                
+│
+│   ├── models/                                       <- Pretrained models used to generate node features and structural information for graph construction.
+│   │   ├── esm2.py
+│   │   ├── esmfold.py
+│
+│   ├── graph_builder/                                <- Graph construction using multiple edge-building functions.
+│   │   ├── distance_functions.py
+│   │   ├── edge_build_functions.py
+│   │   ├── graph_builder.py
+│   │   ├── node_feature_builder.py
+│   │   ├── tertiary_structures.py                    <- Structure prediction using ESMFold or loading from PDB files.
+│
+│   ├── applicability_domain/                         <- Methods for computing the Applicability Domain (AD).
+│   │   ├── config_loader.py                          
+│   │   ├── methods.py                                
+│
+│   ├── architectures/                                <- GNN model architectures.
+│   │   ├── gnn.py
+│   │   ├── gat_v1.py
+│   │   ├── gat_v2.py
+│
+│   ├── modeling/                                     <- Model training, evaluation, and prediction.
+│   │   ├── executor.py
+│   │   ├── metrics.py
+│   │   ├── model_selector.py
+│   │   ├── output_processor.py
+│   │   ├── prediction_maker.py
+│   │   ├── prediction_stats.py
+│
+│   ├── workflow/                                     <- Coordinates the execution of the framework.
+│   │   ├── application_context.py                    <- Manages and injects the dependencies required to run the framework.
+│   │   ├── execution_factories.py                    <- Creates and prepares the tasks for training, test, or inference based on the configuration.
+│   │   ├── gdl_workflow.py                           <- Defines the workflow steps according to the selected execution mode.
+│   │   ├── logging_config.py                         <- Sets up how logs are generated and stored.
 │
 ├── train.py                                          <- Training entry point.
 ├── test.py                                           <- Testing entry point.
