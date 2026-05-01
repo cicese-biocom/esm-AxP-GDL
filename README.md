@@ -15,10 +15,8 @@ The framework supports both:
 
 Graph node features are represented using **ESM-2 embeddings**, capturing rich evolutionary information.
 
-esm-AxP-GDL supports both **classification and regression tasks**, and integrates multiple validation strategies, including:
-- embedding randomization  
-- geometric coordinate perturbation  
-- random graph generation  
+esm-AxP-GDL supports both **classification and regression tasks**, and integrates multiple validation strategies, including: embedding randomization, 
+geometric coordinate perturbation, and random graph generation.  
 
 Additionally, the framework enables comprehensive **applicability domain analysis** through one-class classification methods.
 
