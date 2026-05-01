@@ -148,9 +148,9 @@ class CommonArguments(BaseModel):
             "LOG_CONFIG_FILE",
             "ESM_CHECKPOINTS_DIR",
             "ESM2_REPRESENTATION_CONFIG_FILE",
-            "FEATURE_COLLECTION_FILE",
-            "OUTPUT_SETTINGS",
-            "AD_METHODS_COLLECTION_FILE",
+            "FEATURES_CONFIG_FILE",
+            "OUTPUTS_CONFIG",
+            "AD_METHODS_CONFIG_FILE",
             "AMINO_ACID_DESCRIPTORS_FILE"
         ]
 

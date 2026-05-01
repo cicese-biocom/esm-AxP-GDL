@@ -5,7 +5,7 @@ from src.utils.json import load_json
 from pathlib import Path
 
 
-class Logging:
+class LoggingConfig:
     @staticmethod
     def init(config_file: FilePath, output_dir: FilePath):
         setting_json = Path(config_file).resolve()

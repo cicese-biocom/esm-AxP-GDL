@@ -28,7 +28,7 @@ from src.config.types import (
 
 from src.applicability_domain.methods import build_model
 from src.data_processing.data_partitioner import split
-from src.feature_extraction.features import filter_features, FeaturesContext, FeatureCalculationParameters
+from src.feature_extraction.methods import filter_features, FeaturesContext, FeatureCalculationParameters
 from src.graph_builder.graph_builder import build_graphs, BuildGraphsParameters
 from src.modeling.executor import (
     ModelTrainer,
@@ -42,8 +42,8 @@ from src.modeling.prediction_maker import Prediction
 from src.modeling.model_selector import Model
 from src.params.execution import ExecutionParameters
 from src.utils.base_parameters import BaseParameters
-from src.workflow.app_context import ApplicationContext
-from src.workflow.logging import Logging
+from src.workflow.application_context import ApplicationContext
+from src.workflow.logging_config import LoggingConfig
 
 
 class ModelParameters(BaseParameters):
@@ -143,7 +143,7 @@ class GDLWorkflow(ABC):
         logging.getLogger('workflow_logger').info(f"Features saved to: {file_path}")
 
     def init_logger(self):
-        Logging.init(
+        LoggingConfig.init(
             config_file=Path(os.getenv("LOG_CONFIG_FILE")).resolve(),
             output_dir=self._path.get('log_file')
         )

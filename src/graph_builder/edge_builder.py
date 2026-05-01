@@ -17,7 +17,7 @@ from src.config.types import (
 
 from src.graph_builder.edge_build_functions import EdgeBuildContext
 from src.utils.base_parameters import BaseParameters
-from src.graph_builder.tertiary_structure import (
+from src.graph_builder.tertiary_structures import (
     predict_tertiary_structures,
     load_tertiary_structures,
     Predict3DStructuresParameters,

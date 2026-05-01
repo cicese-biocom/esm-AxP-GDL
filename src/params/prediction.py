@@ -9,10 +9,10 @@ import numpy as np
 from pydantic import PositiveInt
 from pydantic.v1 import Field, root_validator
 
-from src.applicability_domain.collection import ADMethodCollectionLoader
+from src.applicability_domain.config_loader import ADMethodCollectionLoader
 from src.params.common import CommonArguments
 from src.config.types import ExecutionMode, MethodsForAD
-from src.feature_extraction.collection import FeaturesCollectionLoader
+from src.feature_extraction.config_loader import FeaturesCollectionLoader
 from src.utils.path import get_output_path_settings
 
 
@@ -124,7 +124,7 @@ def _configure_applicability_domain(values):
     ad_methods_collection = ADMethodCollectionLoader()
 
     # Validate methods
-    valid_methods = ad_methods_collection.get_method_names()
+    valid_methods = ad_methods_collection.method_names()
     for method in values['methods_for_ad']:
         if method not in valid_methods:
             raise ValueError(
@@ -132,7 +132,7 @@ def _configure_applicability_domain(values):
             )
 
     # Configure methods and features
-    values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.get_methods_with_features(
+    values['methods_for_ad'], feature_types_for_ad = ad_methods_collection.methods_with_features(
         methods_for_ad=values['methods_for_ad'],
         features_for_ad=features_collection.get_all_features()
     )
@@ -203,7 +203,7 @@ def _validate_applicability_domain_configuration(values):
 
     # --- Validate method names ---
     if methods:
-        valid_methods = ADMethodCollectionLoader().get_method_names()
+        valid_methods = ADMethodCollectionLoader().method_names()
 
         invalid_methods = [
             m for m in methods

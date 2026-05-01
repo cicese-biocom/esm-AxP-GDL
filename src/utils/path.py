@@ -34,10 +34,10 @@ def check_directory_empty(base_path: Path) -> Path:
 
 
 def get_output_path_settings(base_path: Path, execution_mode: ExecutionMode) -> Dict:
-    data = load_json(Path(os.getenv("OUTPUT_SETTINGS")).resolve())
+    data = load_json(Path(os.getenv("OUTPUTS_CONFIG")).resolve())
 
     output_path_settings = {}
-    for setting in data["output_settings"]:
+    for setting in data["outputs_config"]:
         if execution_mode.value in setting["modes"]:
             output_path_settings[setting["key"]] = base_path.joinpath(setting["name"])
             output_path_settings[setting["key"]].mkdir(parents=True, exist_ok=True)

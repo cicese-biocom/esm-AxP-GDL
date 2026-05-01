@@ -5,7 +5,7 @@ from src.config.types import ModelingTask, ExecutionMode
 from src.data_processing.data_loader import DataLoaderContext, CSVLoader, FastaLoader
 from src.data_processing.data_processor import DatasetProcessorContext, LabeledDatasetProcessor, DatasetProcessor, \
     TrainingDatasetProcessor, TestDatasetProcessor
-from src.workflow.execution_factory import (
+from src.workflow.execution_factories import (
     ExecutionFactory,
     BinaryExecutionFactory,
     MulticlassExecutionFactory,

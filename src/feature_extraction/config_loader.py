@@ -9,7 +9,7 @@ class FeaturesCollectionLoader:
     def __init__(
             self
     ):
-        json_path = Path(os.getenv("FEATURE_COLLECTION_FILE")).resolve()
+        json_path = Path(os.getenv("FEATURES_CONFIG_FILE")).resolve()
 
         try:
             self.features_collection = load_json(json_path)['features_collection']

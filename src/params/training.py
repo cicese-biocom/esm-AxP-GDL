@@ -17,7 +17,7 @@ from src.config.types import (
     ModelingTask,
     GDLArchitecture,
 )
-from src.feature_extraction.collection import FeaturesCollectionLoader
+from src.feature_extraction.config_loader import FeaturesCollectionLoader
 from src.utils.path import check_directory_empty, get_output_path_settings, check_file_exists
 
 options_edge_build_functions = ", ".join(f"'{e.value}'" for e in EdgeBuildFunction)

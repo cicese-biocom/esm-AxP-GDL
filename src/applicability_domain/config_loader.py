@@ -10,7 +10,7 @@ class ADMethodCollectionLoader:
     def __init__(
             self
     ):
-        json_path = Path(os.getenv("AD_METHODS_COLLECTION_FILE")).resolve()
+        json_path = Path(os.getenv("AD_METHODS_CONFIG_FILE")).resolve()
 
         try:
             self.methods_for_ad: List[Dict] = load_json(json_path)['ad_methods_collection']
@@ -22,7 +22,7 @@ class ADMethodCollectionLoader:
             raise RuntimeError(f"An error occurred while loading methods for applicability domain: {e}")
 
     # features_for_ad: List[Dict]
-    def get_methods_with_features(self, methods_for_ad: List[MethodsForAD], features_for_ad: List[Dict]) -> tuple[
+    def methods_with_features(self, methods_for_ad: List[MethodsForAD], features_for_ad: List[Dict]) -> tuple[
         list[dict[str, Union[list[dict], Any]]], set[Any]]:
         valid_method_ids = {method['method_id'] for method in self.methods_for_ad}
 
@@ -58,6 +58,6 @@ class ADMethodCollectionLoader:
 
         return ad_methods, all_features
 
-    def get_method_names(self) -> set[Any]:
+    def method_names(self) -> set[Any]:
         method_names = {method['method_id'] for method in self.methods_for_ad}
         return method_names
