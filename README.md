@@ -6,6 +6,8 @@
 
 # esm-AxP-GDL
 
+<img width="2247" height="1358" alt="Figure 1" src="https://github.com/user-attachments/assets/baa01530-59cd-45de-b50c-c8adc0d1c1db" />
+
 **esm-AxP-GDL** is a flexible **Graph Deep Learning (GDL)** framework designed to leverage graph-based representations derived from evolutionary-scale protein language models, namely **ESM-2** and **ESMFold**, for the modeling of peptide/protein activities.
 
 The framework supports both:
@@ -21,6 +23,16 @@ geometric coordinate perturbation, and random graph generation.
 Additionally, the framework enables comprehensive **applicability domain analysis** through one-class classification methods.
 
 Overall, esm-AxP-GDL provides a flexible and reproducible platform that combines **Graph Deep Learning** with established **QSAR best practices** for peptide and protein activity modeling.
+
+---
+
+## How to Cite
+
+The development and application of **esm-AxP-GDL** are supported by the following papers:
+
+- Cordoves-Delgado, G., & García-Jacas, C. R. (2024). Predicting antimicrobial peptides using ESMFold-predicted structures and ESM-2-based amino acid features with graph deep learning. *Journal of Chemical Information and Modeling, 64*(10), 4310–4321. https://doi.org/10.1021/acs.jcim.3c02061
+
+- Cordoves-Delgado, G., García-Jacas, C. R., Marrero-Ponce, Y., Aguila, S. A., & Lizama-Uc, G. (2026). Leveraging different distance functions to predict antiviral peptides with geometric deep learning from ESMFold-predicted tertiary structures. *Antibiotics, 15*(1), 39. https://doi.org/10.3390/antibiotics15010039
 
 ---
 
@@ -409,12 +421,3 @@ the ESM-2 representation and graph construction parameters. These configurations
 NOTE: The performance `metrics` obtained and `parameters` used to build the best models are available at `/best_models` directory. The models are available-freely making click on the Table.
 
 ---
-
-## Related Publications
-
-The development and application of **esm-AxP-GDL** are supported by the following papers:
-
-- Cordoves-Delgado, G., & García-Jacas, C. R. (2024). Predicting antimicrobial peptides using ESMFold-predicted structures and ESM-2-based amino acid features with graph deep learning. *Journal of Chemical Information and Modeling, 64*(10), 4310–4321. https://doi.org/10.1021/acs.jcim.3c02061
-
-- Cordoves-Delgado, G., García-Jacas, C. R., Marrero-Ponce, Y., Aguila, S. A., & Lizama-Uc, G. (2026). Leveraging different distance functions to predict antiviral peptides with geometric deep learning from ESMFold-predicted tertiary structures. *Antibiotics, 15*(1), 39. https://doi.org/10.3390/antibiotics15010039
-
