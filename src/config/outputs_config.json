@@ -1,0 +1,127 @@
+{
+  "outputs_config": [
+    {
+      "key": "checkpoints_path",
+      "name": "Checkpoints",
+      "modes": ["TRAIN"],
+      "files": []
+    },
+    {
+      "key": "metrics_path",
+      "name": "Metrics",
+      "modes": ["TRAIN", "TEST"],
+      "files": [
+        {
+          "key": "metrics_file",
+          "name": "Metrics.csv",
+          "modes": ["TRAIN", "TEST"]
+        }
+      ]
+    },
+    {
+      "key": "prediction_path",
+      "name": "Prediction",
+      "modes": ["TEST", "INFERENCE"],
+      "files": [
+        {
+          "key": "prediction_file",
+          "name": "Prediction.csv",
+           "modes": ["TEST", "INFERENCE"]
+        }
+      ]
+    },
+    {
+      "key": "log_path",
+      "name": "Logs",
+      "modes": ["TRAIN", "TEST", "INFERENCE"],
+      "files": [
+        {
+          "key": "log_file",
+          "name": "Run.log",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "sequences_with_non_natural_amino_acids_file",
+          "name": "Sequences_with_non_natural_amino_acids.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "duplicated_sequence_ids_file",
+          "name": "Duplicated_sequence_IDs.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "duplicated_sequences_file",
+          "name": "Duplicated_sequences.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "sequences_with_erroneous_activity_file",
+          "name": "Sequences_with_erroneous_activity.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "sequences_with_baseless_partitions_file",
+          "name": "Sequences_with_baseless_partitions.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "non_pdb_bound_sequences_file",
+          "name": "Non-pdb_bound_sequences.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        }
+      ]
+    },
+    {
+      "key": "parameters_path",
+      "name": "Parameters",
+      "modes": ["TRAIN", "TEST", "INFERENCE"],
+      "files": [
+        {
+          "key": "command_line_build_graphs_parameters",
+          "name": "command_line_build_graphs_parameters.json",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        },
+        {
+          "key": "workflow_execution_args_file",
+          "name": "all_build_graphs_parameters.json",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        }
+      ]
+    },
+    {
+      "key": "features_path",
+      "name": "Features",
+      "modes": ["TRAIN", "TEST", "INFERENCE"],
+      "files": [
+        {
+          "key": "features_file",
+          "name": "Features.csv",
+          "modes": ["TRAIN", "TEST", "INFERENCE"]
+        }
+      ]
+    },
+    {
+      "key": "partitioned_data_path",
+      "name": "Partitioned_Data",
+      "modes": ["TRAIN"],
+      "files": [
+        {
+          "key": "data_csv",
+          "name": "data.csv",
+          "modes": ["TRAIN"]
+        },
+        {
+          "key": "training_data_fasta",
+          "name": "data_training.fasta",
+          "modes": ["TRAIN"]
+        },
+        {
+          "key": "validation_data_fasta",
+          "name": "data_validation.fasta",
+          "modes": ["TRAIN"]
+        }
+      ]
+    }
+  ]
+}

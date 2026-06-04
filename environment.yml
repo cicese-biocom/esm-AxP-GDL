@@ -4,16 +4,18 @@ channels:
   - nodefaults
 
 dependencies:
-  - python=3.7
+  - python=3.9
   - nvidia::cudatoolkit=11.3.1=ha36c431_9
-  - pytorch::pytorch=1.12.0=py3.7_cuda11.3_cudnn8.3.2_0
-  - pytorch::torchvision=0.13.0=py37_cu113
-  - pytorch::torchaudio=0.12.0=py37_cu113
-  - pyg::pyg=2.3.1=py37_torch_1.12.0_cu113
-  - pyg::pytorch-sparse=0.6.15=py37_torch_1.12.0_cu113
-  - pyg::pytorch-cluster=1.6.0=py37_torch_1.12.0_cu113
-  - pyg::pytorch-spline-conv=1.2.1=py37_torch_1.12.0_cu113
-  - pyg::pytorch-scatter=2.1.0=py37_torch_1.12.0_cu113
+  - pytorch::pytorch-mutex=1.0=cuda
+  - pytorch::pytorch=1.12.0=py3.9_cuda11.3_cudnn8.3.2_0
+  - anaconda::pytorch-lightning=1.9.3=py39h06a4308_0
+  - pytorch::torchvision=0.13.0=py39_cu113
+  - pytorch::torchaudio=0.12.0=py39_cu113
+  - pyg::pyg=2.3.1=py39_torch_1.12.0_cu113
+  - pyg::pytorch-sparse=0.6.15=py39_torch_1.12.0_cu113
+  - pyg::pytorch-cluster=1.6.0=py39_torch_1.12.0_cu113
+  - pyg::pytorch-spline-conv=1.2.1=py39_torch_1.12.0_cu113
+  - pyg::pytorch-scatter=2.1.0=py39_torch_1.12.0_cu113
   - pip
   - pip:
     - torcheval
@@ -72,3 +74,5 @@ dependencies:
     - 'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307'
     - networkx
     - python-weka-wrapper3
+    - pydantic-argparse
+    - python-dotenv

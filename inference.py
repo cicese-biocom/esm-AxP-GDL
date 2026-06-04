@@ -1,24 +1,16 @@
 import logging
-
-from workflow.application_context import ApplicationContext
-from workflow.args_parser_handler import ArgsParserHandler
-from workflow.gdl_workflow import InferenceWorkflow
+from src.config.types import ExecutionMode
+from src.workflow.gdl_workflow import InferenceWorkflow
 import time
 
 
-def inference(args):
-    context = ApplicationContext(mode='inference')
-    InferenceWorkflow().run_workflow(context=context, parameters=args)
+def main():
+    InferenceWorkflow(ExecutionMode.INFERENCE).run()
 
 
 if __name__ == '__main__':
-    args_handler = ArgsParserHandler()
-    args = args_handler.get_inference_arguments()
-
     start_time = time.time()
-    inference(args)
+    main()
     final_time = time.time()
-    logging.getLogger('workflow_logger').info(
-        f"Inference execution time in: {str(final_time - start_time)} seconds")
-
-
+    logging.getLogger('logger').info(
+        f"Graph analyzer execution time in: {str(final_time - start_time)} seconds")

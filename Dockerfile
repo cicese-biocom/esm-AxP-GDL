@@ -1,21 +1,53 @@
-FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 
-LABEL maintainer="Greneter Cordoves Delgado <grenetercordovesdelgado@gmail.com>" description="esm-AxP-GDL framework environment"
+# Set non-interactive mode for apt
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base utilities and Python 3.7
+# Update package list and install prerequisites
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    wget
+
+# Add deadsnakes PPA for Python 3.10
+RUN add-apt-repository ppa:deadsnakes/ppa -y
+
+# Install Python 3.9
+RUN apt-get update && apt-get install -y \
+    python3.9 \
+    python3.9-distutils \
+    python3.9-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+ENV PYTHON_HOME /usr/bin/python3.9
+ENV PATH $PYTHON_HOME/bin:$PATH
+
+# Additional tools and packages
 RUN apt-get update \
     && apt-get install -y  \
     build-essential \
     wget \
     libopenblas-dev \
     git \
-    gcc \
-    python3.7 \
     python3-pip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# OpenJDK 11
+# Install Miniconda
+RUN wget -P /tmp \
+    "https://repo.anaconda.com/miniconda/Miniconda3-py39_25.5.1-0-Linux-x86_64.sh" \
+    && bash /tmp/Miniconda3-py39_25.5.1-0-Linux-x86_64.sh -b -p /opt/conda \
+    && rm /tmp/Miniconda3-py39_25.5.1-0-Linux-x86_64.sh
+ENV PATH /opt/conda/bin:$PATH
+
+COPY environment.yml .
+
+RUN conda init bash && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    conda env update --file environment.yml --name base && \
+    conda clean -afy
+
+# OpenJDK 11 for Weka
 RUN apt-get update && \
     apt-get install -y software-properties-common openjdk-11-jdk && \
     apt-get clean && \
@@ -25,17 +57,6 @@ ENV PATH $JAVA_HOME/bin:$PATH
 
 # CLASSPATH for weka
 ENV CLASSPATH=/opt/conda/lib/python3.7/site-packages/weka/lib/*
-
-# Install Miniconda
-RUN wget -P /tmp \
-    "https://repo.anaconda.com/miniconda/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh" \
-    && bash /tmp/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh -b -p /opt/conda \
-    && rm /tmp/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh
-ENV PATH /opt/conda/bin:$PATH
-
-COPY environment.yml .
-RUN conda env update --file environment.yml --name base && \
-    conda init bash
 
 # Set up the working directory
 WORKDIR /opt/project

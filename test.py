@@ -1,21 +1,17 @@
 import logging
-from workflow.application_context import ApplicationContext
-from workflow.args_parser_handler import ArgsParserHandler
-from workflow.gdl_workflow import TestWorkflow
+from src.config.types import ExecutionMode
+from src.workflow.gdl_workflow import TestWorkflow
 import time
 
 
-def test(args):
-    context = ApplicationContext(mode='test')
-    TestWorkflow().run_workflow(context=context, parameters=args)
+def main():
+    TestWorkflow(ExecutionMode.TEST).run()
 
 
 if __name__ == '__main__':
-    args_handler = ArgsParserHandler()
-    args = args_handler.get_eval_arguments()
 
     start_time = time.time()
-    test(args)
+    main()
     final_time = time.time()
-    logging.getLogger('workflow_logger').info(
-        f"Test execution time in: {str(final_time - start_time)} seconds")
+    logging.getLogger('logger').info(
+        f"Graph analyzer execution time in: {str(final_time - start_time)} seconds")
